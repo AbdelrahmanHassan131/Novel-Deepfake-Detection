@@ -40,13 +40,14 @@ class ExperimentLogger:
         self.experiment = experiment
         self._json_logger = JsonLogger(experiment.history_path)
         self._csv_logger = CsvLogger(experiment.metrics_csv_path)
+        self._last_train_data = {}
 
     # ------------------------------------------------------------------
     # Training logging
     # ------------------------------------------------------------------
 
     def log_epoch(self, epoch, train_loss, lr, elapsed,
-                  global_step=None, num_batches=None):
+                  global_step=None, num_batches=None, write_csv=False):
         """
         Log end-of-epoch training data.
 
@@ -57,10 +58,15 @@ class ExperimentLogger:
             elapsed (float): Epoch wall-clock time in seconds.
             global_step (int, optional): Total training steps so far.
             num_batches (int, optional): Batches processed this epoch.
+            write_csv (bool, optional): Whether to write CSV immediately (if no val).
         """
+        self._last_train_data = {
+            'train_loss': round(train_loss, 6),
+            'lr': lr,
+        }
         record = {
             'epoch': epoch,
-            'train_loss': train_loss,
+            'train_loss': round(train_loss, 6),
             'lr': lr,
             'elapsed_seconds': round(elapsed, 2),
         }
@@ -70,6 +76,8 @@ class ExperimentLogger:
             record['num_batches'] = num_batches
 
         self._json_logger.log_train(record)
+        if write_csv:
+            self._csv_logger.write_row(record)
 
     # ------------------------------------------------------------------
     # Validation logging
@@ -92,18 +100,23 @@ class ExperimentLogger:
         """
         record = {
             'epoch': epoch,
-            'val_loss': val_loss,
-            'accuracy': accuracy,
-            'precision': precision,
-            'recall': recall,
-            'f1': f1,
-            'roc_auc': roc_auc,
+            'val_loss': round(val_loss, 6),
+            'accuracy': round(accuracy, 6),
+            'precision': round(precision, 6),
+            'recall': round(recall, 6),
+            'f1': round(f1, 6),
+            'roc_auc': round(roc_auc, 6),
         }
         if num_samples is not None:
             record['num_samples'] = num_samples
 
         self._json_logger.log_validation(record)
-        self._csv_logger.write_row(record)
+
+        # Merge with last train data for a unified CSV row
+        csv_record = dict(record)
+        if self._last_train_data:
+            csv_record.update(self._last_train_data)
+        self._csv_logger.write_row(csv_record)
 
     # ------------------------------------------------------------------
     # Lifecycle

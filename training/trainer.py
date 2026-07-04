@@ -71,11 +71,12 @@ class Trainer(BaseTrainer):
     """
 
     def __init__(self, model, train_loader, opt, val_loader=None,
-                 runtime=None):
+                 runtime=None, experiment_logger=None):
         # BaseTrainer.__init__ calls configure_optimizer / configure_scheduler
         # so we need self.opt available first.
         self._pre_opt = opt
         self._pre_model = model
+        self.experiment_logger = experiment_logger
 
         super().__init__(
             model=model,
@@ -132,7 +133,11 @@ class Trainer(BaseTrainer):
 
         # 1. Logger — always on, rank-safe
         log_freq = getattr(opt, 'loss_freq', getattr(opt, 'log_freq', 50))
-        self.register_hook(LoggerHook(log_freq=log_freq, rank=self.rank))
+        self.register_hook(LoggerHook(
+            log_freq=log_freq,
+            rank=self.rank,
+            experiment_logger=self.experiment_logger,
+        ))
 
         # 2. Scheduler
         if self.scheduler is not None:

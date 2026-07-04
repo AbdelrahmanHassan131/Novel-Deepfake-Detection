@@ -24,9 +24,10 @@ class LoggerHook:
         rank (int): Only rank 0 prints (DDP-safe).
     """
 
-    def __init__(self, log_freq=50, rank=0):
+    def __init__(self, log_freq=50, rank=0, experiment_logger=None):
         self.log_freq = log_freq
         self.rank = rank
+        self.experiment_logger = experiment_logger
         self._epoch_start_time = None
 
     def _should_log(self):
@@ -59,6 +60,19 @@ class LoggerHook:
             f'| batches: {trainer.epoch_batches} '
             f'| time: {elapsed:.1f}s ---'
         )
+        if self.experiment_logger is not None:
+            lr = trainer.model.optimizer.param_groups[0]['lr'] if getattr(trainer.model, 'optimizer', None) else 0.0
+            # If there is no val_loader, we write CSV immediately from log_epoch
+            write_csv = (trainer.val_loader is None)
+            self.experiment_logger.log_epoch(
+                epoch=trainer.current_epoch,
+                train_loss=avg_loss,
+                lr=lr,
+                elapsed=elapsed,
+                global_step=trainer.global_step,
+                num_batches=trainer.epoch_batches,
+                write_csv=write_csv
+            )
 
     def on_batch_end(self, trainer):
         if not self._should_log():
@@ -83,7 +97,19 @@ class LoggerHook:
             f'| loss: {result.loss:.6f} '
             f'| acc: {result.accuracy:.4f} '
             f'| auc: {result.auc:.4f} '
+            f'| f1: {getattr(result, "f1", 0.0):.4f} '
             f'| prec: {result.precision:.4f} '
             f'| rec: {result.recall:.4f} '
             f'| samples: {result.num_samples} ---'
         )
+        if self.experiment_logger is not None:
+            self.experiment_logger.log_validation(
+                epoch=trainer.current_epoch,
+                val_loss=result.loss,
+                accuracy=result.accuracy,
+                precision=result.precision,
+                recall=result.recall,
+                f1=getattr(result, 'f1', 0.0),
+                roc_auc=result.auc,
+                num_samples=result.num_samples
+            )

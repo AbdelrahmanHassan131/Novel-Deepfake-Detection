@@ -28,6 +28,7 @@ class ValidationResult:
     auc: float = 0.0
     precision: float = 0.0
     recall: float = 0.0
+    f1: float = 0.0
     num_samples: int = 0
     predictions: Optional[np.ndarray] = field(default=None, repr=False)
     labels: Optional[np.ndarray] = field(default=None, repr=False)
@@ -55,7 +56,7 @@ class Validator:
             2. Iterates the dataloader, calling ``model.set_input`` and
                ``model.forward`` on every batch.
             3. Collects losses, predictions, and labels.
-            4. Computes aggregate metrics (accuracy, AUC, precision, recall).
+            4. Computes aggregate metrics using MetricsCalculator.
             5. Returns a ``ValidationResult``.
 
         Args:
@@ -85,7 +86,6 @@ class Validator:
             if output.dim() > 1:
                 output = output.squeeze(1)
             probs = torch.sigmoid(output)
-            preds = (probs > 0.5).float()
 
             all_preds.append(probs.cpu().numpy())
             all_labels.append(model.label.cpu().numpy())
@@ -97,15 +97,23 @@ class Validator:
 
         avg_loss = float(np.mean(all_losses)) if all_losses else 0.0
 
-        # Accuracy
-        pred_binary = (all_preds > 0.5).astype(float)
-        accuracy = float(np.mean(pred_binary == all_labels)) if num_samples > 0 else 0.0
-
-        # AUC
-        auc = _safe_auc(all_labels, all_preds)
-
-        # Precision / Recall
-        precision, recall = _precision_recall(all_labels, pred_binary)
+        # Try using MetricsCalculator from experiment package
+        try:
+            from experiment.metrics import MetricsCalculator
+            calc = MetricsCalculator(threshold=0.5)
+            metrics = calc.compute(all_preds, all_labels)
+            accuracy = float(metrics.get('accuracy', 0.0))
+            auc = float(metrics.get('roc_auc', 0.0))
+            precision = float(metrics.get('precision', 0.0))
+            recall = float(metrics.get('recall', 0.0))
+            f1 = float(metrics.get('f1', 0.0))
+        except Exception:
+            # Fallback
+            pred_binary = (all_preds > 0.5).astype(float)
+            accuracy = float(np.mean(pred_binary == all_labels)) if num_samples > 0 else 0.0
+            auc = _safe_auc(all_labels, all_preds)
+            precision, recall = _precision_recall(all_labels, pred_binary)
+            f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
         return ValidationResult(
             loss=avg_loss,
@@ -113,6 +121,7 @@ class Validator:
             auc=auc,
             precision=precision,
             recall=recall,
+            f1=f1,
             num_samples=num_samples,
             predictions=all_preds,
             labels=all_labels,

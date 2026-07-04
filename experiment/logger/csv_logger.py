@@ -16,6 +16,8 @@ import os
 # Column order in the CSV file.
 _CSV_COLUMNS = [
     'epoch',
+    'train_loss',
+    'lr',
     'val_loss',
     'accuracy',
     'precision',

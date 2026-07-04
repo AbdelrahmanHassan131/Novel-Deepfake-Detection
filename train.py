@@ -179,6 +179,9 @@ def main():
     print(f"  -> Checkpoint directory: {experiment.checkpoint_dir}")
     print(f"  -> Metrics CSV log     : {experiment.metrics_csv_path}")
 
+    from experiment.logger import ExperimentLogger
+    experiment_logger = ExperimentLogger(experiment)
+
     # Point trainer checkpoint save directory to the experiment directory
     opt_clean.checkpoints_dir = experiment.checkpoint_dir
     opt_clean.name = ""  # Let CheckpointManager use the directory directly without appending extra subfolders
@@ -207,7 +210,7 @@ def main():
     model = build_model(opt_clean)
 
     print("[5/5] Initializing Trainer...")
-    trainer = Trainer(model, train_loader, opt_clean, val_loader=val_loader)
+    trainer = Trainer(model, train_loader, opt_clean, val_loader=val_loader, experiment_logger=experiment_logger)
 
     print("\n" + "=" * 70)
     print("STARTING TRAINING LOOP")
