@@ -9,13 +9,16 @@ def create_dataloader(opt):
     dataset = get_dataset(opt)
     sampler = get_bal_sampler(dataset) if opt.class_bal else None
 
+    # GPU wavelet backend returns CUDA tensors — pin_memory must be off
+    use_pin = getattr(opt, 'wavelet_backend', 'cpu') != 'gpu'
+
     data_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
         shuffle=shuffle,
         sampler=sampler,
         num_workers=0,  # Set to 0 to avoid pickle errors on Windows
-        pin_memory=True
+        pin_memory=use_pin
     )
     return data_loader
 
