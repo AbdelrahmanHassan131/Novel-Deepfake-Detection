@@ -40,7 +40,34 @@ class ExperimentLogger:
         self.experiment = experiment
         self._json_logger = JsonLogger(experiment.history_path)
         self._csv_logger = CsvLogger(experiment.metrics_csv_path)
+        _STEP_COLUMNS = ['global_step', 'epoch', 'batch', 'loss', 'lr']
+        self._step_csv_logger = CsvLogger(experiment.steps_csv_path, columns=_STEP_COLUMNS)
         self._last_train_data = {}
+
+    # ------------------------------------------------------------------
+    # Step logging
+    # ------------------------------------------------------------------
+
+    def log_step(self, global_step, epoch, batch, loss, lr=0.0):
+        """
+        Log step-level training metrics.
+
+        Args:
+            global_step (int): Total training steps across epochs.
+            epoch (int): Current epoch number.
+            batch (int): Batch index within the current epoch.
+            loss (float): Loss at this step.
+            lr (float, optional): Learning rate at this step.
+        """
+        record = {
+            'global_step': global_step,
+            'epoch': epoch,
+            'batch': batch,
+            'loss': round(loss, 6),
+            'lr': lr,
+        }
+        self._json_logger.log_step(record)
+        self._step_csv_logger.write_row(record)
 
     # ------------------------------------------------------------------
     # Training logging
@@ -126,3 +153,4 @@ class ExperimentLogger:
         """Flush and close all underlying loggers."""
         self._json_logger.close()
         self._csv_logger.close()
+        self._step_csv_logger.close()

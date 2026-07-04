@@ -189,6 +189,7 @@ def main():
         print(f"  -> Experiment directory: {experiment.root_dir}")
         print(f"  -> Checkpoint directory: {experiment.checkpoint_dir}")
         print(f"  -> Metrics CSV log     : {experiment.metrics_csv_path}")
+        print(f"  -> Steps CSV log       : {experiment.steps_csv_path}")
 
     from experiment.logger import ExperimentLogger
     experiment_logger = ExperimentLogger(experiment) if runtime.is_main else None

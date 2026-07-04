@@ -91,11 +91,28 @@ class Validator:
             all_labels.append(model.label.cpu().numpy())
 
         # Aggregate
-        all_preds = np.concatenate(all_preds)
-        all_labels = np.concatenate(all_labels)
-        num_samples = len(all_labels)
-
+        all_preds = np.concatenate(all_preds) if len(all_preds) > 0 else np.array([])
+        all_labels = np.concatenate(all_labels) if len(all_labels) > 0 else np.array([])
         avg_loss = float(np.mean(all_losses)) if all_losses else 0.0
+
+        try:
+            import torch.distributed as dist
+            if dist.is_initialized() and dist.get_world_size() > 1:
+                gathered_preds = [None for _ in range(dist.get_world_size())]
+                gathered_labels = [None for _ in range(dist.get_world_size())]
+                dist.all_gather_object(gathered_preds, all_preds)
+                dist.all_gather_object(gathered_labels, all_labels)
+                all_preds = np.concatenate(gathered_preds)
+                all_labels = np.concatenate(gathered_labels)
+
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                tensor_loss = torch.tensor([avg_loss], dtype=torch.float32, device=device)
+                dist.all_reduce(tensor_loss, op=dist.ReduceOp.SUM)
+                avg_loss = (tensor_loss[0] / dist.get_world_size()).item()
+        except Exception:
+            pass
+
+        num_samples = len(all_labels)
 
         # Try using MetricsCalculator from experiment package
         try:

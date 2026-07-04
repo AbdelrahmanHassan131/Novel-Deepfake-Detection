@@ -46,18 +46,37 @@ class LoggerHook:
             f'| Global step: {trainer.global_step} ==='
         )
 
+    def _get_world_size_and_reduce_loss(self, loss_val):
+        """Average scalar loss across all DDP ranks and get world size."""
+        world_size = 1
+        try:
+            import torch
+            import torch.distributed as dist
+            if dist.is_initialized() and dist.get_world_size() > 1:
+                world_size = dist.get_world_size()
+                device = 'cuda' if torch.cuda.is_available() else 'cpu'
+                tensor_loss = torch.tensor([loss_val], dtype=torch.float32, device=device)
+                dist.all_reduce(tensor_loss, op=dist.ReduceOp.SUM)
+                loss_val = (tensor_loss[0] / world_size).item()
+        except Exception:
+            pass
+        return loss_val, world_size
+
     def on_epoch_end(self, trainer):
-        if not self._should_log():
-            return
-        elapsed = time.time() - self._epoch_start_time if self._epoch_start_time else 0
         avg_loss = (
             trainer.epoch_loss / trainer.epoch_batches
             if trainer.epoch_batches > 0 else 0
         )
+        avg_loss, world_size = self._get_world_size_and_reduce_loss(avg_loss)
+        if not self._should_log():
+            return
+        elapsed = time.time() - self._epoch_start_time if self._epoch_start_time else 0
+        total_batches = trainer.epoch_batches * world_size
+        batch_str = f"{total_batches} ({trainer.epoch_batches}/GPU)" if world_size > 1 else f"{total_batches}"
         print(
             f'--- Epoch {trainer.current_epoch} finished '
             f'| avg_loss: {avg_loss:.6f} '
-            f'| batches: {trainer.epoch_batches} '
+            f'| batches: {batch_str} '
             f'| time: {elapsed:.1f}s ---'
         )
         if self.experiment_logger is not None:
@@ -70,21 +89,34 @@ class LoggerHook:
                 lr=lr,
                 elapsed=elapsed,
                 global_step=trainer.global_step,
-                num_batches=trainer.epoch_batches,
+                num_batches=total_batches,
                 write_csv=write_csv
             )
 
     def on_batch_end(self, trainer):
-        if not self._should_log():
-            return
         if self.log_freq <= 0:
             return
         if trainer.epoch_batches % self.log_freq == 0:
+            loss = trainer.last_batch_loss
+            loss, world_size = self._get_world_size_and_reduce_loss(loss)
+            if not self._should_log():
+                return
+            total_batches = trainer.epoch_batches * world_size
+            batch_str = f"{total_batches} ({trainer.epoch_batches}/GPU)" if world_size > 1 else f"{total_batches}"
             print(
                 f'  [step {trainer.global_step}] '
-                f'batch {trainer.epoch_batches} '
-                f'| loss: {trainer.last_batch_loss:.6f}'
+                f'batch {batch_str} '
+                f'| loss: {loss:.6f}'
             )
+            if self.experiment_logger is not None:
+                lr = trainer.model.optimizer.param_groups[0]['lr'] if getattr(trainer.model, 'optimizer', None) else 0.0
+                self.experiment_logger.log_step(
+                    global_step=trainer.global_step,
+                    epoch=trainer.current_epoch,
+                    batch=total_batches,
+                    loss=loss,
+                    lr=lr,
+                )
 
     def on_batch_start(self, trainer):
         pass

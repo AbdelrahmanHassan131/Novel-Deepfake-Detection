@@ -46,6 +46,11 @@ class Experiment:
         return os.path.join(self.root_dir, 'metrics.csv')
 
     @property
+    def steps_csv_path(self):
+        """Path to ``steps.csv``."""
+        return os.path.join(self.root_dir, 'steps.csv')
+
+    @property
     def opt_txt_path(self):
         """Path to ``opt.txt``."""
         return os.path.join(self.root_dir, 'opt.txt')

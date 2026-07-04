@@ -39,6 +39,18 @@ class JsonLogger:
     # Public API
     # ------------------------------------------------------------------
 
+    def log_step(self, record):
+        """
+        Append a step-level training record and flush to disk.
+
+        Args:
+            record (dict): Step-level metrics (step, epoch, batch, loss, lr).
+        """
+        if 'steps' not in self._history:
+            self._history['steps'] = []
+        self._history['steps'].append(record)
+        self._flush()
+
     def log_train(self, record):
         """
         Append a training record and flush to disk.
@@ -80,10 +92,12 @@ class JsonLogger:
                     data = json.load(f)
                 # Validate minimal structure
                 if 'train' in data and 'validation' in data:
+                    if 'steps' not in data:
+                        data['steps'] = []
                     return data
             except (json.JSONDecodeError, KeyError):
                 pass
-        return {'train': [], 'validation': []}
+        return {'steps': [], 'train': [], 'validation': []}
 
     def _flush(self):
         """Write the full history to disk atomically."""

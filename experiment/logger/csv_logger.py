@@ -36,8 +36,9 @@ class CsvLogger:
         filepath (str): Path to the CSV file.
     """
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, columns=None):
         self.filepath = filepath
+        self.columns = columns if columns is not None else _CSV_COLUMNS
         self._file = None
         self._writer = None
         self._open(filepath)
@@ -51,10 +52,10 @@ class CsvLogger:
         Append a single metrics row.
 
         Args:
-            record (dict): Keys should match ``_CSV_COLUMNS``.
+            record (dict): Keys should match ``self.columns``.
                 Missing keys are written as empty strings.
         """
-        row = [record.get(col, '') for col in _CSV_COLUMNS]
+        row = [record.get(col, '') for col in self.columns]
         self._writer.writerow(row)
         self._file.flush()
 
@@ -76,5 +77,5 @@ class CsvLogger:
         self._writer = csv.writer(self._file)
 
         if write_header:
-            self._writer.writerow(_CSV_COLUMNS)
+            self._writer.writerow(self.columns)
             self._file.flush()
