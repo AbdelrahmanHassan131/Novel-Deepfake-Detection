@@ -20,7 +20,7 @@ import argparse
 import torch
 
 from config import load_config, config_to_opt, ConfigValidator
-from config.defaults import DATA_DEFAULTS, TRAINING_DEFAULTS, MODEL_DEFAULTS, RUNTIME_DEFAULTS, EXPERIMENT_DEFAULTS
+from config.defaults import DATA_DEFAULTS, TRAINING_DEFAULTS, MODEL_DEFAULTS, RUNTIME_DEFAULTS, EXPERIMENT_DEFAULTS, WAVELET_DEFAULTS
 from models import build_model, get_registered_models
 from data.loaders.dataloader_factory import create_dataloader, create_mha_dataloader
 from training import Trainer, seed_everything
@@ -69,6 +69,18 @@ def parse_args():
                         help="Use class balanced sampler")
     parser.add_argument('--compute_wavelets', action='store_true', default=DATA_DEFAULTS['compute_wavelets'],
                         help="Compute wavelets online if required by dataset")
+
+    # Wavelet parameters
+    parser.add_argument('--wavelet_backend', type=str, default=WAVELET_DEFAULTS['backend'], choices=['cpu', 'gpu', 'precomputed'],
+                        help="Wavelet computation backend: cpu, gpu, or precomputed")
+    parser.add_argument('--wavelet_type', type=str, default=WAVELET_DEFAULTS['wavelet_type'],
+                        help="Wavelet family name (e.g. haar, db2)")
+    parser.add_argument('--wavelet_level', type=int, default=WAVELET_DEFAULTS['level'],
+                        help="Wavelet decomposition level")
+    parser.add_argument('--wavelet_mode', type=str, default=WAVELET_DEFAULTS['mode'],
+                        help="Signal extension mode")
+    parser.add_argument('--use_log_packets', action='store_true', default=WAVELET_DEFAULTS['log_packets'],
+                        help="Apply log scaling to wavelet packets")
 
     # Training Hyperparameters
     parser.add_argument('--epochs', '--niter', dest='epochs', type=int, default=TRAINING_DEFAULTS['epochs'],
