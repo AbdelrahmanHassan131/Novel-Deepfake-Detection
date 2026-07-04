@@ -9,16 +9,9 @@ def create_dataloader(opt):
     dataset = get_dataset(opt)
     sampler = get_bal_sampler(dataset) if opt.class_bal else None
 
-    backend = getattr(opt, 'wavelet_backend', 'cpu')
-    if backend == 'gpu':
-        # GPU backend returns CUDA tensors — can't use pin_memory or
-        # multi-process workers (CUDA can't be used in forked workers)
-        num_workers = 0
-        use_pin = False
-    else:
-        num_workers = getattr(opt, 'num_workers',
-                              getattr(opt, 'num_threads', 4))
-        use_pin = True
+    num_workers = getattr(opt, 'num_workers',
+                          getattr(opt, 'num_threads', 4))
+    use_pin = True
 
     data_loader = torch.utils.data.DataLoader(
         dataset,

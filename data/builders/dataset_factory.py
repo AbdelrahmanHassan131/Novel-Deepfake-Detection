@@ -33,7 +33,14 @@ def dataset_folder(opt, root):
     if opt.mode == 'binary':
         # Route to the appropriate dataset class based on configuration
         arch = getattr(opt, 'arch', '') or getattr(opt, 'architecture', '')
-        if getattr(opt, 'compute_wavelets', False) or 'Wolter' in arch:
+        backend = getattr(opt, 'wavelet_backend', 'cpu')
+
+        if 'Wolter' in arch and backend == 'gpu':
+            # GPU wavelet mode: load RGB images with fast parallel workers.
+            # The model computes wavelets on GPU in batch inside set_input.
+            from ..datasets.wavelet_rgb_dataset import WaveletRGBDataset
+            return WaveletRGBDataset(opt, root)
+        elif getattr(opt, 'compute_wavelets', False) or 'Wolter' in arch:
             return WaveletDataset(opt, root)
         elif 'Fusion' in arch:
             return FusionDataset(opt, root)

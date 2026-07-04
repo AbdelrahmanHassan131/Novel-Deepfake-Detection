@@ -19,7 +19,14 @@ class WolterWaveletRawTrainer(BaseModel):
     Based on: Wolter et al. "Wavelet-Packets for Deepfake Image Analysis and Detection"
     Machine Learning, ECML PKDD 2022 Journal Track
 
-    Original architecture without modifications
+    Original architecture without modifications.
+
+    GPU wavelet mode:
+        When ``opt.wavelet_backend == 'gpu'``, the DataLoader delivers
+        raw RGB tensors (3 channels) and this trainer computes wavelet
+        packets on GPU for the entire batch inside ``set_input`` using
+        the batched ``GPUWaveletBackend``.  This keeps DataLoader workers
+        busy with fast I/O while the GPU handles both wavelets and training.
     """
 
     def name(self):
@@ -33,6 +40,8 @@ class WolterWaveletRawTrainer(BaseModel):
         self.wavelet_level = getattr(opt, 'wavelet_level', 3)
         self.wavelet_mode = getattr(opt, 'wavelet_mode', 'reflect')
         self.use_log_packets = getattr(opt, 'use_log_packets', True)
+        self._wavelet_backend_name = getattr(opt, 'wavelet_backend', 'cpu')
+        self._gpu_wavelet = None  # lazy-init
 
         # Calculate number of input channels
         # At level 3: 4^3 = 64 packets per channel
@@ -81,6 +90,19 @@ class WolterWaveletRawTrainer(BaseModel):
 
         self.model.to(opt.gpu_ids[0])
 
+    def _get_gpu_wavelet_backend(self):
+        """Lazy-init the GPU wavelet backend on first use."""
+        if self._gpu_wavelet is None:
+            from data.wavelets.backends.gpu_backend import GPUWaveletBackend
+            self._gpu_wavelet = GPUWaveletBackend(
+                wavelet=self.wavelet_type,
+                level=self.wavelet_level,
+                mode=self.wavelet_mode,
+                log_scale=self.use_log_packets,
+                device=self.device,
+            )
+        return self._gpu_wavelet
+
     def adjust_learning_rate(self, min_lr=1e-6):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] /= 10.
@@ -95,16 +117,20 @@ class WolterWaveletRawTrainer(BaseModel):
             return output
 
         # Fallback: compute wavelets if RGB input
-        batch_packets = []
-        for img in input_tensor:
-            packets = compute_wavelet_packet_coeffs(
-                img, self.wavelet_type, self.wavelet_level, self.wavelet_mode
-            )
-            if self.use_log_packets:
-                packets = log_scale_packets(packets)
-            batch_packets.append(packets)
+        if self._wavelet_backend_name == 'gpu':
+            backend = self._get_gpu_wavelet_backend()
+            wavelet_input = backend(input_tensor.to(self.device))
+        else:
+            batch_packets = []
+            for img in input_tensor:
+                packets = compute_wavelet_packet_coeffs(
+                    img, self.wavelet_type, self.wavelet_level, self.wavelet_mode
+                )
+                if self.use_log_packets:
+                    packets = log_scale_packets(packets)
+                batch_packets.append(packets)
+            wavelet_input = torch.stack(batch_packets).to(self.device)
 
-        wavelet_input = torch.stack(batch_packets).to(self.device)
         output = self.model(wavelet_input)
         return output
 
@@ -115,10 +141,24 @@ class WolterWaveletRawTrainer(BaseModel):
         self.model.eval()
 
     def set_input(self, input):
-        """Input from dataloader: (wavelet_packets, labels)"""
-        wavelet_packets, labels = input[0], input[1]
-        self.input = wavelet_packets.to(self.device)
+        """
+        Input from dataloader: (tensor, labels).
+
+        If tensor has 3 channels (RGB), computes wavelet packets on GPU
+        for the entire batch.  If 192 channels, uses them directly.
+        """
+        data, labels = input[0], input[1]
+        data = data.to(self.device)
         self.label = labels.to(self.device).float()
+
+        if data.shape[1] == 3:
+            # RGB input — compute wavelets on GPU in batch
+            backend = self._get_gpu_wavelet_backend()
+            with torch.no_grad():
+                self.input = backend(data)
+        else:
+            # Already wavelet packets (192 channels)
+            self.input = data
 
     def forward(self):
         self.output = self.model(self.input)
@@ -132,3 +172,4 @@ class WolterWaveletRawTrainer(BaseModel):
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
+
