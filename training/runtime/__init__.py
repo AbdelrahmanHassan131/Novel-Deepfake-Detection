@@ -3,9 +3,9 @@ Distributed Training Runtime.
 
 Public API::
 
-    from Refactored.training.runtime import DistributedRuntime
-    from Refactored.training.runtime import AmpMixin
-    from Refactored.training.runtime import seed_everything
+    from training.runtime import DistributedRuntime
+    from training.runtime import AmpMixin
+    from training.runtime import seed_everything
 
 Usage::
 

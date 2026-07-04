@@ -4,19 +4,19 @@ Experiment Management System.
 Public API::
 
     # Core
-    from Refactored.experiment import ExperimentManager, Experiment
+    from experiment import ExperimentManager, Experiment
 
     # Logging
-    from Refactored.experiment import ExperimentLogger
+    from experiment import ExperimentLogger
 
     # Metrics
-    from Refactored.experiment import MetricsCalculator, MetricAccumulator
+    from experiment import MetricsCalculator, MetricAccumulator
 
     # Post-training utilities
-    from Refactored.experiment import HistoryLoader, ReportGenerator
+    from experiment import HistoryLoader, ReportGenerator
 
     # Post-training visualisation
-    from Refactored.experiment.visualization import (
+    from experiment.visualization import (
         plot_training_curves, compare_runs,
         plot_confusion_matrix, plot_roc_curve,
         plot_precision_recall_curve,

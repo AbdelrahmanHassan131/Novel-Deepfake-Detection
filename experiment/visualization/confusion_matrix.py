@@ -6,7 +6,7 @@ or a fresh evaluation) and produces a confusion matrix heatmap.
 
 Usage::
 
-    from Refactored.experiment.visualization import plot_confusion_matrix
+    from experiment.visualization import plot_confusion_matrix
     import numpy as np
 
     preds = np.array([0.9, 0.1, 0.8, 0.3])
@@ -17,7 +17,7 @@ Usage::
 import os
 import numpy as np
 
-from Refactored.experiment.metrics import MetricsCalculator
+from experiment.metrics import MetricsCalculator
 
 
 def plot_confusion_matrix(predictions, labels, save_path=None,

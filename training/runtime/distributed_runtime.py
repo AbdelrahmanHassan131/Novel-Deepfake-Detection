@@ -23,7 +23,7 @@ The runtime supports three execution modes transparently:
 
 Usage::
 
-    from Refactored.training.runtime import DistributedRuntime
+    from training.runtime import DistributedRuntime
 
     runtime = DistributedRuntime(opt)
     model = build_model(opt)

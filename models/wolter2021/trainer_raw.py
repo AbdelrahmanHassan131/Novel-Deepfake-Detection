@@ -8,7 +8,7 @@ Preserved exactly from WaveletsRawModelRawInput/trainer_WaveletsRawModelRawInput
 """
 import torch
 import torch.nn as nn
-from Refactored.models.base.base_model import BaseModel, init_weights
+from models.base.base_model import BaseModel, init_weights
 from .wavelet_cnn import WaveletPacketCNN
 from .wavelet_utils import compute_wavelet_packet_coeffs, log_scale_packets
 

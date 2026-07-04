@@ -34,14 +34,14 @@ from PIL import Image
 
 # ---------------------------------------------------------------------------
 # Import the existing Refactored wavelet implementation.
-# Adds Refactored/data/ to sys.path so that the wavelets package is reachable.
+# Adds the project root to sys.path so that data.wavelets is reachable.
 # ---------------------------------------------------------------------------
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_DATA_DIR = os.path.abspath(os.path.join(_SCRIPT_DIR, '..'))
-if _DATA_DIR not in sys.path:
-    sys.path.insert(0, _DATA_DIR)
+_PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, '..', '..'))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
-from wavelets.packet_transform import compute_wavelet_packet_coeffs, log_scale_packets
+from data.wavelets.packet_transform import compute_wavelet_packet_coeffs, log_scale_packets
 
 # ---------------------------------------------------------------------------
 # Supported image file extensions

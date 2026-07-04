@@ -11,7 +11,7 @@ module-level dictionaries that the ``Config`` section classes import.
 
 Usage::
 
-    from Refactored.config.defaults import DATA_DEFAULTS, TRAINING_DEFAULTS
+    from config.defaults import DATA_DEFAULTS, TRAINING_DEFAULTS
     batch_size = DATA_DEFAULTS['batch_size']   # 64
 """
 

@@ -7,7 +7,7 @@ directly.
 
 Usage::
 
-    from Refactored.experiment.utils import HistoryLoader
+    from experiment.utils import HistoryLoader
 
     loader = HistoryLoader('experiments/wang2020_progan_20260703_120000')
     history = loader.load_history()

@@ -10,7 +10,7 @@ member.  This enables seamless conversion from the ``opt`` namespace.
 
 Usage::
 
-    from Refactored.config.types import WaveletBackend, OptimizerType
+    from config.types import WaveletBackend, OptimizerType
 
     backend = WaveletBackend.from_string('cpu')
     optim = OptimizerType.from_string('adam')
@@ -22,7 +22,7 @@ from enum import Enum
 class WaveletBackend(Enum):
     """Wavelet computation backend.
 
-    Used by ``Refactored.data.wavelets.backends.factory`` and dataset
+    Used by ``data.wavelets.backends.factory`` and dataset
     classes to select between CPU, GPU, and precomputed wavelet
     processing.
     """
@@ -59,7 +59,7 @@ class WaveletBackend(Enum):
 class OptimizerType(Enum):
     """Optimizer family.
 
-    Used by ``Refactored.training.optimizer_factory`` and individual
+    Used by ``training.optimizer_factory`` and individual
     model trainers to select the optimizer.
     """
     ADAM = 'adam'
@@ -94,7 +94,7 @@ class OptimizerType(Enum):
 class SchedulerType(Enum):
     """Learning-rate scheduler policy.
 
-    Used by ``Refactored.training.scheduler_factory`` to select the
+    Used by ``training.scheduler_factory`` to select the
     scheduler.
     """
     STEP = 'step'
@@ -132,7 +132,7 @@ class ArchitectureType(Enum):
     """Model architecture identifiers.
 
     Maps to the keys used in
-    ``Refactored.models.registry._REGISTRY``.  The ``value`` of each
+    ``models.registry._REGISTRY``.  The ``value`` of each
     member is the exact string used in the registry and in ``opt.arch``.
     """
     WANG2020_RAW = 'Wang2020Raw'
@@ -173,7 +173,7 @@ class ArchitectureType(Enum):
 class DeviceType(Enum):
     """Execution device type.
 
-    Used by ``Refactored.training.runtime.distributed_runtime`` for
+    Used by ``training.runtime.distributed_runtime`` for
     device resolution.
     """
     CPU = 'cpu'
@@ -208,7 +208,7 @@ class DeviceType(Enum):
 class InitType(Enum):
     """Network weight initialization method.
 
-    Used by ``Refactored.models.base.base_model.init_weights``.
+    Used by ``models.base.base_model.init_weights``.
     """
     NORMAL = 'normal'
     XAVIER = 'xavier'

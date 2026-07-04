@@ -12,7 +12,7 @@ Design principles:
 
 Usage::
 
-    from Refactored.experiment.logger import ExperimentLogger
+    from experiment.logger import ExperimentLogger
 
     logger = ExperimentLogger(experiment)
     logger.log_epoch(epoch=1, train_loss=0.42, lr=1e-3, elapsed=12.5)

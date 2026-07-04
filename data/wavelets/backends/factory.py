@@ -38,7 +38,7 @@ Interaction with the data pipeline:
 
 Usage::
 
-    from Refactored.data.wavelets.backends import create_wavelet_backend
+    from data.wavelets.backends import create_wavelet_backend
 
     backend = create_wavelet_backend(opt)
     wavelet_tensor = backend(image)   # CPU or GPU tensor

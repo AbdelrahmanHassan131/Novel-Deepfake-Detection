@@ -11,7 +11,7 @@ unexpected).
 
 Usage::
 
-    from Refactored.config import ConfigValidator
+    from config import ConfigValidator
 
     report = ConfigValidator.validate(config)
     report.raise_on_errors()   # raises ConfigurationError if any errors
@@ -23,7 +23,7 @@ Usage::
 
 import os
 
-from Refactored.config.types import (
+from config.types import (
     WaveletBackend,
     OptimizerType,
     SchedulerType,
@@ -242,7 +242,7 @@ class ConfigValidator:
 
         # Check against known architectures (non-fatal — could be
         # a custom registered model).
-        from Refactored.config.types import ArchitectureType
+        from config.types import ArchitectureType
         known = [member.value for member in ArchitectureType]
         if m.architecture not in known:
             report.add_warning(

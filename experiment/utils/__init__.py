@@ -2,7 +2,7 @@
 Experiment utilities subpackage.
 
 Public API:
-    from Refactored.experiment.utils import HistoryLoader, ReportGenerator
+    from experiment.utils import HistoryLoader, ReportGenerator
 """
 
 from .history_loader import HistoryLoader

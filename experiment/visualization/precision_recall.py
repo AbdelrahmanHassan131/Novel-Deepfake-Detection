@@ -6,7 +6,7 @@ Precision-Recall curve plot with Average Precision annotation.
 
 Usage::
 
-    from Refactored.experiment.visualization import plot_precision_recall_curve
+    from experiment.visualization import plot_precision_recall_curve
     import numpy as np
 
     preds = np.array([0.9, 0.1, 0.8, 0.3])

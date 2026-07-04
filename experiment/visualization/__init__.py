@@ -6,7 +6,7 @@ saved experiment files and produce plots.  Nothing in this package
 is called during training.
 
 Public API:
-    from Refactored.experiment.visualization import (
+    from experiment.visualization import (
         plot_training_curves,
         compare_runs,
         plot_confusion_matrix,

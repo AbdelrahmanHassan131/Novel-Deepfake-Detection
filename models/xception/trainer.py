@@ -8,8 +8,8 @@ Preserved exactly from xception/trainer_Xception.py.
 """
 import torch
 import torch.nn as nn
-from Refactored.models.base.base_model import BaseModel, init_weights
-from Refactored.models.shared.xception_arch import xception
+from models.base.base_model import BaseModel, init_weights
+from models.shared.xception_arch import xception
 
 
 class XceptionRawTrainer(BaseModel):

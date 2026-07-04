@@ -17,7 +17,7 @@ function :func:`create_wavelet_backend`.
 
 Usage::
 
-    from Refactored.data.wavelets.backends import create_wavelet_backend
+    from data.wavelets.backends import create_wavelet_backend
 
     backend = create_wavelet_backend(opt)
     wavelet_tensor = backend(image_tensor)

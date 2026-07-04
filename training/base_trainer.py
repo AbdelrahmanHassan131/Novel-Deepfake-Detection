@@ -29,11 +29,11 @@ import os
 import torch
 from abc import ABC, abstractmethod
 
-from Refactored.training.checkpoint_manager import CheckpointManager
-from Refactored.training.validator import Validator, ValidationResult
-from Refactored.training.runtime.distributed_runtime import DistributedRuntime
-from Refactored.training.runtime.amp import AmpMixin
-from Refactored.training.runtime.seed import seed_everything
+from training.checkpoint_manager import CheckpointManager
+from training.validator import Validator, ValidationResult
+from training.runtime.distributed_runtime import DistributedRuntime
+from training.runtime.amp import AmpMixin
+from training.runtime.seed import seed_everything
 
 
 class BaseTrainer(AmpMixin, ABC):

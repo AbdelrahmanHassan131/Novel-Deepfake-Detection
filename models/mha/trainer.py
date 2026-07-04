@@ -9,7 +9,7 @@ Preserved exactly from MyModels/networks/MHA_128/Trainer_MHA_128.py.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from Refactored.models.base.base_model import BaseModel, init_weights
+from models.base.base_model import BaseModel, init_weights
 from .mha_classifier import MHAFusionClassifier
 
 
@@ -103,7 +103,7 @@ class MHAFusionTrainer(BaseModel):
 
     def _load_rgb_model(self, opt):
         """Load pre-trained RGB model (Wang2020 ResNet50)"""
-        from Refactored.models.shared.resnet import resnet50
+        from models.shared.resnet import resnet50
 
         model = resnet50(num_classes=1)
         state_dict = torch.load(self.rgb_model_path, map_location='cuda')
@@ -139,7 +139,7 @@ class MHAFusionTrainer(BaseModel):
 
     def _load_wavelet_model(self, opt):
         """Load pre-trained Wavelet model (Wolter2022)"""
-        from Refactored.models.wolter2021.wavelet_cnn import WaveletPacketCNN128
+        from models.wolter2021.wavelet_cnn import WaveletPacketCNN128
 
         # Calculate input channels for wavelet model
         wavelet_level = getattr(opt, 'wavelet_level', 3)

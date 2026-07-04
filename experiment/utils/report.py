@@ -9,7 +9,7 @@ training.
 
 Usage::
 
-    from Refactored.experiment.utils import ReportGenerator
+    from experiment.utils import ReportGenerator
 
     report = ReportGenerator('experiments/wang2020_progan_20260703_120000')
     report.generate()

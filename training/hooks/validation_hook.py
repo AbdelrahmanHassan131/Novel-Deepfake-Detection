@@ -7,7 +7,7 @@ Events handled:
     - on_epoch_end: runs the Validator every ``val_epoch_freq`` epochs.
 """
 
-from Refactored.training.validator import Validator
+from training.validator import Validator
 
 
 class ValidationHook:

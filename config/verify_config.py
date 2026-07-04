@@ -22,7 +22,7 @@ Tests:
 
 Run::
 
-    python -m Refactored.config.verify_config
+    python -m config.verify_config
 """
 
 import os
@@ -63,7 +63,7 @@ def _assert(condition, message='Assertion failed'):
 
 def test_imports():
     """1. Verify all imports resolve without circular dependencies."""
-    from Refactored.config import (
+    from config import (
         Config,
         DataConfig, AugmentationConfig, WaveletConfig,
         ModelConfig, TrainingConfig, DistributedConfig,
@@ -83,7 +83,7 @@ def test_imports():
 
 def test_enum_types():
     """2. Verify enum conversions from legacy strings."""
-    from Refactored.config.types import (
+    from config.types import (
         WaveletBackend, OptimizerType, SchedulerType,
         ArchitectureType, DeviceType, InitType,
     )
@@ -127,7 +127,7 @@ def test_enum_types():
 
 def test_config_from_defaults():
     """3. Config.from_defaults() produces a valid config."""
-    from Refactored.config import Config
+    from config import Config
 
     config = Config.from_defaults()
     _assert(config is not None, 'Config is None')
@@ -140,7 +140,7 @@ def test_config_from_defaults():
 
 def test_config_from_opt():
     """4. Config.from_opt(mock_opt) correctly maps all attributes."""
-    from Refactored.config import Config
+    from config import Config
 
     opt = _create_mock_opt()
     config = Config.from_opt(opt)
@@ -188,7 +188,7 @@ def test_config_from_opt():
 
 def test_validator_catches_bad_config():
     """5. ConfigValidator catches known-bad configs."""
-    from Refactored.config import Config, ConfigValidator
+    from config import Config, ConfigValidator
 
     # Create config with bad values
     config = Config.from_defaults()
@@ -207,7 +207,7 @@ def test_validator_catches_bad_config():
 
 def test_validator_accepts_good_config():
     """6. ConfigValidator accepts known-good configs."""
-    from Refactored.config import Config, ConfigValidator
+    from config import Config, ConfigValidator
 
     config = Config.from_defaults()
     # Fix dataroot to avoid path warning
@@ -221,7 +221,7 @@ def test_validator_accepts_good_config():
 
 def test_default_values():
     """7. Default values match expected values."""
-    from Refactored.config.defaults import (
+    from config.defaults import (
         DATA_DEFAULTS, TRAINING_DEFAULTS, WAVELET_DEFAULTS,
         MODEL_DEFAULTS, LOGGING_DEFAULTS, RUNTIME_DEFAULTS,
     )
@@ -240,7 +240,7 @@ def test_default_values():
 
 def test_path_manager():
     """8. PathManager generates correct paths."""
-    from Refactored.config import Config, PathManager
+    from config import Config, PathManager
 
     config = Config.from_defaults()
     config.experiment.name = 'test_exp'
@@ -274,7 +274,7 @@ def test_path_manager():
 
 def test_round_trip():
     """9. config_to_opt() round-trip produces consistent values."""
-    from Refactored.config import Config, config_from_opt, config_to_opt
+    from config import Config, config_from_opt, config_to_opt
 
     opt = _create_mock_opt()
     config = config_from_opt(opt)
@@ -306,7 +306,7 @@ def test_round_trip():
 
 def test_nested_access():
     """10. Nested section access works correctly."""
-    from Refactored.config import Config
+    from config import Config
 
     config = Config.from_defaults()
 
@@ -331,7 +331,7 @@ def test_nested_access():
 
 def test_to_dict():
     """11. to_dict() serialization produces correct structure."""
-    from Refactored.config import Config
+    from config import Config
 
     config = Config.from_defaults()
     d = config.to_dict()
@@ -351,7 +351,7 @@ def test_to_dict():
 
 def test_to_flat_dict():
     """12. to_flat_dict() produces dotted keys."""
-    from Refactored.config import Config
+    from config import Config
 
     config = Config.from_defaults()
     flat = config.to_flat_dict()
@@ -367,7 +367,7 @@ def test_to_flat_dict():
 
 def test_freeze():
     """13. Freeze mechanism prevents mutation."""
-    from Refactored.config import Config
+    from config import Config
 
     config = Config.from_defaults()
 
@@ -397,7 +397,7 @@ def test_freeze():
 
 def test_compatibility_edge_cases():
     """14. Compatibility layer handles edge cases."""
-    from Refactored.config import config_from_opt
+    from config import config_from_opt
 
     # Test with minimal opt (missing many attributes)
     minimal_opt = argparse.Namespace()

@@ -6,7 +6,7 @@ side-by-side for easy comparison of loss, accuracy, F1, and AUC.
 
 Usage::
 
-    from Refactored.experiment.visualization import compare_runs
+    from experiment.visualization import compare_runs
 
     compare_runs([
         'experiments/wang2020_progan_20260703_120000',
@@ -16,7 +16,7 @@ Usage::
 
 import os
 
-from Refactored.experiment.utils.history_loader import HistoryLoader
+from experiment.utils.history_loader import HistoryLoader
 
 
 def compare_runs(experiment_dirs, save_path=None, show=False, labels=None):

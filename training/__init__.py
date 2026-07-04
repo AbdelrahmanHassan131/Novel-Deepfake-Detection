@@ -3,14 +3,14 @@ Refactored Training Engine.
 
 Public API::
 
-    from Refactored.training import Trainer
-    from Refactored.training import Validator, ValidationResult
-    from Refactored.training import CheckpointManager
-    from Refactored.training import build_optimizer, build_scheduler
+    from training import Trainer
+    from training import Validator, ValidationResult
+    from training import CheckpointManager
+    from training import build_optimizer, build_scheduler
 
     # Distributed runtime
-    from Refactored.training import DistributedRuntime
-    from Refactored.training import seed_everything
+    from training import DistributedRuntime
+    from training import seed_everything
 
 Usage::
 

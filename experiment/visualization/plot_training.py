@@ -9,14 +9,14 @@ Reads experiment history files and generates:
 
 Usage::
 
-    from Refactored.experiment.visualization import plot_training_curves
+    from experiment.visualization import plot_training_curves
 
     plot_training_curves('experiments/wang2020_progan_20260703_120000')
 """
 
 import os
 
-from Refactored.experiment.utils.history_loader import HistoryLoader
+from experiment.utils.history_loader import HistoryLoader
 
 
 def plot_training_curves(experiment_dir, save_dir=None, show=False):

@@ -4,26 +4,26 @@ Refactored Configuration System.
 Public API::
 
     # Core configuration
-    from Refactored.config import Config, load_config, load_config_from_defaults
+    from config import Config, load_config, load_config_from_defaults
 
     # Section classes
-    from Refactored.config import (
+    from config import (
         DataConfig, AugmentationConfig, WaveletConfig, ModelConfig,
         TrainingConfig, DistributedConfig, ExperimentConfig,
         LoggingConfig, RuntimeConfig,
     )
 
     # Compatibility layer
-    from Refactored.config import config_from_opt, config_to_opt
+    from config import config_from_opt, config_to_opt
 
     # Validation
-    from Refactored.config import ConfigValidator, ConfigurationError
+    from config import ConfigValidator, ConfigurationError
 
     # Path management
-    from Refactored.config import PathManager
+    from config import PathManager
 
     # Type definitions
-    from Refactored.config import (
+    from config import (
         WaveletBackend, OptimizerType, SchedulerType,
         ArchitectureType, DeviceType, InitType,
     )

@@ -11,7 +11,7 @@ Constructed from a ``Config`` instance, it derives all paths from
 
 Usage::
 
-    from Refactored.config import PathManager
+    from config import PathManager
 
     paths = PathManager(config)
 

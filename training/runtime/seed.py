@@ -15,7 +15,7 @@ of potential performance regression.
 
 Usage::
 
-    from Refactored.training.runtime import seed_everything
+    from training.runtime import seed_everything
 
     seed_everything(42, rank=0, deterministic=True)
 

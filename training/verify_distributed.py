@@ -77,7 +77,7 @@ class MockOpt:
 
 
 # ===== Helper: tiny model =====
-from Refactored.models.base.base_model import BaseModel
+from models.base.base_model import BaseModel
 
 
 class TinyModel(BaseModel):
@@ -145,22 +145,22 @@ print('1. Verifying imports ...')
 print('=' * 60)
 
 try:
-    from Refactored.training import (
+    from training import (
         Trainer, Validator, ValidationResult, CheckpointManager,
         build_optimizer, build_scheduler,
         DistributedRuntime, seed_everything,
     )
-    from Refactored.training.base_trainer import BaseTrainer
-    from Refactored.training.hooks import (
+    from training.base_trainer import BaseTrainer
+    from training.hooks import (
         CheckpointHook, ValidationHook, LoggerHook, SchedulerHook,
     )
-    from Refactored.training.runtime import (
+    from training.runtime import (
         DistributedRuntime, AmpMixin, seed_everything,
     )
-    from Refactored.training.runtime.distributed_runtime import DistributedRuntime
-    from Refactored.training.runtime.amp import AmpMixin
-    from Refactored.training.runtime.seed import seed_everything
-    from Refactored.models import build_model, BaseModel, init_weights
+    from training.runtime.distributed_runtime import DistributedRuntime
+    from training.runtime.amp import AmpMixin
+    from training.runtime.seed import seed_everything
+    from models import build_model, BaseModel, init_weights
     check('All imports', True)
 except Exception as e:
     check('All imports', False, str(e))
@@ -178,22 +178,22 @@ print('=' * 60)
 
 import importlib
 mods_to_check = [
-    'Refactored.training',
-    'Refactored.training.base_trainer',
-    'Refactored.training.trainer',
-    'Refactored.training.validator',
-    'Refactored.training.checkpoint_manager',
-    'Refactored.training.optimizer_factory',
-    'Refactored.training.scheduler_factory',
-    'Refactored.training.hooks',
-    'Refactored.training.hooks.checkpoint_hook',
-    'Refactored.training.hooks.validation_hook',
-    'Refactored.training.hooks.logger_hook',
-    'Refactored.training.hooks.scheduler_hook',
-    'Refactored.training.runtime',
-    'Refactored.training.runtime.distributed_runtime',
-    'Refactored.training.runtime.amp',
-    'Refactored.training.runtime.seed',
+    'training',
+    'training.base_trainer',
+    'training.trainer',
+    'training.validator',
+    'training.checkpoint_manager',
+    'training.optimizer_factory',
+    'training.scheduler_factory',
+    'training.hooks',
+    'training.hooks.checkpoint_hook',
+    'training.hooks.validation_hook',
+    'training.hooks.logger_hook',
+    'training.hooks.scheduler_hook',
+    'training.runtime',
+    'training.runtime.distributed_runtime',
+    'training.runtime.amp',
+    'training.runtime.seed',
 ]
 try:
     for mod_name in mods_to_check:
@@ -503,7 +503,7 @@ try:
 
     # Test amp_autocast returns _NullContext when disabled
     ctx = trainer_na.amp_autocast()
-    from Refactored.training.runtime.amp import _NullContext
+    from training.runtime.amp import _NullContext
     check('amp_autocast returns NullContext', isinstance(ctx, _NullContext))
 
     # Test AMP enabled (only if CUDA available)

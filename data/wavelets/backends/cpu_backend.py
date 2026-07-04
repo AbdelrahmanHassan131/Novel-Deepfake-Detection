@@ -3,7 +3,7 @@ CPUWaveletBackend — wavelet packet computation using PyWavelets (pywt).
 
 This is the original on-the-fly wavelet computation path.  It wraps the
 existing :func:`compute_wavelet_packet_coeffs` and
-:func:`log_scale_packets` from ``Refactored.data.wavelets.packet_transform``
+:func:`log_scale_packets` from ``data.wavelets.packet_transform``
 so that their behaviour is preserved exactly.
 
 Responsibility:

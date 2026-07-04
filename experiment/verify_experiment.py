@@ -29,7 +29,7 @@ print('=' * 60)
 print('1. Verifying imports ...')
 print('=' * 60)
 
-from Refactored.experiment import (
+from experiment import (
     ExperimentManager,
     Experiment,
     ExperimentLogger,
@@ -38,8 +38,8 @@ from Refactored.experiment import (
     HistoryLoader,
     ReportGenerator,
 )
-from Refactored.experiment.logger import JsonLogger, CsvLogger
-from Refactored.experiment.visualization import (
+from experiment.logger import JsonLogger, CsvLogger
+from experiment.visualization import (
     plot_training_curves,
     compare_runs,
     plot_confusion_matrix,
@@ -288,25 +288,25 @@ try:
 
     import importlib
     mods_to_check = [
-        'Refactored.experiment',
-        'Refactored.experiment.manager',
-        'Refactored.experiment.experiment',
-        'Refactored.experiment.logger',
-        'Refactored.experiment.logger.logger',
-        'Refactored.experiment.logger.json_logger',
-        'Refactored.experiment.logger.csv_logger',
-        'Refactored.experiment.metrics',
-        'Refactored.experiment.metrics.metrics',
-        'Refactored.experiment.metrics.accumulators',
-        'Refactored.experiment.visualization',
-        'Refactored.experiment.visualization.plot_training',
-        'Refactored.experiment.visualization.compare_runs',
-        'Refactored.experiment.visualization.confusion_matrix',
-        'Refactored.experiment.visualization.roc_curve',
-        'Refactored.experiment.visualization.precision_recall',
-        'Refactored.experiment.utils',
-        'Refactored.experiment.utils.history_loader',
-        'Refactored.experiment.utils.report',
+        'experiment',
+        'experiment.manager',
+        'experiment.experiment',
+        'experiment.logger',
+        'experiment.logger.logger',
+        'experiment.logger.json_logger',
+        'experiment.logger.csv_logger',
+        'experiment.metrics',
+        'experiment.metrics.metrics',
+        'experiment.metrics.accumulators',
+        'experiment.visualization',
+        'experiment.visualization.plot_training',
+        'experiment.visualization.compare_runs',
+        'experiment.visualization.confusion_matrix',
+        'experiment.visualization.roc_curve',
+        'experiment.visualization.precision_recall',
+        'experiment.utils',
+        'experiment.utils.history_loader',
+        'experiment.utils.report',
     ]
     for mod_name in mods_to_check:
         importlib.import_module(mod_name)

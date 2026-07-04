@@ -11,14 +11,14 @@ This is the recommended way for all Refactored modules to obtain a
 
 Usage::
 
-    from Refactored.config import load_config
+    from config import load_config
 
     config = load_config(opt)
     # config is validated and frozen
 """
 
-from Refactored.config.configuration import Config
-from Refactored.config.validator import ConfigValidator
+from config.configuration import Config
+from config.validator import ConfigValidator
 
 
 def load_config(opt, validate=True, freeze=True):

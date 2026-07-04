@@ -2,8 +2,8 @@
 Logger subpackage.
 
 Public API:
-    from Refactored.experiment.logger import ExperimentLogger
-    from Refactored.experiment.logger import JsonLogger, CsvLogger
+    from experiment.logger import ExperimentLogger
+    from experiment.logger import JsonLogger, CsvLogger
 """
 
 from .logger import ExperimentLogger

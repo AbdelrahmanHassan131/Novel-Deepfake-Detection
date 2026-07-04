@@ -24,15 +24,15 @@ print('=' * 60)
 print('1. Verifying imports ...')
 print('=' * 60)
 
-from Refactored.training import (
+from training import (
     Trainer, Validator, ValidationResult, CheckpointManager,
     build_optimizer, build_scheduler,
 )
-from Refactored.training.base_trainer import BaseTrainer
-from Refactored.training.hooks import (
+from training.base_trainer import BaseTrainer
+from training.hooks import (
     CheckpointHook, ValidationHook, LoggerHook, SchedulerHook,
 )
-from Refactored.models import build_model, BaseModel, init_weights
+from models import build_model, BaseModel, init_weights
 print('  All imports OK.\n')
 
 
@@ -199,7 +199,7 @@ try:
     print('  No global state in BaseTrainer: OK')
 
     # b. runtime is accepted and rank is propagated
-    from Refactored.training.runtime import DistributedRuntime
+    from training.runtime import DistributedRuntime
     opt_r1 = MockOpt(checkpoints_dir=tmp_dir)
     runtime_r1 = DistributedRuntime(opt_r1)
     # Manually set rank for testing (in real usage, torchrun sets env vars)
@@ -253,18 +253,18 @@ try:
     # Double-check by reimporting in isolation.
     import importlib
     mods_to_check = [
-        'Refactored.training',
-        'Refactored.training.base_trainer',
-        'Refactored.training.trainer',
-        'Refactored.training.validator',
-        'Refactored.training.checkpoint_manager',
-        'Refactored.training.optimizer_factory',
-        'Refactored.training.scheduler_factory',
-        'Refactored.training.hooks',
-        'Refactored.training.hooks.checkpoint_hook',
-        'Refactored.training.hooks.validation_hook',
-        'Refactored.training.hooks.logger_hook',
-        'Refactored.training.hooks.scheduler_hook',
+        'training',
+        'training.base_trainer',
+        'training.trainer',
+        'training.validator',
+        'training.checkpoint_manager',
+        'training.optimizer_factory',
+        'training.scheduler_factory',
+        'training.hooks',
+        'training.hooks.checkpoint_hook',
+        'training.hooks.validation_hook',
+        'training.hooks.logger_hook',
+        'training.hooks.scheduler_hook',
     ]
     for mod_name in mods_to_check:
         importlib.import_module(mod_name)

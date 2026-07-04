@@ -5,7 +5,7 @@ Maps model names to their trainer classes.
 Provides build_model(opt) to construct models without if/else chains.
 
 Usage:
-    from Refactored.models import build_model
+    from models import build_model
 
     opt.arch = 'Wang2020_128'
     model = build_model(opt)
@@ -52,13 +52,13 @@ def _ensure_registered():
     if _REGISTRY:
         return
 
-    from Refactored.models.wang2020.trainer import Wang2020RawTrainer
-    from Refactored.models.wang2020_128.trainer import Wang2020_128Trainer
-    from Refactored.models.wolter2021.trainer_raw import WolterWaveletRawTrainer
-    from Refactored.models.wolter2021.trainer_128 import WolterWavelet128Trainer
-    from Refactored.models.fusion.trainer import ConcatenationFusionTrainer
-    from Refactored.models.mha.trainer import MHAFusionTrainer
-    from Refactored.models.xception.trainer import XceptionRawTrainer
+    from models.wang2020.trainer import Wang2020RawTrainer
+    from models.wang2020_128.trainer import Wang2020_128Trainer
+    from models.wolter2021.trainer_raw import WolterWaveletRawTrainer
+    from models.wolter2021.trainer_128 import WolterWavelet128Trainer
+    from models.fusion.trainer import ConcatenationFusionTrainer
+    from models.mha.trainer import MHAFusionTrainer
+    from models.xception.trainer import XceptionRawTrainer
 
     register_model('Wang2020Raw', Wang2020RawTrainer)
     register_model('Wang2020_128', Wang2020_128Trainer)

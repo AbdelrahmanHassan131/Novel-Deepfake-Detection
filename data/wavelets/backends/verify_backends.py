@@ -14,7 +14,7 @@ Checks:
 
 Usage::
 
-    python -m Refactored.data.wavelets.backends.verify_backends
+    python -m data.wavelets.backends.verify_backends
 
 Does NOT create benchmarks, profiling scripts, or visualisation tools.
 """
@@ -52,7 +52,7 @@ def check_imports():
     """1. Verify all backend classes are importable."""
     _header('1. Import checks')
     try:
-        from Refactored.data.wavelets.backends import (
+        from data.wavelets.backends import (
             WaveletBackend,
             CPUWaveletBackend,
             GPUWaveletBackend,
@@ -65,7 +65,7 @@ def check_imports():
         return False
 
     try:
-        from Refactored.data.wavelets import (
+        from data.wavelets import (
             WaveletBackend as WB2,
             create_wavelet_backend as cwb2,
         )
@@ -82,11 +82,11 @@ def check_no_circular():
     _header('2. Circular dependency check')
     try:
         # Re-import from different paths to trigger any cycles
-        from Refactored.data.wavelets.backends.base import WaveletBackend
-        from Refactored.data.wavelets.backends.cpu_backend import CPUWaveletBackend
-        from Refactored.data.wavelets.backends.gpu_backend import GPUWaveletBackend
-        from Refactored.data.wavelets.backends.precomputed_backend import PrecomputedWaveletBackend
-        from Refactored.data.wavelets.backends.factory import create_wavelet_backend
+        from data.wavelets.backends.base import WaveletBackend
+        from data.wavelets.backends.cpu_backend import CPUWaveletBackend
+        from data.wavelets.backends.gpu_backend import GPUWaveletBackend
+        from data.wavelets.backends.precomputed_backend import PrecomputedWaveletBackend
+        from data.wavelets.backends.factory import create_wavelet_backend
         _pass('No circular dependencies detected.')
         return True
     except Exception as e:
@@ -98,7 +98,7 @@ def check_cpu_backend():
     """3. CPU backend produces correct shapes."""
     _header('3. CPU backend')
     try:
-        from Refactored.data.wavelets.backends import CPUWaveletBackend
+        from data.wavelets.backends import CPUWaveletBackend
 
         backend = CPUWaveletBackend(wavelet='haar', level=3, mode='reflect',
                                     log_scale=True)
@@ -133,7 +133,7 @@ def check_gpu_backend():
         return True, None
 
     try:
-        from Refactored.data.wavelets.backends import GPUWaveletBackend
+        from data.wavelets.backends import GPUWaveletBackend
 
         device = torch.device('cuda:0')
         backend = GPUWaveletBackend(
@@ -172,7 +172,7 @@ def check_precomputed_backend():
     """5. Precomputed backend loads .npy correctly."""
     _header('5. Precomputed backend')
     try:
-        from Refactored.data.wavelets.backends import PrecomputedWaveletBackend
+        from data.wavelets.backends import PrecomputedWaveletBackend
 
         backend = PrecomputedWaveletBackend()
         assert backend.name == 'precomputed'
@@ -205,7 +205,7 @@ def check_factory():
     """6. Factory creates correct backends from opt."""
     _header('6. Factory (create_wavelet_backend)')
     try:
-        from Refactored.data.wavelets.backends import create_wavelet_backend
+        from data.wavelets.backends import create_wavelet_backend
 
         class MockOpt:
             wavelet_type = 'haar'
@@ -260,7 +260,7 @@ def check_shape_consistency():
         return True
 
     try:
-        from Refactored.data.wavelets.backends import (
+        from data.wavelets.backends import (
             CPUWaveletBackend, GPUWaveletBackend,
         )
 
@@ -300,7 +300,7 @@ def check_ddp_device_resolution():
         return True
 
     try:
-        from Refactored.data.wavelets.backends.factory import _resolve_device
+        from data.wavelets.backends.factory import _resolve_device
 
         class MockOpt:
             gpu_ids = [0]

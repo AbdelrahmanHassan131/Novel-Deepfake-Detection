@@ -23,7 +23,7 @@ flat namespace and the new structured sections::
 
 Usage::
 
-    from Refactored.config.compatibility import config_from_opt, config_to_opt
+    from config.compatibility import config_from_opt, config_to_opt
 
     config = config_from_opt(opt)
     opt_compat = config_to_opt(config)
@@ -31,7 +31,7 @@ Usage::
 
 import argparse
 
-from Refactored.config.configuration import (
+from config.configuration import (
     Config,
     DataConfig,
     AugmentationConfig,

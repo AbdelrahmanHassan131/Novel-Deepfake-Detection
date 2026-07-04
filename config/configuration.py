@@ -30,7 +30,7 @@ Serialization:
 
 Usage::
 
-    from Refactored.config import Config, load_config
+    from config import Config, load_config
 
     # From legacy opt object
     config = Config.from_opt(opt)
@@ -43,7 +43,7 @@ Usage::
     crop = config.data.crop_size
 """
 
-from Refactored.config.defaults import (
+from config.defaults import (
     DATA_DEFAULTS,
     AUGMENTATION_DEFAULTS,
     WAVELET_DEFAULTS,
@@ -466,7 +466,7 @@ class Config(_FrozenMixin):
     def from_opt(cls, opt):
         """Create a Config from a legacy ``opt`` namespace.
 
-        Delegates to :func:`Refactored.config.compatibility.config_from_opt`.
+        Delegates to :func:`config.compatibility.config_from_opt`.
 
         Args:
             opt: An ``argparse.Namespace`` (or similar) from the
@@ -475,7 +475,7 @@ class Config(_FrozenMixin):
         Returns:
             A fully populated ``Config`` instance.
         """
-        from Refactored.config.compatibility import config_from_opt
+        from config.compatibility import config_from_opt
         return config_from_opt(opt)
 
     @classmethod

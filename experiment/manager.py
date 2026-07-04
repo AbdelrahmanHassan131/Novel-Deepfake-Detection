@@ -9,7 +9,7 @@ Responsible for:
 
 Usage::
 
-    from Refactored.experiment import ExperimentManager
+    from experiment import ExperimentManager
 
     manager = ExperimentManager(base_dir='experiments')
     experiment = manager.create('wang2020_progan', opt)

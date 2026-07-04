@@ -2,9 +2,9 @@
 Refactored Models Package.
 
 Public API:
-    from Refactored.models import build_model
-    from Refactored.models import BaseModel, init_weights
-    from Refactored.models import register_model, get_registered_models
+    from models import build_model
+    from models import BaseModel, init_weights
+    from models import register_model, get_registered_models
 
 Usage:
     opt.arch = 'Wang2020_128'

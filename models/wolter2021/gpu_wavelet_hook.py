@@ -12,7 +12,7 @@ IMPORTANT:
     - No behavioral changes.
 
 Future usage example:
-    from Refactored.models.wolter2021.gpu_wavelet_hook import get_wavelet_transform
+    from models.wolter2021.gpu_wavelet_hook import get_wavelet_transform
     wavelet_fn = get_wavelet_transform(backend='cpu')  # current behavior
     # wavelet_fn = get_wavelet_transform(backend='gpu')  # future GPU path
 """

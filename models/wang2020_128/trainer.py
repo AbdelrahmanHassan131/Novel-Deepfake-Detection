@@ -9,8 +9,8 @@ Preserved exactly from MyModels/networks/wang2020_128/Trainer_Wang2020_128.py.
 import functools
 import torch
 import torch.nn as nn
-from Refactored.models.shared.resnet import resnet50
-from Refactored.models.base.base_model import BaseModel, init_weights
+from models.shared.resnet import resnet50
+from models.base.base_model import BaseModel, init_weights
 
 
 class Wang2020_128Trainer(BaseModel):

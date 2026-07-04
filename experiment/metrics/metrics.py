@@ -12,7 +12,7 @@ No state is stored — every call is independent and side-effect-free.
 
 Usage::
 
-    from Refactored.experiment.metrics import MetricsCalculator
+    from experiment.metrics import MetricsCalculator
 
     calc = MetricsCalculator()
     result = calc.compute(predictions, labels)

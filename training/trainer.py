@@ -6,8 +6,8 @@ existing ``opt`` object.  This is the *only* class most callers need.
 
 Usage::
 
-    from Refactored.models import build_model
-    from Refactored.training import Trainer
+    from models import build_model
+    from training import Trainer
 
     model = build_model(opt)
     trainer = Trainer(model, train_loader, opt, val_loader=val_loader)
@@ -46,12 +46,12 @@ Public API:
     No code changes required between modes.
 """
 
-from Refactored.training.base_trainer import BaseTrainer
-from Refactored.training.scheduler_factory import build_scheduler
-from Refactored.training.hooks.logger_hook import LoggerHook
-from Refactored.training.hooks.scheduler_hook import SchedulerHook
-from Refactored.training.hooks.validation_hook import ValidationHook
-from Refactored.training.hooks.checkpoint_hook import CheckpointHook
+from training.base_trainer import BaseTrainer
+from training.scheduler_factory import build_scheduler
+from training.hooks.logger_hook import LoggerHook
+from training.hooks.scheduler_hook import SchedulerHook
+from training.hooks.validation_hook import ValidationHook
+from training.hooks.checkpoint_hook import CheckpointHook
 
 
 class Trainer(BaseTrainer):
