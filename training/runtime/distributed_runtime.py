@@ -112,7 +112,7 @@ class DistributedRuntime:
         """
         backend = getattr(opt, 'dist_backend', None)
         if backend is None:
-            backend = 'nccl' if torch.cuda.is_available() else 'gloo'
+            backend = 'nccl' if (torch.cuda.is_available() and os.name != 'nt') else 'gloo'
 
         init_url = getattr(opt, 'dist_url', 'env://')
 
