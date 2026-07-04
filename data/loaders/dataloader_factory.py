@@ -9,16 +9,26 @@ def create_dataloader(opt):
     dataset = get_dataset(opt)
     sampler = get_bal_sampler(dataset) if opt.class_bal else None
 
-    # GPU wavelet backend returns CUDA tensors — pin_memory must be off
-    use_pin = getattr(opt, 'wavelet_backend', 'cpu') != 'gpu'
+    backend = getattr(opt, 'wavelet_backend', 'cpu')
+    if backend == 'gpu':
+        # GPU backend returns CUDA tensors — can't use pin_memory or
+        # multi-process workers (CUDA can't be used in forked workers)
+        num_workers = 0
+        use_pin = False
+    else:
+        num_workers = getattr(opt, 'num_workers',
+                              getattr(opt, 'num_threads', 4))
+        use_pin = True
 
     data_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
         shuffle=shuffle,
         sampler=sampler,
-        num_workers=0,  # Set to 0 to avoid pickle errors on Windows
-        pin_memory=use_pin
+        num_workers=num_workers,
+        pin_memory=use_pin,
+        persistent_workers=(num_workers > 0),
+        prefetch_factor=2 if num_workers > 0 else None,
     )
     return data_loader
 
@@ -33,12 +43,18 @@ def create_mha_dataloader(opt):
     dataset = get_mha_dataset(opt)
     sampler = get_bal_sampler(dataset) if opt.class_bal else None
 
+    num_workers = getattr(opt, 'num_workers',
+                          getattr(opt, 'num_threads', 4))
+
     data_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=opt.batch_size,
         shuffle=shuffle,
         sampler=sampler,
-        num_workers=int(opt.num_threads),
-        pin_memory=True
+        num_workers=num_workers,
+        pin_memory=True,
+        persistent_workers=(num_workers > 0),
+        prefetch_factor=2 if num_workers > 0 else None,
     )
     return data_loader
+
