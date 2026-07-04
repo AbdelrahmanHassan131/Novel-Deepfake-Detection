@@ -1,0 +1,78 @@
+# Experiment Options
+# Created: 2026-07-04T15:35:30.730221
+
+arch: Wang2020Raw
+batch_size: 32
+beta1: 0.9
+blur_prob: 0.0
+blur_sig: [0.5]
+checkpoints_dir: ./experiments
+class_bal: False
+classes: ['fake', 'real']
+compute_wavelets: False
+continue_train: False
+cropSize: 224
+data_aug: False
+dataroot: G:\Master's Of Science Computer Engineering\thesis deepfake detection\fourth task\ThesisModel\CNNDetection\dataset\train
+deterministic: False
+dist_backend: None
+dist_url: env://
+dropout: 0.1
+earlystop_epoch: 5
+embed_dim: 128
+epoch: latest
+epoch_count: 1
+find_unused_parameters: False
+freeze_base_models: True
+fusion_type: cross_attention
+gpu_ids: [0]
+init_gain: 0.02
+init_type: normal
+isTrain: True
+jpg_method: ['cv2']
+jpg_prob: 0.0
+jpg_qual: [75]
+last_epoch: -1
+loadSize: 256
+log_freq: 50
+loss_freq: 400
+lr: 0.0001
+lr_decay_iters: 10
+lr_gamma: 0.1
+lr_patience: 5
+lr_policy: none
+mode: binary
+momentum: 0.0
+name: wang2020_baseline
+new_optim: False
+niter: 2
+niter_decay: 0
+no_crop: False
+no_flip: False
+no_resize: False
+num_classes: 1
+num_heads: 4
+num_threads: 0
+num_workers: 0
+optim: adam
+pin_memory: True
+precomputed_dir: None
+pretrained: True
+resize_or_crop: scale_and_crop
+rz_interp: ['bilinear']
+save_epoch_freq: 1
+save_latest_freq: 2000
+seed: None
+serial_batches: False
+suffix: 
+train_split: train
+use_amp: True
+use_log_packets: True
+val_epoch_freq: 1
+val_root: G:\Master's Of Science Computer Engineering\thesis deepfake detection\fourth task\ThesisModel\CNNDetection\dataset\val
+val_split: val
+wavelet_backend: cpu
+wavelet_level: 3
+wavelet_mode: reflect
+wavelet_type: haar
+weight_decay: 0.0

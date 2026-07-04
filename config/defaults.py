@@ -32,7 +32,7 @@ DATA_DEFAULTS = {
     'mode': 'binary',
     'classes': '',
     'resize_or_crop': 'scale_and_crop',
-    'compute_wavelets': True,
+    'compute_wavelets': False,
     'train_split': 'train',
     'val_split': 'val',
 }

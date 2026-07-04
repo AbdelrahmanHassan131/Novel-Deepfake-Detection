@@ -32,7 +32,7 @@ def has_subfolders(directory):
 def dataset_folder(opt, root):
     if opt.mode == 'binary':
         # Route to the appropriate dataset class based on configuration
-        if getattr(opt, 'compute_wavelets', True):
+        if getattr(opt, 'compute_wavelets', False):
             return WaveletDataset(opt, root)
         else:
             return RGBDataset(opt, root)

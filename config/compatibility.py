@@ -259,6 +259,7 @@ def config_to_opt(config):
 
     # --- Data ---
     opt.dataroot = config.data.dataroot
+    opt.val_root = config.data.val_root
     opt.cropSize = config.data.crop_size
     opt.loadSize = config.data.image_size
     opt.batch_size = config.data.batch_size
