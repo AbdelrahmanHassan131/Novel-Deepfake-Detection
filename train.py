@@ -146,21 +146,25 @@ def parse_args():
 
 
 def main():
-    print("=" * 70)
-    print("        NOVEL DEEPFAKE DETECTION — TRAINING ENGINE")
-    print("=" * 70)
+    is_main = int(os.environ.get('RANK', 0)) == 0
+    if is_main:
+        print("=" * 70)
+        print("        NOVEL DEEPFAKE DETECTION — TRAINING ENGINE")
+        print("=" * 70)
 
     # 1. Parse command line arguments
     opt = parse_args()
-    print(f"Architecture : {opt.arch}")
-    print(f"Dataset Root : {opt.dataroot}")
-    print(f"Classes      : {opt.classes}")
-    print(f"GPUs         : {opt.gpu_ids if opt.gpu_ids else 'CPU'}")
-    print(f"Batch Size   : {opt.batch_size}")
-    print(f"Learning Rate: {opt.lr}")
+    if is_main:
+        print(f"Architecture : {opt.arch}")
+        print(f"Dataset Root : {opt.dataroot}")
+        print(f"Classes      : {opt.classes}")
+        print(f"GPUs         : {opt.gpu_ids if opt.gpu_ids else 'CPU'}")
+        print(f"Batch Size   : {opt.batch_size}")
+        print(f"Learning Rate: {opt.lr}")
 
     # 2. Convert to structured Config & validate
-    print("\n[1/5] Validating configuration...")
+    if is_main:
+        print("\n[1/5] Validating configuration...")
     try:
         config = load_config(opt, validate=True, freeze=True)
         opt_clean = config_to_opt(config)
@@ -168,60 +172,77 @@ def main():
         if isinstance(opt_clean.classes, str):
             opt_clean.classes = [c.strip() for c in opt_clean.classes.split(',') if c.strip()]
     except Exception as e:
-        print(f"\nConfiguration validation failed:\n{e}")
+        if is_main:
+            print(f"\nConfiguration validation failed:\n{e}")
         sys.exit(1)
 
+    # Instantiate runtime early so process group is ready and we know is_main
+    from training.runtime import DistributedRuntime
+    runtime = DistributedRuntime(opt_clean)
+
     # 3. Setup Experiment Manager
-    print("[2/5] Setting up experiment environment...")
+    if runtime.is_main:
+        print("[2/5] Setting up experiment environment...")
     manager = ExperimentManager(base_dir=opt_clean.checkpoints_dir)
     experiment = manager.create(opt_clean.name, opt_clean)
-    print(f"  -> Experiment directory: {experiment.root_dir}")
-    print(f"  -> Checkpoint directory: {experiment.checkpoint_dir}")
-    print(f"  -> Metrics CSV log     : {experiment.metrics_csv_path}")
+    if runtime.is_main:
+        print(f"  -> Experiment directory: {experiment.root_dir}")
+        print(f"  -> Checkpoint directory: {experiment.checkpoint_dir}")
+        print(f"  -> Metrics CSV log     : {experiment.metrics_csv_path}")
 
     from experiment.logger import ExperimentLogger
-    experiment_logger = ExperimentLogger(experiment)
+    experiment_logger = ExperimentLogger(experiment) if runtime.is_main else None
 
     # Point trainer checkpoint save directory to the experiment directory
     opt_clean.checkpoints_dir = experiment.checkpoint_dir
     opt_clean.name = ""  # Let CheckpointManager use the directory directly without appending extra subfolders
 
     # 4. Build DataLoaders
-    print("[3/5] Building dataloaders...")
+    if runtime.is_main:
+        print("[3/5] Building dataloaders...")
     if opt_clean.arch == 'MHA_128':
         train_loader = create_mha_dataloader(opt_clean)
     else:
         train_loader = create_dataloader(opt_clean)
-    print(f"  -> Training dataset size: {len(train_loader.dataset)} samples")
+    if runtime.is_main:
+        print(f"  -> Training dataset size: {len(train_loader.dataset)} samples")
 
     val_loader = None
     val_root = getattr(opt_clean, 'val_root', None)
     if val_root and os.path.exists(val_root):
-        print("  -> Building validation dataloader...")
+        if runtime.is_main:
+            print("  -> Building validation dataloader...")
         val_opt = argparse.Namespace(**vars(opt_clean))
         val_opt.dataroot = val_root
         val_opt.isTrain = False
         val_opt.serial_batches = True
         val_loader = create_dataloader(val_opt)
-        print(f"  -> Validation dataset size: {len(val_loader.dataset)} samples")
+        if runtime.is_main:
+            print(f"  -> Validation dataset size: {len(val_loader.dataset)} samples")
 
     # 5. Build Model & Trainer
-    print(f"[4/5] Constructing model ({opt_clean.arch})...")
+    if runtime.is_main:
+        print(f"[4/5] Constructing model ({opt_clean.arch})...")
     model = build_model(opt_clean)
 
-    print("[5/5] Initializing Trainer...")
-    trainer = Trainer(model, train_loader, opt_clean, val_loader=val_loader, experiment_logger=experiment_logger)
+    if runtime.is_main:
+        print("[5/5] Initializing Trainer...")
+    trainer = Trainer(model, train_loader, opt_clean, val_loader=val_loader, runtime=runtime, experiment_logger=experiment_logger)
 
-    print("\n" + "=" * 70)
-    print("STARTING TRAINING LOOP")
-    print("=" * 70)
+    if runtime.is_main:
+        print("\n" + "=" * 70)
+        print("STARTING TRAINING LOOP")
+        print("=" * 70)
     try:
         trainer.fit(num_epochs=opt_clean.niter)
-        print("\n[SUCCESS] Training completed successfully!")
+        if runtime.is_main:
+            print("\n[SUCCESS] Training completed successfully!")
     except KeyboardInterrupt:
-        print("\n[INFO] Training interrupted by user.")
+        if runtime.is_main:
+            print("\n[INFO] Training interrupted by user.")
     except Exception as e:
-        print(f"\n[ERROR] Training failed with error: {e}")
+        if runtime.is_main:
+            print(f"\n[ERROR] Training failed with error: {e}")
         raise
 
 

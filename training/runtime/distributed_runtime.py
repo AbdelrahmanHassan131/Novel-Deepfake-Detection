@@ -81,6 +81,7 @@ class DistributedRuntime:
         self.local_rank = int(os.environ.get('LOCAL_RANK', 0))
         self.world_size = int(os.environ.get('WORLD_SIZE', 1))
         self.is_distributed = self.world_size > 1
+        self.is_main = (self.rank == 0)
 
         # --- initialize process group ---
         if self.is_distributed:
@@ -88,9 +89,6 @@ class DistributedRuntime:
 
         # --- device assignment ---
         self.device = self._resolve_device(opt)
-
-        # --- convenience flags ---
-        self.is_main = (self.rank == 0)
 
     # ------------------------------------------------------------------
     # Distributed initialization

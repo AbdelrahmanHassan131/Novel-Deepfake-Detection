@@ -70,14 +70,25 @@ class ExperimentManager:
             An :class:`Experiment` instance with all paths set.
         """
         experiment_id = self._generate_id()
+        try:
+            import torch.distributed as dist
+            if dist.is_initialized():
+                obj_list = [experiment_id]
+                dist.broadcast_object_list(obj_list, src=0)
+                experiment_id = obj_list[0]
+                rank = dist.get_rank()
+            else:
+                rank = 0
+        except Exception:
+            rank = 0
+
         dir_name = f'{experiment_name}_{experiment_id}'
         experiment_dir = os.path.join(self.base_dir, dir_name)
 
-        # Create directory structure
-        self._create_structure(experiment_dir)
-
-        # Save options
-        self._save_opt(experiment_dir, opt)
+        if rank == 0:
+            # Create directory structure and save options only on rank 0
+            self._create_structure(experiment_dir)
+            self._save_opt(experiment_dir, opt)
 
         return Experiment(
             name=experiment_name,
