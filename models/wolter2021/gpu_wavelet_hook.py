@@ -70,22 +70,27 @@ class CPUWaveletTransform(WaveletTransformBase):
 
 class GPUWaveletTransform(WaveletTransformBase):
     """
-    Placeholder for future GPU-based wavelet transform.
-
-    When pytorch_wavelets or equivalent is ready for integration:
-        1. Implement this class
-        2. Use pytorch_wavelets.DWTForward for GPU computation
-        3. Ensure output shape matches CPUWaveletTransform
-
-    Currently raises NotImplementedError.
+    GPU-based wavelet transform using pytorch_wavelets via GPUWaveletBackend.
     """
 
+    def __init__(self, device=None):
+        self._device = device
+        self._backend = None
+        self._last_params = None
+
     def __call__(self, img, wavelet='haar', level=3, mode='reflect'):
-        raise NotImplementedError(
-            "GPU wavelet transform is not yet implemented. "
-            "This is a placeholder for future integration with "
-            "pytorch_wavelets.DWTForward or equivalent."
-        )
+        device = self._device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        params = (wavelet, level, mode, device)
+        if self._backend is None or self._last_params != params:
+            from data.wavelets.backends.gpu_backend import GPUWaveletBackend
+            self._backend = GPUWaveletBackend(wavelet=wavelet, level=level, mode=mode, device=device)
+            self._last_params = params
+
+        if not isinstance(img, torch.Tensor):
+            import torchvision.transforms.functional as TF
+            img = TF.to_tensor(img)
+
+        return self._backend(img)
 
     @property
     def backend(self):
