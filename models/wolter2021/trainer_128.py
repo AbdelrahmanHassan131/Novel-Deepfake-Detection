@@ -34,6 +34,8 @@ class WolterWavelet128Trainer(BaseModel):
         self.wavelet_level = getattr(opt, 'wavelet_level', 3)
         self.wavelet_mode = getattr(opt, 'wavelet_mode', 'reflect')
         self.use_log_packets = getattr(opt, 'use_log_packets', True)
+        self._wavelet_backend_name = getattr(opt, 'wavelet_backend', 'cpu')
+        self._gpu_wavelet = None  # lazy-init
 
         # Calculate number of input channels
         # At level 3: 4^3 = 64 packets per channel
@@ -85,6 +87,19 @@ class WolterWavelet128Trainer(BaseModel):
 
         self.model.to(opt.gpu_ids[0])
 
+    def _get_gpu_wavelet_backend(self):
+        """Lazy-init the GPU wavelet backend on first use."""
+        if self._gpu_wavelet is None:
+            from data.wavelets.backends.gpu_backend import GPUWaveletBackend
+            self._gpu_wavelet = GPUWaveletBackend(
+                wavelet=self.wavelet_type,
+                level=self.wavelet_level,
+                mode=self.wavelet_mode,
+                log_scale=self.use_log_packets,
+                device=self.device,
+            )
+        return self._gpu_wavelet
+
     def adjust_learning_rate(self, min_lr=1e-6):
         """Reduce learning rate by a factor of 10"""
         for param_group in self.optimizer.param_groups:
@@ -96,41 +111,30 @@ class WolterWavelet128Trainer(BaseModel):
     def __call__(self, input_tensor):
         """
         Make trainer callable for validation.
-
-        Args:
-            input_tensor: 
-                - If from dataloader with compute_wavelets=True: wavelet packets (B, 192, H, W)
-                - If RGB images: (B, 3, H, W) - will compute wavelets
-        Returns:
-            output logits (B, 1)
         """
-        # Check if input is already wavelet packets (192 channels) or RGB (3 channels)
         if input_tensor.shape[1] == 192:  # Already wavelet packets from dataloader
-            # OPTIMIZED PATH: Direct forward pass, no preprocessing needed!
             output = self.model(input_tensor.to(self.device))
             return output
 
-        # Fallback: Input is RGB, compute wavelets (for backward compatibility)
-        batch_packets = []
-        for img in input_tensor:
-            # Compute wavelet packet coefficients
-            packets = compute_wavelet_packet_coeffs(
-                img,
-                wavelet=self.wavelet_type,
-                level=self.wavelet_level,
-                mode=self.wavelet_mode
-            )
+        # Fallback: Input is RGB, compute wavelets
+        if self._wavelet_backend_name == 'gpu':
+            backend = self._get_gpu_wavelet_backend()
+            wavelet_input = backend(input_tensor.to(self.device))
+        else:
+            batch_packets = []
+            for img in input_tensor:
+                packets = compute_wavelet_packet_coeffs(
+                    img,
+                    wavelet=self.wavelet_type,
+                    level=self.wavelet_level,
+                    mode=self.wavelet_mode
+                )
+                if self.use_log_packets:
+                    packets = log_scale_packets(packets)
+                batch_packets.append(packets)
+            wavelet_input = torch.stack(batch_packets).to(self.device)
 
-            # Apply log-scaling if specified
-            if self.use_log_packets:
-                packets = log_scale_packets(packets)
-
-            batch_packets.append(packets)
-
-        # Stack into batch and run through model
-        wavelet_input = torch.stack(batch_packets).to(self.device)
         output = self.model(wavelet_input)
-
         return output
 
     def train(self):
@@ -143,21 +147,23 @@ class WolterWavelet128Trainer(BaseModel):
 
     def set_input(self, input):
         """
-        Process input from dataloader.
+        Process input from dataloader: (tensor, labels).
 
-        OPTIMIZED: Input is already wavelet packets from dataloader!
-        No wavelet computation needed here - just transfer to GPU.
-
-        Args:
-            input: tuple of (wavelet_packets, labels)
-                wavelet_packets: torch tensor (B, 192, H, W) - already computed in dataloader
-                labels: torch tensor (B,)
+        If tensor has 3 channels (RGB), computes wavelet packets on GPU
+        for the entire batch. If 192 channels, uses them directly.
         """
-        wavelet_packets, labels = input[0], input[1]
-
-        # OPTIMIZED: Just transfer to GPU - wavelets already computed!
-        self.input = wavelet_packets.to(self.device)
+        data, labels = input[0], input[1]
+        data = data.to(self.device)
         self.label = labels.to(self.device).float()
+
+        if data.shape[1] == 3:
+            # RGB input — compute wavelets on GPU in batch
+            backend = self._get_gpu_wavelet_backend()
+            with torch.no_grad():
+                self.input = backend(data)
+        else:
+            # Already wavelet packets (192 channels)
+            self.input = data
 
     def forward(self):
         """Forward pass through the model"""
