@@ -116,6 +116,24 @@ def parse_args():
     parser.add_argument('--deterministic', action='store_true', default=False,
                         help="Enable deterministic mode for reproducibility")
 
+    # MHA / Fusion parameters
+    parser.add_argument('--rgb_model_path', type=str, default=None,
+                        help="Path to pre-trained RGB checkpoint for fusion models")
+    parser.add_argument('--wavelet_model_path', type=str, default=None,
+                        help="Path to pre-trained Wavelet checkpoint for fusion models")
+    parser.add_argument('--embed_dim', type=int, default=128,
+                        help="Embedding dimension for fusion models")
+    parser.add_argument('--num_heads', type=int, default=4,
+                        help="Number of attention heads for MHA fusion")
+    parser.add_argument('--dropout', type=float, default=0.1,
+                        help="Dropout rate for fusion models")
+    parser.add_argument('--fusion_type', type=str, default='cross_attention', choices=['cross_attention', 'self_attention', 'concat'],
+                        help="Fusion strategy for MHA model")
+    parser.add_argument('--freeze_base_models', action='store_true', default=True,
+                        help="Freeze pre-trained base models during fusion training")
+    parser.add_argument('--no_freeze_base_models', dest='freeze_base_models', action='store_false',
+                        help="Do not freeze base models during fusion training")
+
     # Experiment & Logging
     parser.add_argument('--name', type=str, default='wang2020_experiment',
                         help="Name of the experiment run")
@@ -213,7 +231,7 @@ def main():
     # 4. Build DataLoaders
     if runtime.is_main:
         print("[3/5] Building dataloaders...")
-    if opt_clean.arch == 'MHA_128':
+    if opt_clean.arch in ['MHA_128', 'Fusion_128']:
         train_loader = create_mha_dataloader(opt_clean)
     else:
         train_loader = create_dataloader(opt_clean)
@@ -229,7 +247,10 @@ def main():
         val_opt.dataroot = val_root
         val_opt.isTrain = False
         val_opt.serial_batches = True
-        val_loader = create_dataloader(val_opt)
+        if val_opt.arch in ['MHA_128', 'Fusion_128']:
+            val_loader = create_mha_dataloader(val_opt)
+        else:
+            val_loader = create_dataloader(val_opt)
         if runtime.is_main:
             print(f"  -> Validation dataset size: {len(val_loader.dataset)} samples")
 

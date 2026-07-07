@@ -176,6 +176,23 @@ class MHAFusionTrainer(BaseModel):
         for param in model.parameters():
             param.requires_grad = False
 
+    def _get_gpu_wavelet_backend(self):
+        """Lazy-init the GPU wavelet backend on first use."""
+        if not hasattr(self, '_gpu_wavelet') or self._gpu_wavelet is None:
+            from data.wavelets.backends.gpu_backend import GPUWaveletBackend
+            wavelet_level = getattr(self.opt, 'wavelet_level', 3)
+            wavelet_type = getattr(self.opt, 'wavelet_type', 'haar')
+            wavelet_mode = getattr(self.opt, 'wavelet_mode', 'reflect')
+            use_log = getattr(self.opt, 'use_log_packets', True)
+            self._gpu_wavelet = GPUWaveletBackend(
+                wavelet=wavelet_type,
+                level=wavelet_level,
+                mode=wavelet_mode,
+                log_scale=use_log,
+                device=self.device,
+            )
+        return self._gpu_wavelet
+
     def adjust_learning_rate(self, min_lr=1e-6):
         """Reduce learning rate by a factor of 10"""
         for param_group in self.optimizer.param_groups:
@@ -187,15 +204,13 @@ class MHAFusionTrainer(BaseModel):
     def __call__(self, rgb_input, wavelet_input):
         """
         Make trainer callable for validation.
-
-        Args:
-            rgb_input: [B, 3, H, W] - RGB images
-            wavelet_input: [B, 192, H, W] - Wavelet packet coefficients
-        Returns:
-            output logits [B, 1]
         """
         rgb_input = rgb_input.to(self.device)
-        wavelet_input = wavelet_input.to(self.device)
+        if wavelet_input.shape[1] == 3:
+            backend = self._get_gpu_wavelet_backend()
+            wavelet_input = backend(wavelet_input.to(self.device))
+        else:
+            wavelet_input = wavelet_input.to(self.device)
 
         with torch.no_grad():
             # Extract embeddings from base models
@@ -223,19 +238,20 @@ class MHAFusionTrainer(BaseModel):
 
     def set_input(self, input):
         """
-        Process input from dataloader.
-
-        Args:
-            input: tuple of (rgb_images, wavelet_packets, labels)
-                rgb_images: [B, 3, H, W]
-                wavelet_packets: [B, 192, H, W]
-                labels: [B]
+        Process input from dataloader: (rgb_images, wavelet_packets/rgb, labels)
         """
         rgb_imgs, wavelet_imgs, labels = input[0], input[1], input[2]
 
         self.rgb_input = rgb_imgs.to(self.device)
-        self.wavelet_input = wavelet_imgs.to(self.device)
         self.label = labels.to(self.device).float()
+
+        if wavelet_imgs.shape[1] == 3:
+            # RGB input — compute wavelets on GPU in batch
+            backend = self._get_gpu_wavelet_backend()
+            with torch.no_grad():
+                self.wavelet_input = backend(wavelet_imgs.to(self.device))
+        else:
+            self.wavelet_input = wavelet_imgs.to(self.device)
 
     def forward(self):
         """Forward pass through all models"""

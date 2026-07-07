@@ -133,14 +133,14 @@ class FusionDataset(BaseDataset):
             npy_path = self._get_npy_path(path)
             wavelet_tensor = self._backend(npy_path)
         elif self._needs_to_tensor:
-            # ----- GPU backend: convert to tensor first -----
+            # ----- GPU backend: return raw CPU float32 tensor for GPU batched computation -----
             img_array = np.array(img, dtype=np.float32)
             if img_array.ndim == 3 and img_array.shape[2] == 3:
                 img_tensor = torch.from_numpy(
                     img_array.transpose(2, 0, 1))  # (3, H, W)
             else:
                 img_tensor = torch.from_numpy(img_array)
-            wavelet_tensor = self._backend(img_tensor)
+            wavelet_tensor = img_tensor
         else:
             # ----- CPU backend: pass image directly -----
             wavelet_tensor = self._backend(img)

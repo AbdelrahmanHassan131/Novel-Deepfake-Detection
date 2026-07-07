@@ -42,7 +42,7 @@ def dataset_folder(opt, root):
             return WaveletRGBDataset(opt, root)
         elif getattr(opt, 'compute_wavelets', False) or 'Wolter' in arch:
             return WaveletDataset(opt, root)
-        elif 'Fusion' in arch:
+        elif 'Fusion' in arch or 'MHA' in arch:
             return FusionDataset(opt, root)
         else:
             return RGBDataset(opt, root)
