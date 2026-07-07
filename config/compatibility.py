@@ -147,6 +147,8 @@ def config_from_opt(opt):
         dropout=_get(opt, 'dropout', 0.1),
         fusion_type=_get(opt, 'fusion_type', 'cross_attention'),
         freeze_base_models=_get(opt, 'freeze_base_models', True),
+        rgb_model_path=_get(opt, 'rgb_model_path', None),
+        wavelet_model_path=_get(opt, 'wavelet_model_path', None),
     )
 
     # ------------------------------------------------------------------
@@ -303,6 +305,8 @@ def config_to_opt(config):
     opt.dropout = config.model.dropout
     opt.fusion_type = config.model.fusion_type
     opt.freeze_base_models = config.model.freeze_base_models
+    opt.rgb_model_path = config.model.rgb_model_path
+    opt.wavelet_model_path = config.model.wavelet_model_path
 
     # --- Training ---
     opt.niter = config.training.epochs

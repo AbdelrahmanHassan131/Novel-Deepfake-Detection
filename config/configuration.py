@@ -233,6 +233,8 @@ class ModelConfig(_FrozenMixin):
         self.dropout = defaults['dropout']
         self.fusion_type = defaults['fusion_type']
         self.freeze_base_models = defaults['freeze_base_models']
+        self.rgb_model_path = defaults['rgb_model_path']
+        self.wavelet_model_path = defaults['wavelet_model_path']
 
     def to_dict(self):
         """Return this section as a dictionary."""

@@ -76,6 +76,8 @@ MODEL_DEFAULTS = {
     'dropout': 0.1,
     'fusion_type': 'cross_attention',
     'freeze_base_models': True,
+    'rgb_model_path': None,
+    'wavelet_model_path': None,
 }
 
 # ------------------------------------------------------------------
