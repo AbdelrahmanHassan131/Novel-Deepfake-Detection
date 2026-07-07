@@ -95,17 +95,29 @@ class ConcatenationFusionTrainer(BaseModel):
         print(f"Concatenation Fusion model created")
         print(f"Base models frozen: {self.freeze_base_models}")
 
+    def _get_weights_dict(self, state_dict):
+        """Extract model weights from different checkpoint dictionary formats."""
+        if isinstance(state_dict, dict):
+            if 'model_state_dict' in state_dict:
+                return state_dict['model_state_dict']
+            elif 'model' in state_dict:
+                return state_dict['model']
+            elif 'state_dict' in state_dict:
+                return state_dict['state_dict']
+        return state_dict
+
     def _load_rgb_model(self, opt):
         """Load pre-trained RGB model (Wang2020 ResNet50)"""
         from models.shared.resnet import resnet50
 
         model = resnet50(num_classes=1)
         state_dict = torch.load(self.rgb_model_path, map_location='cuda')
+        weights = self._get_weights_dict(state_dict)
 
         # The saved model has fc as Sequential: [Linear(2048->128), ReLU, Dropout, Linear(128->1)]
         # We need to modify the architecture to match before loading
         # Check if fc is Sequential in the state_dict
-        if 'fc.0.weight' in state_dict['model']:
+        if 'fc.0.weight' in weights:
             # The saved model has fc as Sequential
             # Temporarily replace fc with Sequential to load weights
             in_features = model.fc.in_features
@@ -116,7 +128,7 @@ class ConcatenationFusionTrainer(BaseModel):
                 nn.Linear(128, 1)
             )
 
-        model.load_state_dict(state_dict['model'])
+        model.load_state_dict(weights)
 
         # Now remove the final classification layer to get 128-dim embeddings
         # Keep only: Linear(2048->128) -> ReLU
@@ -142,7 +154,8 @@ class ConcatenationFusionTrainer(BaseModel):
 
         model = WaveletPacketCNN128(input_channels=input_channels, num_classes=1)
         state_dict = torch.load(self.wavelet_model_path, map_location='cuda')
-        model.load_state_dict(state_dict['model'])
+        weights = self._get_weights_dict(state_dict)
+        model.load_state_dict(weights)
 
         # Remove the final classification layer
         # WaveletPacketCNN128 structure: ... -> classifier = Sequential[
