@@ -175,6 +175,11 @@ class DistributedRuntime:
         trainer wrapper.  The model is also moved to the correct
         device before wrapping.
 
+        For fusion/MHA models that carry additional sub-models
+        (``rgb_model``, ``wavelet_model``), those are also moved
+        to the correct per-rank device so that all forward passes
+        happen on the same GPU.
+
         In non-distributed mode this is a no-op (the model is moved
         to the device but not wrapped in DDP).
 
@@ -194,6 +199,13 @@ class DistributedRuntime:
 
         # Move the inner nn.Module to the correct device
         model.model.to(self.device)
+
+        # Move any additional frozen sub-models to the correct device
+        # (e.g. rgb_model, wavelet_model in MHA/Fusion trainers)
+        for attr_name in ('rgb_model', 'wavelet_model'):
+            sub_model = getattr(model, attr_name, None)
+            if sub_model is not None and isinstance(sub_model, torch.nn.Module):
+                sub_model.to(self.device)
 
         if self.is_distributed:
             model.model = DDP(
