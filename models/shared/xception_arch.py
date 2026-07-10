@@ -29,9 +29,10 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 __all__ = ['xception']
 
-model_urls = {
-    'xception':'http://data.lip6.fr/cadene/pretrainedmodels/xception-43020ad28.pth'
-}
+model_urls = [
+    'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-cadene/xception-43020ad28.pth',
+    'http://data.lip6.fr/cadene/pretrainedmodels/xception-43020ad28.pth',
+]
 
 
 class SeparableConv2d(nn.Module):
@@ -195,5 +196,33 @@ def xception(pretrained=False, **kwargs):
     """
     model = Xception(**kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['xception']))
+        # In distributed mode, rank > 0 waits for rank 0 to download first
+        try:
+            import torch.distributed as dist
+            if dist.is_initialized() and dist.get_world_size() > 1 and dist.get_rank() != 0:
+                dist.barrier()
+        except Exception:
+            pass
+
+        state_dict = None
+        last_err = None
+        for url in model_urls:
+            try:
+                state_dict = model_zoo.load_url(url, map_location='cpu')
+                break
+            except Exception as e:
+                last_err = e
+
+        # Rank 0 releases barrier after downloading/loading from URL
+        try:
+            import torch.distributed as dist
+            if dist.is_initialized() and dist.get_world_size() > 1 and dist.get_rank() == 0:
+                dist.barrier()
+        except Exception:
+            pass
+
+        if state_dict is None:
+            raise RuntimeError(f"Failed to download Xception pretrained weights from all mirrors: {last_err}")
+
+        model.load_state_dict(state_dict, strict=False)
     return model
