@@ -77,21 +77,21 @@ class ClassificationMetrics:
 
         result = {
             # Core (from MetricsCalculator)
-            'accuracy': core['accuracy'],
-            'precision': core['precision'],
-            'recall': core['recall'],
-            'f1_score': core['f1'],
-            'roc_auc': core['roc_auc'],
-            'confusion_matrix': core['confusion_matrix'],
+            'accuracy': float(core['accuracy']),
+            'precision': float(core['precision']),
+            'recall': float(core['recall']),
+            'f1_score': float(core['f1']),
+            'roc_auc': float(core['roc_auc']),
+            'confusion_matrix': [[int(x) for x in row] for row in core['confusion_matrix']],
             # Extended
-            'specificity': specificity,
-            'sensitivity': sensitivity,
-            'eer': eer,
-            'eer_threshold': eer_threshold,
-            'far': far,
-            'frr': frr,
-            'pr_auc': pr_auc,
-            'decision_threshold': self.threshold,
+            'specificity': float(specificity),
+            'sensitivity': float(sensitivity),
+            'eer': float(eer),
+            'eer_threshold': float(eer_threshold),
+            'far': float(far),
+            'frr': float(frr),
+            'pr_auc': float(pr_auc),
+            'decision_threshold': float(self.threshold),
             # Confusion matrix raw
             'true_negatives': int(tn),
             'false_positives': int(fp),
@@ -100,7 +100,7 @@ class ClassificationMetrics:
             # Per-class
             **per_class,
             # Dataset stats
-            'total_samples': len(labels),
+            'total_samples': int(len(labels)),
             'num_positive': int((labels == 1).sum()),
             'num_negative': int((labels == 0).sum()),
         }

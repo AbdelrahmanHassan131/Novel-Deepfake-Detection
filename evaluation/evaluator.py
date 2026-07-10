@@ -71,8 +71,8 @@ class Evaluator:
     """
 
     def __init__(self, checkpoint_path, dataroot, output_dir='evaluation_results',
-                 arch=None, batch_size=32, device=None, collect_embeddings=False,
-                 run_profiling=True, generate_plots=True):
+                 arch=None, batch_size=32, device=None, collect_embeddings=True,
+                 run_profiling=True, generate_plots=True, generate_gradcam=True):
         self.checkpoint_path = checkpoint_path
         self.dataroot = dataroot
         self.output_dir = output_dir
@@ -82,6 +82,7 @@ class Evaluator:
         self.collect_embeddings = collect_embeddings
         self.run_profiling = run_profiling
         self.generate_plots = generate_plots
+        self.generate_gradcam = generate_gradcam
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -184,6 +185,16 @@ class Evaluator:
                     title=f'{detected_arch} t-SNE Embeddings'
                 )
 
+            if self.generate_gradcam:
+                gc_path = self._generate_gradcam_explanations(
+                    model=model,
+                    dataloader=dataloader,
+                    detected_arch=detected_arch,
+                    plots_dir=plots_dir
+                )
+                if gc_path:
+                    plot_paths['gradcam'] = gc_path
+
         # 7. Generate Reports
         print("Generating reports...")
         report_gen = EvaluationReportGenerator(output_dir=self.output_dir)
@@ -227,5 +238,93 @@ class Evaluator:
         # MHA/Fusion multi-input loaders
         arch = getattr(opt, 'arch', '')
         if arch in ('Fusion_128', 'MHA_128'):
-            return create_mha_dataloader(opt)
-        return create_dataloader(opt)
+            dataloader = create_mha_dataloader(opt)
+        else:
+            dataloader = create_dataloader(opt)
+
+        self._normalize_dataset_label_mapping(dataloader.dataset)
+        return dataloader
+
+    def _normalize_dataset_label_mapping(self, dataset):
+        """Ensure Real=0 and Fake=1 regardless of alphabetical folder sorting."""
+        if hasattr(dataset, 'datasets'):
+            for d in dataset.datasets:
+                self._normalize_dataset_label_mapping(d)
+            return
+
+        if hasattr(dataset, 'class_to_idx'):
+            idx_to_class = {v: str(k).lower() for k, v in dataset.class_to_idx.items()}
+            # Check if index 0 represents Fake
+            if 0 in idx_to_class and ('fake' in idx_to_class[0] or '1_fake' in idx_to_class[0]):
+                print(f"[Evaluator] Remapping alphabetical dataset labels {dataset.class_to_idx} -> Real=0, Fake=1")
+                old_transform = dataset.target_transform
+                def remap_target(y, old_t=old_transform):
+                    y_val = old_t(y) if old_t is not None else y
+                    return 1 - y_val
+                dataset.target_transform = remap_target
+
+    def _generate_gradcam_explanations(self, model, dataloader, detected_arch, plots_dir):
+        """Generate sample Grad-CAM heatmap visualization figure."""
+        try:
+            from .visualization.gradcam import GradCAM, generate_gradcam_figure
+        except ImportError:
+            return None
+
+        raw_net = getattr(model, 'model', model)
+        target_layer = None
+        for m in raw_net.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                target_layer = m
+
+        if target_layer is None:
+            print(f"[Evaluator] No Conv2d layer found in {detected_arch} for Grad-CAM.")
+            return None
+
+        images = []
+        cams = []
+        labels = []
+        predictions = []
+
+        cam_engine = GradCAM(model, target_layer)
+        try:
+            for batch in dataloader:
+                if len(images) >= 6:
+                    break
+                inputs, targets = batch[0], batch[1]
+                for i in range(inputs.size(0)):
+                    if len(images) >= 6:
+                        break
+                    inp = inputs[i:i+1].to(self.device)
+                    lbl = int(targets[i].item())
+
+                    img_tensor = inputs[i].cpu()
+                    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+                    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+                    img_unnorm = torch.clamp(img_tensor * std + mean, 0, 1)
+                    img_np = img_unnorm.permute(1, 2, 0).numpy()
+
+                    heatmap, out_tensor = cam_engine.generate(inp)
+                    prob = float(torch.sigmoid(out_tensor).squeeze().item())
+
+                    images.append(img_np)
+                    cams.append(heatmap)
+                    labels.append(lbl)
+                    predictions.append(prob)
+        except Exception as e:
+            print(f"[Evaluator] Note: Grad-CAM generation skipped ({e})")
+        finally:
+            cam_engine.remove_hooks()
+
+        if not images:
+            return None
+
+        save_path = os.path.join(plots_dir, 'gradcam_explanations.png')
+        generate_gradcam_figure(
+            images=images,
+            cams=cams,
+            labels=labels,
+            predictions=predictions,
+            save_path=save_path,
+            title=f"{detected_arch} Grad-CAM Explanations"
+        )
+        return save_path

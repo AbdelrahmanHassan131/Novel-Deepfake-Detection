@@ -77,38 +77,68 @@ class InferenceRunner:
         all_labels = []
         all_embeddings = [] if self.collect_embeddings else None
 
-        for batch in tqdm(self.dataloader, desc='Inference'):
-            self.model.set_input(batch)
-            self.model.forward()
+        hook_handle = None
+        captured_embeddings = []
 
-            # Extract output logits
-            output = self.model.output
-            if output.dim() > 1:
-                output = output.squeeze(1)
+        if self.collect_embeddings:
+            # Try to register hook on penultimate feature layer if model.embedding isn't managed
+            raw_net = getattr(self.model, 'model', self.model)
+            target_layer = None
+            if hasattr(raw_net, 'fc') and isinstance(raw_net.fc, torch.nn.Sequential) and len(raw_net.fc) > 1:
+                target_layer = raw_net.fc[1]  # E.g. after ReLU of 128-dim head
+            elif hasattr(raw_net, 'avgpool'):
+                target_layer = raw_net.avgpool
+            elif hasattr(raw_net, 'last_linear'):
+                target_layer = raw_net
 
-            logits = output.cpu().numpy()
-            probs = torch.sigmoid(output).cpu().numpy()
-            preds = (probs >= 0.5).astype(np.float64)
-            labels = self.model.label.cpu().numpy()
+            if target_layer is not None:
+                def embed_hook(module, inp, out):
+                    feat = out.detach().flatten(start_dim=1)
+                    captured_embeddings.append(feat.cpu().numpy())
+                hook_handle = target_layer.register_forward_hook(embed_hook)
 
-            all_logits.append(logits)
-            all_probs.append(probs)
-            all_preds.append(preds)
-            all_labels.append(labels)
+        try:
+            for batch in tqdm(self.dataloader, desc='Inference'):
+                self.model.set_input(batch)
+                self.model.forward()
 
-            # Collect embeddings if requested and available
-            if self.collect_embeddings and hasattr(self.model, 'embedding'):
-                embed = self.model.embedding
-                if embed is not None:
-                    all_embeddings.append(embed.cpu().numpy())
+                # Extract output logits
+                output = self.model.output
+                if output.dim() > 1:
+                    output = output.squeeze(1)
+
+                logits = output.cpu().numpy()
+                probs = torch.sigmoid(output).cpu().numpy()
+                preds = (probs >= 0.5).astype(np.float64)
+                labels = self.model.label.cpu().numpy()
+
+                all_logits.append(logits)
+                all_probs.append(probs)
+                all_preds.append(preds)
+                all_labels.append(labels)
+
+                # Collect embeddings if attribute is directly set on model
+                if self.collect_embeddings and hasattr(self.model, 'embedding'):
+                    embed = self.model.embedding
+                    if embed is not None:
+                        all_embeddings.append(embed.cpu().numpy())
+        finally:
+            if hook_handle is not None:
+                hook_handle.remove()
+
+        final_embeddings = None
+        if self.collect_embeddings:
+            if all_embeddings:
+                final_embeddings = np.vstack(all_embeddings)
+            elif captured_embeddings:
+                final_embeddings = np.vstack(captured_embeddings)
 
         result = InferenceResult(
             logits=np.concatenate(all_logits),
             probabilities=np.concatenate(all_probs),
             predictions=np.concatenate(all_preds),
             labels=np.concatenate(all_labels),
-            embeddings=(np.vstack(all_embeddings)
-                        if all_embeddings else None),
+            embeddings=final_embeddings,
         )
 
         print(f'[InferenceRunner] Processed {len(result.labels)} samples')

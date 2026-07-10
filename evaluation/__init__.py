@@ -26,6 +26,7 @@ Usage::
 from .evaluator import Evaluator, EvaluationResult
 from .inference import InferenceRunner, InferenceResult
 from .checkpoint_loader import CheckpointLoader
+from .comparison import ModelComparisonEvaluator
 
 __all__ = [
     'Evaluator',
@@ -33,4 +34,5 @@ __all__ = [
     'InferenceRunner',
     'InferenceResult',
     'CheckpointLoader',
+    'ModelComparisonEvaluator',
 ]
