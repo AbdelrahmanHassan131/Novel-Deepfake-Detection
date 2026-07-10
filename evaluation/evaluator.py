@@ -247,7 +247,7 @@ class Evaluator:
             'jpg_method': ['cv2'],
             'jpg_qual': [75],
             'data_aug': False,
-            'wavelet_backend': 'cpu',
+            'wavelet_backend': 'gpu' if torch.cuda.is_available() else 'cpu',
             'wavelet_type': 'haar',
             'level': 3,
             'precomputed_dir': None,
@@ -265,26 +265,18 @@ class Evaluator:
         else:
             dataloader = create_dataloader(opt)
 
-        self._normalize_dataset_label_mapping(dataloader.dataset)
+        self._log_dataset_label_mapping(dataloader.dataset)
         return dataloader
 
-    def _normalize_dataset_label_mapping(self, dataset):
-        """Ensure Real=0 and Fake=1 regardless of alphabetical folder sorting."""
+    def _log_dataset_label_mapping(self, dataset):
+        """Log dataset class mapping to preserve native ImageFolder order used during training."""
         if hasattr(dataset, 'datasets'):
             for d in dataset.datasets:
-                self._normalize_dataset_label_mapping(d)
+                self._log_dataset_label_mapping(d)
             return
 
         if hasattr(dataset, 'class_to_idx'):
-            idx_to_class = {v: str(k).lower() for k, v in dataset.class_to_idx.items()}
-            # Check if index 0 represents Fake
-            if 0 in idx_to_class and ('fake' in idx_to_class[0] or '1_fake' in idx_to_class[0]):
-                print(f"[Evaluator] Remapping alphabetical dataset labels {dataset.class_to_idx} -> Real=0, Fake=1")
-                old_transform = dataset.target_transform
-                def remap_target(y, old_t=old_transform):
-                    y_val = old_t(y) if old_t is not None else y
-                    return 1 - y_val
-                dataset.target_transform = remap_target
+            print(f"[Evaluator] Dataset class mapping: {dataset.class_to_idx}")
 
     def _generate_gradcam_explanations(self, model, dataloader, detected_arch, plots_dir):
         """Generate sample Grad-CAM heatmap visualization figure."""
