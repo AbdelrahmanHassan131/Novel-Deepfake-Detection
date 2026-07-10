@@ -175,6 +175,25 @@ class CheckpointLoader:
             os.path.dirname(self.checkpoint_path)) or 'eval'
         opt.epoch = 'latest'
 
+        # Data & transform settings required by datasets and resize transforms
+        opt.no_crop = False
+        opt.no_flip = True
+        opt.no_resize = False
+        opt.cropSize = 224
+        opt.loadSize = 256
+        opt.rz_interp = ['bilinear']
+        opt.blur_prob = 0.0
+        opt.blur_sig = [0.5]
+        opt.jpg_prob = 0.0
+        opt.jpg_method = ['cv2']
+        opt.jpg_qual = [75]
+        opt.data_aug = False
+        opt.classes = ['0_real', '1_fake']
+        opt.mode = 'binary'
+        opt.serial_batches = True
+        opt.class_bal = False
+        opt.num_threads = 0
+
         # Data settings (required by some model __init__ paths)
         opt.compute_wavelets = arch in (
             'WolterWavelet2021Raw', 'WolterWavelet2021_128',

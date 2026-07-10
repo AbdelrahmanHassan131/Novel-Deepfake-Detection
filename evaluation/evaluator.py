@@ -223,17 +223,40 @@ class Evaluator:
         """Build the appropriate DataLoader for the model architecture."""
         from data import create_dataloader, create_mha_dataloader
 
-        # Ensure opt has necessary defaults
-        if not hasattr(opt, 'classes') or not opt.classes:
-            opt.classes = ['0_real', '1_fake']
-        if not hasattr(opt, 'mode'):
-            opt.mode = 'binary'
-        if not hasattr(opt, 'serial_batches'):
-            opt.serial_batches = True
-        if not hasattr(opt, 'class_bal'):
-            opt.class_bal = False
-        if not hasattr(opt, 'num_threads'):
-            opt.num_threads = 0
+        # Override with evaluation target settings
+        opt.dataroot = self.dataroot
+        opt.batch_size = self.batch_size
+        opt.isTrain = False
+
+        # Ensure opt has necessary dataset and transform defaults
+        defaults = {
+            'classes': ['0_real', '1_fake'],
+            'mode': 'binary',
+            'serial_batches': True,
+            'class_bal': False,
+            'num_threads': 0,
+            'no_crop': False,
+            'no_flip': True,
+            'no_resize': False,
+            'cropSize': 224,
+            'loadSize': 256,
+            'rz_interp': ['bilinear'],
+            'blur_prob': 0.0,
+            'blur_sig': [0.5],
+            'jpg_prob': 0.0,
+            'jpg_method': ['cv2'],
+            'jpg_qual': [75],
+            'data_aug': False,
+            'wavelet_backend': 'cpu',
+            'wavelet_type': 'haar',
+            'level': 3,
+            'precomputed_dir': None,
+            'rgb_model_path': getattr(opt, 'rgb_model_path', ''),
+            'wavelet_model_path': getattr(opt, 'wavelet_model_path', ''),
+        }
+        for k, v in defaults.items():
+            if not hasattr(opt, k) or (k == 'classes' and not getattr(opt, k)):
+                setattr(opt, k, v)
 
         # MHA/Fusion multi-input loaders
         arch = getattr(opt, 'arch', '')

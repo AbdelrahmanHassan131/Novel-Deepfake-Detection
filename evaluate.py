@@ -119,7 +119,10 @@ def collect_models(args):
     for display_name, ckpt_path, arch in named_models:
         if ckpt_path:
             if not os.path.isfile(ckpt_path):
-                print(f"[WARNING] Checkpoint file not found for {display_name}: {ckpt_path}")
+                print(f"[WARNING] Checkpoint file not found for {display_name}: '{ckpt_path}'")
+                print(f"          Resolved path checked: '{os.path.abspath(ckpt_path)}'")
+                if ckpt_path.startswith('./kaggle'):
+                    print(f"          Hint: Path starts with './kaggle'. Did you mean '/kaggle/...'?")
             else:
                 models_dict[display_name] = (ckpt_path, arch)
 
@@ -132,7 +135,10 @@ def collect_models(args):
         arch_or_name = arch_or_name.strip()
         ckpt_path = ckpt_path.strip()
         if not os.path.isfile(ckpt_path):
-            print(f"[WARNING] Checkpoint file not found for --model {arch_or_name}: {ckpt_path}")
+            print(f"[WARNING] Checkpoint file not found for --model {arch_or_name}: '{ckpt_path}'")
+            print(f"          Resolved path checked: '{os.path.abspath(ckpt_path)}'")
+            if ckpt_path.startswith('./kaggle'):
+                print(f"          Hint: Path starts with './kaggle'. Did you mean '/kaggle/...'?")
         else:
             models_dict[arch_or_name] = (ckpt_path, arch_or_name)
 
