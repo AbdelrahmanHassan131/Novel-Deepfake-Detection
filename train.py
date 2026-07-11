@@ -20,7 +20,7 @@ import argparse
 import torch
 
 from config import load_config, config_to_opt, ConfigValidator
-from config.defaults import DATA_DEFAULTS, TRAINING_DEFAULTS, MODEL_DEFAULTS, RUNTIME_DEFAULTS, EXPERIMENT_DEFAULTS, WAVELET_DEFAULTS
+from config.defaults import DATA_DEFAULTS, TRAINING_DEFAULTS, MODEL_DEFAULTS, RUNTIME_DEFAULTS, EXPERIMENT_DEFAULTS, WAVELET_DEFAULTS, AUGMENTATION_DEFAULTS
 from models import build_model, get_registered_models
 from data.loaders.dataloader_factory import create_dataloader, create_mha_dataloader
 from training import Trainer, seed_everything
@@ -69,6 +69,18 @@ def parse_args():
                         help="Use class balanced sampler")
     parser.add_argument('--compute_wavelets', action='store_true', default=DATA_DEFAULTS['compute_wavelets'],
                         help="Compute wavelets online if required by dataset")
+
+    # Augmentation parameters
+    parser.add_argument('--blur_prob', type=float, default=AUGMENTATION_DEFAULTS['blur_prob'],
+                        help="Probability of applying Gaussian blur data augmentation (e.g., 0.5)")
+    parser.add_argument('--blur_sig', type=str, default='0.5',
+                        help="Comma-separated blur sigma range (e.g., '0.0,3.0' or '0.5')")
+    parser.add_argument('--jpg_prob', type=float, default=AUGMENTATION_DEFAULTS['jpg_prob'],
+                        help="Probability of applying JPEG compression data augmentation (e.g., 0.5)")
+    parser.add_argument('--jpg_method', type=str, default='cv2',
+                        help="Comma-separated JPEG compression methods (e.g., 'cv2,pil')")
+    parser.add_argument('--jpg_qual', type=str, default='75',
+                        help="Comma-separated JPEG quality values (e.g., '30,75')")
 
     # Wavelet parameters
     parser.add_argument('--wavelet_backend', type=str, default=WAVELET_DEFAULTS['backend'], choices=['cpu', 'gpu', 'precomputed'],
