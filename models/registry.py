@@ -18,6 +18,8 @@ Supported model names:
     - Fusion_128
     - MHA_128
     - XceptionRaw
+    - ConvNeXtRaw
+    - ConvNeXt_128
 """
 
 # Registry dict: model_name -> (module_path, class_name)
@@ -59,6 +61,8 @@ def _ensure_registered():
     from models.fusion.trainer import ConcatenationFusionTrainer
     from models.mha.trainer import MHAFusionTrainer
     from models.xception.trainer import XceptionRawTrainer
+    from models.convnext.trainer import ConvNeXtRawTrainer
+    from models.convnext_128.trainer import ConvNeXt128Trainer
 
     register_model('Wang2020Raw', Wang2020RawTrainer)
     register_model('Wang2020_128', Wang2020_128Trainer)
@@ -67,6 +71,8 @@ def _ensure_registered():
     register_model('Fusion_128', ConcatenationFusionTrainer)
     register_model('MHA_128', MHAFusionTrainer)
     register_model('XceptionRaw', XceptionRawTrainer)
+    register_model('ConvNeXtRaw', ConvNeXtRawTrainer)
+    register_model('ConvNeXt_128', ConvNeXt128Trainer)
 
 
 def build_model(opt):

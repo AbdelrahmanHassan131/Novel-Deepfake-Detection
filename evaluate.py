@@ -62,6 +62,12 @@ def parse_args():
     model_group.add_argument('--xception', '--xception_raw', '--sception', dest='xception',
                              type=str, default=None,
                              help="Path to XceptionRaw .pth checkpoint file")
+    model_group.add_argument('--convnext_raw', '--convnext', dest='convnext_raw',
+                             type=str, default=None,
+                             help="Path to ConvNeXtRaw .pth checkpoint file")
+    model_group.add_argument('--convnext_128', dest='convnext_128',
+                             type=str, default=None,
+                             help="Path to ConvNeXt_128 .pth checkpoint file")
     model_group.add_argument('--fusion', '--fusion_128', dest='fusion',
                              type=str, default=None,
                              help="Path to Fusion_128 .pth checkpoint file")
@@ -112,6 +118,8 @@ def collect_models(args):
         ('WolterWavelet2021Raw', args.wolter2021_raw, 'WolterWavelet2021Raw'),
         ('WolterWavelet2021_128', args.wolter2021_128, 'WolterWavelet2021_128'),
         ('XceptionRaw', args.xception, 'XceptionRaw'),
+        ('ConvNeXtRaw', args.convnext_raw, 'ConvNeXtRaw'),
+        ('ConvNeXt_128', args.convnext_128, 'ConvNeXt_128'),
         ('Fusion_128', args.fusion, 'Fusion_128'),
         ('MHA_128', args.mha, 'MHA_128'),
     ]

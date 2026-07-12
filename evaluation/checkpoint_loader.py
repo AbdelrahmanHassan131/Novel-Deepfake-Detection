@@ -119,6 +119,8 @@ class CheckpointLoader:
             'Fusion_128': 'Fusion_128',
             'MHA_128': 'MHA_128',
             'XceptionRaw': 'XceptionRaw',
+            'ConvNeXtRaw': 'ConvNeXtRaw',
+            'ConvNeXt_128': 'ConvNeXt_128',
             # Also accept direct registry names
             'Wang2020Raw': 'Wang2020Raw',
             'WolterWavelet2021Raw': 'WolterWavelet2021Raw',
