@@ -143,7 +143,9 @@ def collect_models(args):
 
     for display_name, ckpt_path, arch in named_models:
         if ckpt_path:
-            if not os.path.isfile(ckpt_path):
+            if ckpt_path.lower() in ('none', 'pretrained', 'default', 'scratch'):
+                models_dict[display_name] = (ckpt_path, arch)
+            elif not os.path.isfile(ckpt_path):
                 print(f"[WARNING] Checkpoint file not found for {display_name}: '{ckpt_path}'")
                 print(f"          Resolved path checked: '{os.path.abspath(ckpt_path)}'")
                 if ckpt_path.startswith('./kaggle'):
@@ -159,7 +161,9 @@ def collect_models(args):
         arch_or_name, ckpt_path = entry.split('=', 1)
         arch_or_name = arch_or_name.strip()
         ckpt_path = ckpt_path.strip()
-        if not os.path.isfile(ckpt_path):
+        if ckpt_path.lower() in ('none', 'pretrained', 'default', 'scratch'):
+            models_dict[arch_or_name] = (ckpt_path, arch_or_name)
+        elif not os.path.isfile(ckpt_path):
             print(f"[WARNING] Checkpoint file not found for --model {arch_or_name}: '{ckpt_path}'")
             print(f"          Resolved path checked: '{os.path.abspath(ckpt_path)}'")
             if ckpt_path.startswith('./kaggle'):
@@ -169,10 +173,11 @@ def collect_models(args):
 
     # Fallback to single --checkpoint if no specific models given
     if not models_dict and args.checkpoint:
-        if not os.path.isfile(args.checkpoint):
+        if args.checkpoint.lower() in ('none', 'pretrained', 'default', 'scratch') or os.path.isfile(args.checkpoint):
+            arch = args.arch or 'DetectedArch'
+            models_dict[arch] = (args.checkpoint, args.arch)
+        else:
             raise FileNotFoundError(f"Checkpoint file not found: {args.checkpoint}")
-        arch = args.arch or 'DetectedArch'
-        models_dict[arch] = (args.checkpoint, args.arch)
 
     return models_dict
 

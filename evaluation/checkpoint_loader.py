@@ -36,7 +36,8 @@ class CheckpointLoader:
 
     def __init__(self, checkpoint_path, arch=None, device=None,
                  gpu_ids=None):
-        if not os.path.isfile(checkpoint_path):
+        is_special = (checkpoint_path is None or str(checkpoint_path).lower() in ('pretrained', 'none', 'default', 'scratch'))
+        if not is_special and not os.path.isfile(checkpoint_path):
             raise FileNotFoundError(
                 f'Checkpoint not found: {checkpoint_path}'
             )
@@ -47,6 +48,7 @@ class CheckpointLoader:
         self.gpu_ids = gpu_ids if gpu_ids is not None else (
             [0] if torch.cuda.is_available() else []
         )
+        self.is_pretrained_only = is_special
         self._checkpoint = None
         self._metadata = {}
 
@@ -67,6 +69,23 @@ class CheckpointLoader:
             A ``BaseModel`` subclass instance with weights restored
             and in eval mode.
         """
+        if self.is_pretrained_only:
+            arch = self.forced_arch
+            if not arch:
+                raise ValueError("Architecture (--arch) must be provided when evaluating without a checkpoint file.")
+            print(f'[CheckpointLoader] Evaluating architecture without checkpoint file (using default/pretrained weights): {arch}')
+            self._metadata = {
+                'arch': arch,
+                'epoch': 'pretrained',
+                'checkpoint_path': 'Pretrained/Default Weights',
+            }
+            opt = self._build_opt(arch, opt_overrides)
+            from models import build_model
+            model = build_model(opt)
+            opt.isTrain = False
+            model.eval()
+            return model
+
         # Load raw checkpoint
         self._checkpoint = torch.load(
             self.checkpoint_path,
@@ -174,10 +193,11 @@ class CheckpointLoader:
 
         # Checkpoint settings — point to a dummy dir so the legacy
         # load_networks doesn't interfere; we handle loading ourselves.
+        ckpt_path_str = self.checkpoint_path if (isinstance(self.checkpoint_path, str) and not self.is_pretrained_only) else './dummy/eval.pth'
         opt.checkpoints_dir = os.path.dirname(
-            os.path.dirname(self.checkpoint_path))
+            os.path.dirname(ckpt_path_str))
         opt.name = os.path.basename(
-            os.path.dirname(self.checkpoint_path)) or 'eval'
+            os.path.dirname(ckpt_path_str)) or 'eval'
         opt.epoch = 'latest'
 
         # Data & transform settings required by datasets and resize transforms

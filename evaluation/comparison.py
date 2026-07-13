@@ -87,6 +87,19 @@ class ModelComparisonEvaluator:
         eval_results = {}
         inference_results = {}
 
+        # Discover base model paths from models_dict if available
+        base_rgb_path = ""
+        base_wavelet_path = ""
+        for name, entry in self.models_dict.items():
+            cpath = entry[0] if isinstance(entry, (tuple, list)) else entry
+            if isinstance(cpath, str) and os.path.isfile(cpath):
+                if 'Wang2020' in name or 'wang2020' in str(cpath).lower():
+                    if not base_rgb_path:
+                        base_rgb_path = cpath
+                if 'Wolter' in name or 'wolter' in name or 'wavelet' in str(cpath).lower():
+                    if not base_wavelet_path:
+                        base_wavelet_path = cpath
+
         for display_name, entry in self.models_dict.items():
             if isinstance(entry, (tuple, list)):
                 ckpt_path, arch = entry[0], entry[1]
@@ -95,6 +108,12 @@ class ModelComparisonEvaluator:
 
             print(f"\n---> Evaluating [{display_name}] (ckp: {ckpt_path}, arch: {arch})")
             model_out_dir = os.path.join(self.output_dir, "models", display_name)
+
+            curr_overrides = dict(opt_overrides) if opt_overrides else {}
+            if base_rgb_path and 'rgb_model_path' not in curr_overrides:
+                curr_overrides['rgb_model_path'] = base_rgb_path
+            if base_wavelet_path and 'wavelet_model_path' not in curr_overrides:
+                curr_overrides['wavelet_model_path'] = base_wavelet_path
 
             evaluator = Evaluator(
                 checkpoint_path=ckpt_path,
@@ -109,7 +128,7 @@ class ModelComparisonEvaluator:
                 generate_gradcam=self.generate_gradcam,
                 tsne_dataroot=self.tsne_dataroot
             )
-            result = evaluator.run(opt_overrides=opt_overrides)
+            result = evaluator.run(opt_overrides=curr_overrides)
             eval_results[display_name] = result
             inference_results[display_name] = result.inference_result
 

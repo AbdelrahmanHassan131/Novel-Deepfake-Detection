@@ -115,17 +115,25 @@ class MHAFusionTrainer(BaseModel):
     def _load_rgb_model(self, opt):
         """Load pre-trained RGB model (Wang2020 ResNet50)"""
         from models.shared.resnet import resnet50
+        import os
 
         model = resnet50(num_classes=1)
-        state_dict = torch.load(self.rgb_model_path, map_location='cuda')
-        weights = self._get_weights_dict(state_dict)
+        if self.rgb_model_path and os.path.isfile(self.rgb_model_path):
+            state_dict = torch.load(self.rgb_model_path, map_location='cuda')
+            weights = self._get_weights_dict(state_dict)
 
-        # The saved model has fc as Sequential: [Linear(2048->128), ReLU, Dropout, Linear(128->1)]
-        # We need to modify the architecture to match before loading
-        # Check if fc is Sequential in the state_dict
-        if 'fc.0.weight' in weights:
-            # The saved model has fc as Sequential
-            # Temporarily replace fc with Sequential to load weights
+            # Check if fc is Sequential in the state_dict
+            if 'fc.0.weight' in weights:
+                in_features = model.fc.in_features
+                model.fc = nn.Sequential(
+                    nn.Linear(in_features, 128),
+                    nn.ReLU(inplace=True),
+                    nn.Dropout(0.5),
+                    nn.Linear(128, 1)
+                )
+            model.load_state_dict(weights)
+        else:
+            print(f"[WARNING] RGB base model path '{self.rgb_model_path}' not found or empty. Using unweighted 128-dim backbone.")
             in_features = model.fc.in_features
             model.fc = nn.Sequential(
                 nn.Linear(in_features, 128),
@@ -134,16 +142,11 @@ class MHAFusionTrainer(BaseModel):
                 nn.Linear(128, 1)
             )
 
-        model.load_state_dict(weights)
-
         # Now remove the final classification layer to get 128-dim embeddings
         # Keep only: Linear(2048->128) -> ReLU
-        in_features = model.fc[0].in_features if isinstance(
-            model.fc, nn.Sequential) else model.fc.in_features
         model.fc = nn.Sequential(
             model.fc[0],  # Linear(2048 -> 128)
             model.fc[1],  # ReLU
-            # Remove Dropout and final Linear layer
         )
 
         model.eval()
@@ -152,6 +155,7 @@ class MHAFusionTrainer(BaseModel):
     def _load_wavelet_model(self, opt):
         """Load pre-trained Wavelet model (Wolter2022)"""
         from models.wolter2021.wavelet_cnn import WaveletPacketCNN128
+        import os
 
         # Calculate input channels for wavelet model
         wavelet_level = getattr(opt, 'wavelet_level', 3)
@@ -159,9 +163,12 @@ class MHAFusionTrainer(BaseModel):
         input_channels = 3 * num_packets_per_channel
 
         model = WaveletPacketCNN128(input_channels=input_channels, num_classes=1)
-        state_dict = torch.load(self.wavelet_model_path, map_location='cuda')
-        weights = self._get_weights_dict(state_dict)
-        model.load_state_dict(weights)
+        if self.wavelet_model_path and os.path.isfile(self.wavelet_model_path):
+            state_dict = torch.load(self.wavelet_model_path, map_location='cuda')
+            weights = self._get_weights_dict(state_dict)
+            model.load_state_dict(weights)
+        else:
+            print(f"[WARNING] Wavelet base model path '{self.wavelet_model_path}' not found or empty. Using unweighted 128-dim backbone.")
 
         # Remove the final classification layer
         # WaveletPacketCNN128 structure: ... -> classifier = Sequential[
