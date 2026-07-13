@@ -83,13 +83,17 @@ def plot_tsne(embeddings, labels, category_names=None, save_path=None,
         category_names = [f'Class {i}' for i in unique_labels]
 
     if colors is None:
-        # Default colour palette
         default_colors = [
-            '#FF0000', '#FF6600', '#FFFB00', '#FF00E6',
-            '#0008FF', '#98D8C8', '#2ECC71', '#9B59B6',
-            '#E67E22', '#1ABC9C',
+            '#E63946', '#2A9D8F', '#E76F51', '#457B9D', '#F4A261',
+            '#9B5DE5', '#00BBF9', '#00F5D4', '#F15BB5', '#D4A373',
+            '#2EC4B6', '#C1121F', '#3A0CA3', '#4CC9F0', '#FB5607',
+            '#8338EC', '#FF006E', '#38B000', '#FFBE0B', '#5E60CE'
         ]
-        colors = default_colors[:len(unique_labels)]
+        if len(unique_labels) <= len(default_colors):
+            colors = default_colors[:len(unique_labels)]
+        else:
+            cmap = plt.get_cmap('tab20' if len(unique_labels) <= 20 else 'nipy_spectral')
+            colors = [cmap(i / max(1, len(unique_labels) - 1)) for i in range(len(unique_labels))]
 
     # Compute t-SNE
     print(f'[t-SNE] Computing with perplexity={perplexity}, '
@@ -112,7 +116,10 @@ def plot_tsne(embeddings, labels, category_names=None, save_path=None,
             edgecolors='w', linewidth=0.5,
         )
 
-    ax.legend(fontsize=12, markerscale=1.5, loc='best')
+    if len(unique_labels) > 5:
+        ax.legend(fontsize=10, markerscale=1.3, loc='center left', bbox_to_anchor=(1.02, 0.5))
+    else:
+        ax.legend(fontsize=12, markerscale=1.5, loc='best')
     ax.set_title(title, fontsize=16, fontweight='bold')
     ax.set_xlabel('t-SNE Component 1', fontsize=12)
     ax.set_ylabel('t-SNE Component 2', fontsize=12)
@@ -163,10 +170,13 @@ def plot_tsne_comparison(embeddings_dict, labels, category_names=None,
     if category_names is None:
         category_names = [f'Class {i}' for i in unique_labels]
     if colors is None:
-        colors = [
-            '#FF0000', '#FF6600', '#FFFB00', '#FF00E6',
-            '#0008FF', '#98D8C8', '#2ECC71', '#9B59B6',
+        default_colors = [
+            '#E63946', '#2A9D8F', '#E76F51', '#457B9D', '#F4A261',
+            '#9B5DE5', '#00BBF9', '#00F5D4', '#F15BB5', '#D4A373',
+            '#2EC4B6', '#C1121F', '#3A0CA3', '#4CC9F0', '#FB5607',
+            '#8338EC', '#FF006E', '#38B000', '#FFBE0B', '#5E60CE'
         ]
+        colors = default_colors[:len(unique_labels)]
 
     n_plots = len(embeddings_dict)
     fig, axes = plt.subplots(1, n_plots, figsize=(7 * n_plots, 6))

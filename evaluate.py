@@ -44,8 +44,10 @@ def parse_args():
     )
 
     # Dataset arguments
-    parser.add_argument('--val_root', '--dataroot', '--val_dir', dest='val_root', type=str, required=True,
+    parser.add_argument('--val_root', '--dataroot', '--val_dir', dest='val_root', type=str, required=False, default=None,
                         help="Path to validation folder containing 'real' and 'fake' subfolders.")
+    parser.add_argument('--tsne_val_root', '--tsne_dir', '--tsne_dataroot', dest='tsne_val_root', type=str, default=None,
+                        help="Path to dedicated validation dataset folder for multi-category t-SNE (containing subfolders like DDPM, DDIM, DFDC, ADM, GAN, DiffSwap, Real).")
 
     # Named checkpoint paths for the 7 standard architectures
     model_group = parser.add_argument_group("Model Checkpoints (.pth files)")
@@ -163,8 +165,16 @@ def collect_models(args):
 def main():
     args = parse_args()
 
-    if not os.path.exists(args.val_root):
+    if not args.val_root and not args.tsne_val_root:
+        print("[ERROR] Please provide at least --val_root or --tsne_val_root!")
+        sys.exit(1)
+
+    if args.val_root and not os.path.exists(args.val_root):
         print(f"[ERROR] Validation dataset directory not found: {args.val_root}")
+        sys.exit(1)
+
+    if args.tsne_val_root and not os.path.exists(args.tsne_val_root):
+        print(f"[ERROR] t-SNE validation dataset directory not found: {args.tsne_val_root}")
         sys.exit(1)
 
     models_dict = collect_models(args)
@@ -195,7 +205,8 @@ def main():
             collect_embeddings=collect_embeddings,
             run_profiling=run_profiling,
             generate_plots=generate_plots,
-            generate_gradcam=generate_gradcam
+            generate_gradcam=generate_gradcam,
+            tsne_dataroot=args.tsne_val_root
         )
         res = evaluator.run()
         print(f"\nEvaluation Complete for {display_name}:")
@@ -203,7 +214,10 @@ def main():
         print(f"  - ROC AUC:  {res.metrics.get('roc_auc', 0.0):.4f}")
         print(f"  - F1 Score: {res.metrics.get('f1_score', 0.0):.4f}")
         print(f"  - EER:      {res.metrics.get('eer', 0.0):.4f}")
-        print(f"  - JSON Report: {res.report_paths['json']}")
+        if 'json' in res.report_paths:
+            print(f"  - JSON Report: {res.report_paths['json']}")
+        if 'tsne' in res.plot_paths:
+            print(f"  - t-SNE Plot:  {res.plot_paths['tsne']}")
     else:
         # Multi-model evaluation & comparison
         comparator = ModelComparisonEvaluator(
@@ -214,7 +228,8 @@ def main():
             device=device,
             collect_embeddings=collect_embeddings,
             run_profiling=run_profiling,
-            generate_plots=generate_plots
+            generate_plots=generate_plots,
+            tsne_dataroot=args.tsne_val_root
         )
         # Note: Evaluators created by ModelComparisonEvaluator inherit generate_gradcam setting
         results = comparator.run()

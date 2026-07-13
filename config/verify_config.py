@@ -108,6 +108,10 @@ def test_enum_types():
             == ArchitectureType.WANG2020_128)
     _assert(ArchitectureType.from_string('XceptionRaw')
             == ArchitectureType.XCEPTION_RAW)
+    _assert(ArchitectureType.from_string('ConvNeXtRaw')
+            == ArchitectureType.CONVNEXT_RAW)
+    _assert(ArchitectureType.from_string('ConvNeXt_128')
+            == ArchitectureType.CONVNEXT_128)
 
     # DeviceType
     _assert(DeviceType.from_string('cpu') == DeviceType.CPU)

@@ -53,7 +53,8 @@ class ModelComparisonEvaluator:
 
     def __init__(self, models_dict, dataroot, output_dir='evaluation_comparison_results',
                  batch_size=32, device=None, collect_embeddings=True,
-                 run_profiling=True, generate_plots=True, generate_gradcam=True):
+                 run_profiling=True, generate_plots=True, generate_gradcam=True,
+                 tsne_dataroot=None):
         self.models_dict = models_dict
         self.dataroot = dataroot
         self.output_dir = output_dir
@@ -63,6 +64,7 @@ class ModelComparisonEvaluator:
         self.run_profiling = run_profiling
         self.generate_plots = generate_plots
         self.generate_gradcam = generate_gradcam
+        self.tsne_dataroot = tsne_dataroot
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -104,7 +106,8 @@ class ModelComparisonEvaluator:
                 collect_embeddings=self.collect_embeddings,
                 run_profiling=self.run_profiling,
                 generate_plots=self.generate_plots,
-                generate_gradcam=self.generate_gradcam
+                generate_gradcam=self.generate_gradcam,
+                tsne_dataroot=self.tsne_dataroot
             )
             result = evaluator.run(opt_overrides=opt_overrides)
             eval_results[display_name] = result

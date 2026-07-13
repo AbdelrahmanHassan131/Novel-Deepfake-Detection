@@ -72,7 +72,8 @@ class Evaluator:
 
     def __init__(self, checkpoint_path, dataroot, output_dir='evaluation_results',
                  arch=None, batch_size=32, device=None, collect_embeddings=True,
-                 run_profiling=True, generate_plots=True, generate_gradcam=True):
+                 run_profiling=True, generate_plots=True, generate_gradcam=True,
+                 tsne_dataroot=None):
         self.checkpoint_path = checkpoint_path
         self.dataroot = dataroot
         self.output_dir = output_dir
@@ -83,6 +84,7 @@ class Evaluator:
         self.run_profiling = run_profiling
         self.generate_plots = generate_plots
         self.generate_gradcam = generate_gradcam
+        self.tsne_dataroot = tsne_dataroot
 
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -107,13 +109,28 @@ class Evaluator:
             arch=self.arch,
             device=self.device
         )
-        overrides = {'dataroot': self.dataroot, 'batch_size': self.batch_size}
+        overrides = {'dataroot': self.dataroot or self.tsne_dataroot, 'batch_size': self.batch_size}
         if opt_overrides:
             overrides.update(opt_overrides)
 
         model = loader.load(opt_overrides=overrides)
         metadata = loader.metadata
         detected_arch = metadata.get('arch', 'unknown')
+
+        if not self.dataroot and self.tsne_dataroot:
+            print("[Evaluator] No --val_root provided; running dedicated multi-category t-SNE evaluation only.")
+            plots_dir = os.path.join(self.output_dir, 'plots')
+            os.makedirs(plots_dir, exist_ok=True)
+            tsne_path = self._run_tsne_multi_folder(model, detected_arch, plots_dir)
+            plot_paths = {'tsne': tsne_path} if tsne_path else {}
+            return EvaluationResult(
+                metadata=metadata,
+                metrics={},
+                performance={},
+                inference_result=None,
+                plot_paths=plot_paths,
+                report_paths={}
+            )
 
         # 2. Build Dataloader
         dataloader = self._build_dataloader(model.opt)
@@ -176,14 +193,22 @@ class Evaluator:
                 title=f'{detected_arch} Confusion Matrix'
             )
 
-            if self.collect_embeddings and inference_result.embeddings is not None:
-                plot_paths['tsne'] = plot_tsne(
-                    embeddings=inference_result.embeddings,
-                    labels=inference_result.labels,
-                    category_names=['Real (0)', 'Fake (1)'],
-                    save_path=os.path.join(plots_dir, 'tsne_embeddings.png'),
-                    title=f'{detected_arch} t-SNE Embeddings'
-                )
+            if self.collect_embeddings:
+                if getattr(self, 'tsne_dataroot', None):
+                    tsne_path = self._run_tsne_multi_folder(model, detected_arch, plots_dir)
+                    if tsne_path:
+                        plot_paths['tsne'] = tsne_path
+                elif inference_result.embeddings is not None:
+                    cat_names = getattr(dataloader.dataset, 'classes', None)
+                    if not cat_names or len(cat_names) < 2:
+                        cat_names = ['Real (0)', 'Fake (1)']
+                    plot_paths['tsne'] = plot_tsne(
+                        embeddings=inference_result.embeddings,
+                        labels=inference_result.labels,
+                        category_names=cat_names,
+                        save_path=os.path.join(plots_dir, 'tsne_embeddings.png'),
+                        title=f'{detected_arch} t-SNE Embeddings'
+                    )
 
             if self.generate_gradcam:
                 gc_path = self._generate_gradcam_explanations(
@@ -219,12 +244,14 @@ class Evaluator:
             report_paths=report_paths
         )
 
-    def _build_dataloader(self, opt):
+    def _build_dataloader(self, opt, target_root=None):
         """Build the appropriate DataLoader for the model architecture."""
+        import copy
         from data import create_dataloader, create_mha_dataloader
 
+        opt = copy.copy(opt)
         # Override with evaluation target settings
-        opt.dataroot = self.dataroot
+        opt.dataroot = target_root or self.dataroot
         opt.batch_size = self.batch_size
         opt.isTrain = False
 
@@ -277,6 +304,40 @@ class Evaluator:
 
         if hasattr(dataset, 'class_to_idx'):
             print(f"[Evaluator] Dataset class mapping: {dataset.class_to_idx}")
+
+    def _run_tsne_multi_folder(self, model, detected_arch, plots_dir):
+        """Run dedicated t-SNE feature embedding extraction and visualization on a multi-folder dataset."""
+        if not self.tsne_dataroot or not os.path.exists(self.tsne_dataroot):
+            print(f"[WARNING] t-SNE multi-folder validation dataset not found: {self.tsne_dataroot}")
+            return None
+        from evaluation.inference import InferenceRunner
+        from evaluation.visualization.tsne import plot_tsne
+
+        print(f"\n[t-SNE] Extracting embeddings from multi-folder t-SNE dataset: {self.tsne_dataroot}")
+        tsne_loader = self._build_dataloader(model.opt, target_root=self.tsne_dataroot)
+        discovered_classes = getattr(tsne_loader.dataset, 'classes', None)
+        if not discovered_classes:
+            discovered_classes = [f'Class {i}' for i in range(100)]
+        print(f"[t-SNE] Discovered {len(discovered_classes)} category subfolders: {discovered_classes}")
+
+        runner = InferenceRunner(
+            model=model,
+            dataloader=tsne_loader,
+            device=self.device,
+            collect_embeddings=True
+        )
+        tsne_result = runner.run()
+        if tsne_result.embeddings is None or len(tsne_result.embeddings) == 0:
+            print("[WARNING] Could not extract embeddings for t-SNE.")
+            return None
+
+        return plot_tsne(
+            embeddings=tsne_result.embeddings,
+            labels=tsne_result.labels,
+            category_names=discovered_classes,
+            save_path=os.path.join(plots_dir, 'tsne_embeddings.png'),
+            title=f'{detected_arch} Multi-Generator t-SNE ({len(discovered_classes)} Categories)'
+        )
 
     def _generate_gradcam_explanations(self, model, dataloader, detected_arch, plots_dir):
         """Generate sample Grad-CAM heatmap visualization figure."""
