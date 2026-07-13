@@ -78,6 +78,8 @@ MODEL_DEFAULTS = {
     'freeze_base_models': True,
     'rgb_model_path': None,
     'wavelet_model_path': None,
+    'xception_model_path': None,
+    'convnext_model_path': None,
 }
 
 # ------------------------------------------------------------------

@@ -149,6 +149,8 @@ def config_from_opt(opt):
         freeze_base_models=_get(opt, 'freeze_base_models', True),
         rgb_model_path=_get(opt, 'rgb_model_path', None),
         wavelet_model_path=_get(opt, 'wavelet_model_path', None),
+        xception_model_path=_get(opt, 'xception_model_path', None),
+        convnext_model_path=_get(opt, 'convnext_model_path', None),
     )
 
     # ------------------------------------------------------------------
@@ -307,6 +309,8 @@ def config_to_opt(config):
     opt.freeze_base_models = config.model.freeze_base_models
     opt.rgb_model_path = config.model.rgb_model_path
     opt.wavelet_model_path = config.model.wavelet_model_path
+    opt.xception_model_path = config.model.xception_model_path
+    opt.convnext_model_path = config.model.convnext_model_path
 
     # --- Training ---
     opt.niter = config.training.epochs

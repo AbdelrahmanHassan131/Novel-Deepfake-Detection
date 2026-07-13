@@ -218,6 +218,10 @@ class ModelConfig(_FrozenMixin):
         fusion_type (str): Fusion strategy (MHA model).
         freeze_base_models (bool): Freeze base model weights
             (fusion/MHA).
+        xception_model_path (str or None): Path to pre-trained Xception_128
+            checkpoint (WWXC models).
+        convnext_model_path (str or None): Path to pre-trained ConvNeXt_128
+            checkpoint (WWXC models).
     """
 
     def __init__(self, **kwargs):
@@ -235,6 +239,8 @@ class ModelConfig(_FrozenMixin):
         self.freeze_base_models = defaults['freeze_base_models']
         self.rgb_model_path = defaults['rgb_model_path']
         self.wavelet_model_path = defaults['wavelet_model_path']
+        self.xception_model_path = defaults['xception_model_path']
+        self.convnext_model_path = defaults['convnext_model_path']
 
     def to_dict(self):
         """Return this section as a dictionary."""
