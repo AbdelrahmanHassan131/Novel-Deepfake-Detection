@@ -163,6 +163,8 @@ class Evaluator:
                 in_shape = (1, 192, 128, 128)
             elif detected_arch in ('Fusion_128', 'MHA_128'):
                 in_shape = [(1, 128), (1, 128)]
+            elif detected_arch in ('Fusion_WWXC', 'MHA_WWXC'):
+                in_shape = [(1, 128), (1, 128), (1, 128), (1, 128)]
             performance = profiler.profile(dataloader=dataloader, input_shape=in_shape)
 
         # 6. Generate Visualizations
@@ -287,7 +289,7 @@ class Evaluator:
 
         # MHA/Fusion multi-input loaders
         arch = getattr(opt, 'arch', '')
-        if arch in ('Fusion_128', 'MHA_128'):
+        if arch in ('Fusion_128', 'MHA_128', 'Fusion_WWXC', 'MHA_WWXC'):
             dataloader = create_mha_dataloader(opt)
         else:
             dataloader = create_dataloader(opt)

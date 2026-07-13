@@ -20,8 +20,11 @@ Usage Examples:
         --wolter2021_raw ./checkpoints/wolter2021_raw.pth \
         --wolter2021_128 ./checkpoints/wolter2021_128.pth \
         --xception ./checkpoints/xception.pth \
+        --xception_128 ./checkpoints/xception_128.pth \
         --fusion ./checkpoints/fusion.pth \
-        --mha ./checkpoints/mha.pth
+        --mha ./checkpoints/mha.pth \
+        --fusion_wwxc ./checkpoints/fusion_wwxc.pth \
+        --mha_wwxc ./checkpoints/mha_wwxc.pth
 
     # Or pass custom model paths:
     python evaluate.py --val_root ./dataset/val \
@@ -64,6 +67,9 @@ def parse_args():
     model_group.add_argument('--xception', '--xception_raw', '--sception', dest='xception',
                              type=str, default=None,
                              help="Path to XceptionRaw .pth checkpoint file")
+    model_group.add_argument('--xception_128', dest='xception_128',
+                             type=str, default=None,
+                             help="Path to Xception_128 .pth checkpoint file")
     model_group.add_argument('--convnext_raw', '--convnext', dest='convnext_raw',
                              type=str, default=None,
                              help="Path to ConvNeXtRaw .pth checkpoint file")
@@ -76,6 +82,12 @@ def parse_args():
     model_group.add_argument('--mha', '--mha_128', dest='mha',
                              type=str, default=None,
                              help="Path to MHA_128 .pth checkpoint file")
+    model_group.add_argument('--fusion_wwxc', dest='fusion_wwxc',
+                             type=str, default=None,
+                             help="Path to Fusion_WWXC .pth checkpoint file")
+    model_group.add_argument('--mha_wwxc', dest='mha_wwxc',
+                             type=str, default=None,
+                             help="Path to MHA_WWXC .pth checkpoint file")
 
     # Flexible repeatable model argument e.g. --model Wang2020Raw=path.pth
     model_group.add_argument('--model', action='append', default=[],
@@ -120,10 +132,13 @@ def collect_models(args):
         ('WolterWavelet2021Raw', args.wolter2021_raw, 'WolterWavelet2021Raw'),
         ('WolterWavelet2021_128', args.wolter2021_128, 'WolterWavelet2021_128'),
         ('XceptionRaw', args.xception, 'XceptionRaw'),
+        ('Xception_128', args.xception_128, 'Xception_128'),
         ('ConvNeXtRaw', args.convnext_raw, 'ConvNeXtRaw'),
         ('ConvNeXt_128', args.convnext_128, 'ConvNeXt_128'),
         ('Fusion_128', args.fusion, 'Fusion_128'),
         ('MHA_128', args.mha, 'MHA_128'),
+        ('Fusion_WWXC', args.fusion_wwxc, 'Fusion_WWXC'),
+        ('MHA_WWXC', args.mha_wwxc, 'MHA_WWXC'),
     ]
 
     for display_name, ckpt_path, arch in named_models:

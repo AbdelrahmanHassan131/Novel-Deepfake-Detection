@@ -142,8 +142,11 @@ class ArchitectureType(Enum):
     FUSION_128 = 'Fusion_128'
     MHA_128 = 'MHA_128'
     XCEPTION_RAW = 'XceptionRaw'
+    XCEPTION_128 = 'Xception_128'
     CONVNEXT_RAW = 'ConvNeXtRaw'
     CONVNEXT_128 = 'ConvNeXt_128'
+    FUSION_WWXC = 'Fusion_WWXC'
+    MHA_WWXC = 'MHA_WWXC'
     # Legacy aliases
     RES50 = 'res50'
 

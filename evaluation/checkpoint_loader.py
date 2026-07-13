@@ -119,8 +119,11 @@ class CheckpointLoader:
             'Fusion_128': 'Fusion_128',
             'MHA_128': 'MHA_128',
             'XceptionRaw': 'XceptionRaw',
+            'Xception_128': 'Xception_128',
             'ConvNeXtRaw': 'ConvNeXtRaw',
             'ConvNeXt_128': 'ConvNeXt_128',
+            'Fusion_WWXC': 'Fusion_WWXC',
+            'MHA_WWXC': 'MHA_WWXC',
             # Also accept direct registry names
             'Wang2020Raw': 'Wang2020Raw',
             'WolterWavelet2021Raw': 'WolterWavelet2021Raw',
@@ -200,6 +203,7 @@ class CheckpointLoader:
         opt.compute_wavelets = arch in (
             'WolterWavelet2021Raw', 'WolterWavelet2021_128',
             'Fusion_128', 'MHA_128',
+            'Fusion_WWXC', 'MHA_WWXC',
         )
         opt.wavelet_level = 3
 
@@ -207,6 +211,13 @@ class CheckpointLoader:
         if arch in ('Fusion_128', 'MHA_128'):
             opt.rgb_model_path = getattr(opt, 'rgb_model_path', '')
             opt.wavelet_model_path = getattr(opt, 'wavelet_model_path', '')
+
+        # WWXC models need all 4 base model paths
+        if arch in ('Fusion_WWXC', 'MHA_WWXC'):
+            opt.rgb_model_path = getattr(opt, 'rgb_model_path', '')
+            opt.wavelet_model_path = getattr(opt, 'wavelet_model_path', '')
+            opt.xception_model_path = getattr(opt, 'xception_model_path', '')
+            opt.convnext_model_path = getattr(opt, 'convnext_model_path', '')
 
         # Apply user overrides
         if opt_overrides:

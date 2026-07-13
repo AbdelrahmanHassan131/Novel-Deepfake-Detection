@@ -133,6 +133,10 @@ def parse_args():
                         help="Path to pre-trained RGB checkpoint for fusion models")
     parser.add_argument('--wavelet_model_path', type=str, default=None,
                         help="Path to pre-trained Wavelet checkpoint for fusion models")
+    parser.add_argument('--xception_model_path', type=str, default=None,
+                        help="Path to pre-trained Xception_128 checkpoint for WWXC fusion models")
+    parser.add_argument('--convnext_model_path', type=str, default=None,
+                        help="Path to pre-trained ConvNeXt_128 checkpoint for WWXC fusion models")
     parser.add_argument('--embed_dim', type=int, default=128,
                         help="Embedding dimension for fusion models")
     parser.add_argument('--num_heads', type=int, default=4,
@@ -243,7 +247,7 @@ def main():
     # 4. Build DataLoaders
     if runtime.is_main:
         print("[3/5] Building dataloaders...")
-    if opt_clean.arch in ['MHA_128', 'Fusion_128']:
+    if opt_clean.arch in ['MHA_128', 'Fusion_128', 'Fusion_WWXC', 'MHA_WWXC']:
         train_loader = create_mha_dataloader(opt_clean)
     else:
         train_loader = create_dataloader(opt_clean)
@@ -259,7 +263,7 @@ def main():
         val_opt.dataroot = val_root
         val_opt.isTrain = False
         val_opt.serial_batches = True
-        if val_opt.arch in ['MHA_128', 'Fusion_128']:
+        if val_opt.arch in ['MHA_128', 'Fusion_128', 'Fusion_WWXC', 'MHA_WWXC']:
             val_loader = create_mha_dataloader(val_opt)
         else:
             val_loader = create_dataloader(val_opt)

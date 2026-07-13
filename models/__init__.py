@@ -18,8 +18,11 @@ Supported architectures:
     - Fusion_128          : Concatenation fusion of RGB + Wavelet
     - MHA_128             : Multi-head attention fusion of RGB + Wavelet
     - XceptionRaw         : Xception, Linear(2048, 1)
+    - Xception_128        : Xception, 128-dim embedding head
     - ConvNeXtRaw         : ConvNeXt-Base, Linear(1024, 1)
     - ConvNeXt_128        : ConvNeXt-Base, 128-dim embedding head
+    - Fusion_WWXC         : Concatenation fusion of Wang+Wolter+Xception+ConvNeXt
+    - MHA_WWXC            : MHA fusion of Wang+Wolter+Xception+ConvNeXt
 """
 
 from .registry import build_model, register_model, get_registered_models
