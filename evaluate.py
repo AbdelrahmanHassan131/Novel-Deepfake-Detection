@@ -115,6 +115,16 @@ def parse_args():
     parser.add_argument('--no_profiling', action='store_true', default=False,
                         help="Disable FLOPs and latency profiling")
 
+    # WWXC/Fusion base model paths
+    parser.add_argument('--rgb_model_path', type=str, default=None,
+                        help="Path to pre-trained RGB/Wang2020_128 checkpoint for fusion/MHA models")
+    parser.add_argument('--wavelet_model_path', type=str, default=None,
+                        help="Path to pre-trained Wavelet/Wolter_128 checkpoint for fusion/MHA models")
+    parser.add_argument('--xception_model_path', type=str, default=None,
+                        help="Path to pre-trained Xception_128 checkpoint for WWXC models")
+    parser.add_argument('--convnext_model_path', type=str, default=None,
+                        help="Path to pre-trained ConvNeXt_128 checkpoint for WWXC models")
+
     return parser.parse_args()
 
 
@@ -211,6 +221,17 @@ def main():
 
     device = args.device or ('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+    # Collect overrides for base model paths
+    overrides = {}
+    if args.rgb_model_path:
+        overrides['rgb_model_path'] = args.rgb_model_path
+    if args.wavelet_model_path:
+        overrides['wavelet_model_path'] = args.wavelet_model_path
+    if args.xception_model_path:
+        overrides['xception_model_path'] = args.xception_model_path
+    if args.convnext_model_path:
+        overrides['convnext_model_path'] = args.convnext_model_path
+
     if len(models_dict) == 1:
         # Single model evaluation
         display_name, (ckpt_path, arch) = next(iter(models_dict.items()))
@@ -228,7 +249,7 @@ def main():
             generate_gradcam=generate_gradcam,
             tsne_dataroot=args.tsne_val_root
         )
-        res = evaluator.run()
+        res = evaluator.run(opt_overrides=overrides)
         print(f"\nEvaluation Complete for {display_name}:")
         print(f"  - Accuracy: {res.metrics.get('accuracy', 0.0):.4f}")
         print(f"  - ROC AUC:  {res.metrics.get('roc_auc', 0.0):.4f}")
@@ -252,7 +273,7 @@ def main():
             tsne_dataroot=args.tsne_val_root
         )
         # Note: Evaluators created by ModelComparisonEvaluator inherit generate_gradcam setting
-        results = comparator.run()
+        results = comparator.run(opt_overrides=overrides)
         print("\n=== All Models Evaluated & Compared Successfully ===")
 
 
