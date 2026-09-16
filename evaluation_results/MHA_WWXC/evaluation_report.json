@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-07-14T17:49:40.828817",
+  "metadata": {
+    "arch": "MHA_WWXC",
+    "epoch": 1,
+    "best_metric": null,
+    "global_step": 12585,
+    "model_name": "MHA_WWXC",
+    "checkpoint_path": "F:\\Thesis Revesions SP\\Final Expirments\\mha_wwxc_experiment_20260714_015042\\checkpoints\\model_epoch_1.pth",
+    "checkpoint_size_mb": 11.117037773132324
+  },
+  "classification_metrics": {
+    "accuracy": 0.9998173182316404,
+    "precision": 1.0,
+    "recall": 0.9980353634577603,
+    "f1_score": 0.9990167158308751,
+    "roc_auc": 1.0,
+    "confusion_matrix": [
+      [
+        29790,
+        0
+      ],
+      [
+        6,
+        3048
+      ]
+    ],
+    "specificity": 1.0,
+    "sensitivity": 0.9980353634577603,
+    "eer": 0.0,
+    "eer_threshold": 0.16742919385433197,
+    "far": 0.0,
+    "frr": 0.0019646365422396855,
+    "pr_auc": 1.0,
+    "decision_threshold": 0.5,
+    "true_negatives": 29790,
+    "false_positives": 0,
+    "false_negatives": 6,
+    "true_positives": 3048,
+    "precision_class_0": 0.999798630688683,
+    "precision_class_1": 1.0,
+    "recall_class_0": 1.0,
+    "recall_class_1": 0.9980353634577603,
+    "f1_class_0": 0.9998993052059209,
+    "f1_class_1": 0.9990167158308751,
+    "support_class_0": 29790,
+    "support_class_1": 3054,
+    "total_samples": 32844,
+    "num_positive": 3054,
+    "num_negative": 29790
+  },
+  "performance_metrics": {
+    "avg_latency_per_image_ms": 9.5145,
+    "avg_latency_per_batch_ms": 304.4637,
+    "throughput_images_per_sec": 105.1,
+    "total_batches_timed": 50,
+    "total_samples_timed": 1600,
+    "flops": 1919104,
+    "macs": 959552,
+    "flops_source": "torch.utils.flop_counter",
+    "total_parameters": 965633,
+    "trainable_parameters": 965633,
+    "model_size_mb": 3.6835975646972656,
+    "checkpoint_size_mb": null,
+    "gpu_allocated_mb": 575.21,
+    "gpu_reserved_mb": 2494.0,
+    "gpu_peak_mb": 1225.99
+  },
+  "plots": {
+    "roc_curve": "evaluation_results\\MHA_WWXC\\plots\\roc_curve.png",
+    "precision_recall_curve": "evaluation_results\\MHA_WWXC\\plots\\precision_recall_curve.png",
+    "confusion_matrix": "evaluation_results\\MHA_WWXC\\plots\\confusion_matrix.png"
+  }
+}

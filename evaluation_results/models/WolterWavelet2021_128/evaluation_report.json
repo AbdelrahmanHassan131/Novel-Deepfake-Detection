@@ -1,0 +1,75 @@
+{
+  "generated_at": "2026-07-14T20:22:09.615569",
+  "metadata": {
+    "arch": "WolterWavelet2021_128",
+    "epoch": 2,
+    "best_metric": 0.9023525071653565,
+    "global_step": 25170,
+    "model_name": "WolterWavelet2021_128",
+    "checkpoint_path": "F:\\Thesis Revesions SP\\Final Expirments\\wolter2021_128_singlegpu_blur_20260713_044343\\checkpoints\\model_epoch_2.pth",
+    "checkpoint_size_mb": 19.805140495300293
+  },
+  "classification_metrics": {
+    "accuracy": 0.9943977591036415,
+    "precision": 0.9487179487179487,
+    "recall": 0.9934512115258677,
+    "f1_score": 0.9705694177863083,
+    "roc_auc": 0.9998082187625098,
+    "confusion_matrix": [
+      [
+        29626,
+        164
+      ],
+      [
+        20,
+        3034
+      ]
+    ],
+    "specificity": 0.9944947969117154,
+    "sensitivity": 0.9934512115258677,
+    "eer": 0.005975159449479691,
+    "eer_threshold": 0.4754007160663605,
+    "far": 0.005505203088284659,
+    "frr": 0.006548788474132285,
+    "pr_auc": 0.9983434772404447,
+    "decision_threshold": 0.5,
+    "true_negatives": 29626,
+    "false_positives": 164,
+    "false_negatives": 20,
+    "true_positives": 3034,
+    "precision_class_0": 0.9993253727315659,
+    "precision_class_1": 0.9487179487179487,
+    "recall_class_0": 0.9944947969117154,
+    "recall_class_1": 0.9934512115258677,
+    "f1_class_0": 0.9969042331247057,
+    "f1_class_1": 0.9705694177863083,
+    "support_class_0": 29790,
+    "support_class_1": 3054,
+    "total_samples": 32844,
+    "num_positive": 3054,
+    "num_negative": 29790
+  },
+  "performance_metrics": {
+    "avg_latency_per_image_ms": 0.2582,
+    "avg_latency_per_batch_ms": 8.2639,
+    "throughput_images_per_sec": 3872.26,
+    "total_batches_timed": 50,
+    "total_samples_timed": 1600,
+    "flops": 5435949312,
+    "macs": 2717974656,
+    "flops_source": "torch.utils.flop_counter",
+    "total_parameters": 1727553,
+    "trainable_parameters": 1727553,
+    "model_size_mb": 6.590091705322266,
+    "checkpoint_size_mb": null,
+    "gpu_allocated_mb": 292.17,
+    "gpu_reserved_mb": 954.0,
+    "gpu_peak_mb": 716.27
+  },
+  "plots": {
+    "roc_curve": "evaluation_results\\models\\WolterWavelet2021_128\\plots\\roc_curve.png",
+    "precision_recall_curve": "evaluation_results\\models\\WolterWavelet2021_128\\plots\\precision_recall_curve.png",
+    "confusion_matrix": "evaluation_results\\models\\WolterWavelet2021_128\\plots\\confusion_matrix.png",
+    "gradcam": "evaluation_results\\models\\WolterWavelet2021_128\\plots\\gradcam_explanations.png"
+  }
+}

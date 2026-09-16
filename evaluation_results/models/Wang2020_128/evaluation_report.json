@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-07-14T20:19:44.098806",
+  "metadata": {
+    "arch": "Wang2020_128",
+    "epoch": 2,
+    "best_metric": null,
+    "global_step": 25170,
+    "model_name": "Wang2020_128",
+    "checkpoint_path": "F:\\Thesis Revesions SP\\Final Expirments\\wang2020_128_singlegpu_20260712_211828\\checkpoints\\model_epoch_2.pth",
+    "checkpoint_size_mb": 272.47157192230225
+  },
+  "classification_metrics": {
+    "accuracy": 0.999756424308854,
+    "precision": 0.9973873285434357,
+    "recall": 1.0,
+    "f1_score": 0.9986919555264878,
+    "roc_auc": 0.9999999340504685,
+    "confusion_matrix": [
+      [
+        29782,
+        8
+      ],
+      [
+        0,
+        3054
+      ]
+    ],
+    "specificity": 0.9997314535078885,
+    "sensitivity": 1.0,
+    "eer": 0.0002014098690835851,
+    "eer_threshold": 0.673966646194458,
+    "far": 0.0002685464921114468,
+    "frr": 0.0,
+    "pr_auc": 0.9999993579619143,
+    "decision_threshold": 0.5,
+    "true_negatives": 29782,
+    "false_positives": 8,
+    "false_negatives": 0,
+    "true_positives": 3054,
+    "precision_class_0": 1.0,
+    "precision_class_1": 0.9973873285434357,
+    "recall_class_0": 0.9997314535078885,
+    "recall_class_1": 1.0,
+    "f1_class_0": 0.9998657087222185,
+    "f1_class_1": 0.9986919555264878,
+    "support_class_0": 29790,
+    "support_class_1": 3054,
+    "total_samples": 32844,
+    "num_positive": 3054,
+    "num_negative": 29790
+  },
+  "performance_metrics": {
+    "avg_latency_per_image_ms": 1.7073,
+    "avg_latency_per_batch_ms": 54.6332,
+    "throughput_images_per_sec": 585.72,
+    "total_batches_timed": 50,
+    "total_samples_timed": 1600,
+    "flops": 10677125376,
+    "macs": 5338562688,
+    "flops_source": "torch.utils.flop_counter",
+    "total_parameters": 23770433,
+    "trainable_parameters": 23770433,
+    "model_size_mb": 90.67700576782227,
+    "checkpoint_size_mb": null,
+    "gpu_allocated_mb": 506.78,
+    "gpu_reserved_mb": 954.0,
+    "gpu_peak_mb": 716.27
+  },
+  "plots": {
+    "roc_curve": "evaluation_results\\models\\Wang2020_128\\plots\\roc_curve.png",
+    "precision_recall_curve": "evaluation_results\\models\\Wang2020_128\\plots\\precision_recall_curve.png",
+    "confusion_matrix": "evaluation_results\\models\\Wang2020_128\\plots\\confusion_matrix.png"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "generated_at": "2026-07-14T20:22:09.619569",
+  "dataset": "F:\\to be deleted again val",
+  "models": {
+    "Wang2020_128": {
+      "architecture": "Wang2020_128",
+      "checkpoint_path": "F:\\Thesis Revesions SP\\Final Expirments\\wang2020_128_singlegpu_20260712_211828\\checkpoints\\model_epoch_2.pth",
+      "accuracy": 0.999756424308854,
+      "f1_score": 0.9986919555264878,
+      "roc_auc": 0.9999999340504685,
+      "pr_auc": 0.9999993579619143,
+      "eer": 0.0002014098690835851,
+      "precision": 0.9973873285434357,
+      "recall": 1.0,
+      "specificity": 0.9997314535078885,
+      "sensitivity": 1.0,
+      "far": 0.0002685464921114468,
+      "frr": 0.0,
+      "true_positives": 3054,
+      "false_positives": 8,
+      "true_negatives": 29782,
+      "false_negatives": 0,
+      "total_samples": 32844,
+      "performance": {
+        "flops_g": 0.0,
+        "latency_ms_per_sample": 0.0,
+        "throughput_samples_per_sec": 0.0
+      }
+    },
+    "WolterWavelet2021_128": {
+      "architecture": "WolterWavelet2021_128",
+      "checkpoint_path": "F:\\Thesis Revesions SP\\Final Expirments\\wolter2021_128_singlegpu_blur_20260713_044343\\checkpoints\\model_epoch_2.pth",
+      "accuracy": 0.9943977591036415,
+      "f1_score": 0.9705694177863083,
+      "roc_auc": 0.9998082187625098,
+      "pr_auc": 0.9983434772404447,
+      "eer": 0.005975159449479691,
+      "precision": 0.9487179487179487,
+      "recall": 0.9934512115258677,
+      "specificity": 0.9944947969117154,
+      "sensitivity": 0.9934512115258677,
+      "far": 0.005505203088284659,
+      "frr": 0.006548788474132285,
+      "true_positives": 3034,
+      "false_positives": 164,
+      "true_negatives": 29626,
+      "false_negatives": 20,
+      "total_samples": 32844,
+      "performance": {
+        "flops_g": 0.0,
+        "latency_ms_per_sample": 0.0,
+        "throughput_samples_per_sec": 0.0
+      }
+    }
+  }
+}

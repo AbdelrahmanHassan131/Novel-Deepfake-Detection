@@ -1,0 +1,42 @@
+----------------- Options ---------------
+                     arch: res50                         
+               batch_size: 64                            
+                blur_prob: 0                             
+                 blur_sig: 0.5                           
+          checkpoint_path: F:\Thesis Revesions SP\First Revesion\Experiments with 2 epochs Second NB\experiments\mha_128_singlegpu_20260713_083003\checkpoints\model_epoch_2.pth	[default: None]
+          checkpoints_dir: ./checkpoints                 
+                class_bal: False                         
+                  classes:                               
+                 cropSize: 224                           
+                data_root: F:\Thesis Revesions SP\Second Revesion\test images for grad cam 4 images	[default: None]
+                 dataroot: ./dataset/                    
+                  dropout: 0.1                           
+                embed_dim: 128                           
+                    epoch: latest                        
+              fusion_type: cross_attention               
+                  gpu_ids: 0                             
+                init_gain: 0.02                          
+                init_type: normal                        
+                  isTrain: False                         	[default: None]
+               jpg_method: cv2                           
+                 jpg_prob: 0                             
+                 jpg_qual: 75                            
+                 loadSize: 256                           
+                     mode: binary                        
+                   n_iter: 300                           
+                     name: experiment_name               
+                  no_flip: False                         
+                num_heads: 4                             
+               num_images: 4                             	[default: 2]
+              num_samples: None                          
+              num_threads: 0                             
+               output_dir: F:\Thesis Revesions SP\Second Revesion\new grad cam images	[default: tsne_outputs]
+               perplexity: 30                            
+           resize_or_crop: scale_and_crop                
+           rgb_model_path: F:\Thesis Revesions SP\First Revesion\Experiments With 2 Epochs\experiments\wang2020_128_singlegpu_20260712_211828\checkpoints\model_epoch_2.pth	[default: ./checkpoints]
+                rz_interp: bilinear                      
+           serial_batches: False                         
+                   suffix:                               
+            wavelet_level: 3                             
+       wavelet_model_path: F:\Thesis Revesions SP\First Revesion\Experiments with 2 epochs Second NB\experiments\wolter2021_128_singlegpu_blur_20260713_044343\checkpoints\model_epoch_2.pth	[default: ./checkpoints]
+----------------- End -------------------
