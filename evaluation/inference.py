@@ -103,7 +103,7 @@ class InferenceRunner:
                 self.model.forward()
 
                 # Extract output logits
-                output = self.model.output
+                output = self.model.output * getattr(self.model, 'score_sign', 1.0)
                 if output.dim() > 1:
                     output = output.squeeze(1)
 

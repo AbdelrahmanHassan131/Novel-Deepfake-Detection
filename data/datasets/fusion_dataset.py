@@ -53,6 +53,8 @@ class FusionDataset(BaseDataset):
         # --- Precomputed root (only for precomputed backend) ---
         self._precomputed_root = None
         if self._backend.name == 'precomputed':
+            if opt.isTrain:
+                raise ValueError('Precomputed fusion training can mismatch augmented RGB and wavelets. Use cpu or gpu wavelets.')
             if not precomputed_dir:
                 raise ValueError(
                     "opt.precomputed_dir must be set when using the "

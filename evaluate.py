@@ -125,6 +125,11 @@ def parse_args():
     parser.add_argument('--convnext_model_path', type=str, default=None,
                         help="Path to pre-trained ConvNeXt_128 checkpoint for WWXC models")
 
+    parser.add_argument('--manifest', help='Evaluation manifest; explicit labels and source groups')
+    parser.add_argument('--split', default='external_test')
+    parser.add_argument('--legacy_config', help='Original preprocessing/options and label_mapping for checkpoints without metadata')
+    parser.add_argument('--threshold_file', help='Threshold calibrated on development predictions from this checkpoint')
+    parser.add_argument('--bootstrap', type=int, default=200)
     return parser.parse_args()
 
 
@@ -222,7 +227,7 @@ def main():
     device = args.device or ('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     # Collect overrides for base model paths
-    overrides = {}
+    overrides = dict(manifest=args.manifest, manifest_split=args.split, legacy_config=args.legacy_config, threshold_file=args.threshold_file, bootstrap=args.bootstrap)
     if args.rgb_model_path:
         overrides['rgb_model_path'] = args.rgb_model_path
     if args.wavelet_model_path:

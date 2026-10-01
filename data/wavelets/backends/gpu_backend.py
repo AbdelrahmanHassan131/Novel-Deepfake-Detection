@@ -112,11 +112,14 @@ class GPUWaveletBackend(WaveletBackend):
     }
 
     def __init__(self, wavelet='haar', level=3, mode='reflect',
-                 log_scale=True, device=None):
+                 log_scale=True, device=None, log_mode='legacy'):
         super().__init__(wavelet=wavelet, level=level, mode=mode,
                          log_scale=log_scale)
 
         self.device = device or torch.device('cuda')
+        if log_mode not in ('legacy', 'signed_log1p'):
+            raise ValueError(log_mode)
+        self.log_mode = log_mode
 
         # Resolve padding mode
         pt_mode = self._MODE_MAP.get(mode, 'reflect')
@@ -137,7 +140,6 @@ class GPUWaveletBackend(WaveletBackend):
     # Public API
     # ------------------------------------------------------------------
 
-    @torch.no_grad()
     def __call__(self, data):
         """
         Compute wavelet packets on GPU.
@@ -192,7 +194,8 @@ class GPUWaveletBackend(WaveletBackend):
 
         # --- optional log-scaling ---
         if self.log_scale:
-            result = self._log_scale(result)
+            result = (torch.sign(result) * torch.log1p(torch.abs(result))
+                      if self.log_mode == 'signed_log1p' else self._log_scale(result))
 
         if single:
             result = result.squeeze(0)  # back to (C', H', W')

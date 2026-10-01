@@ -17,6 +17,8 @@ Usage:
 import os
 import sys
 import argparse
+import json
+from datetime import datetime
 import torch
 
 from config import load_config, config_to_opt, ConfigValidator
@@ -33,8 +35,10 @@ def parse_args():
     # Model / Architecture
     parser.add_argument('--arch', type=str, default='Wang2020Raw',
                         help=f"Model architecture to train. Available: {get_registered_models()}")
-    parser.add_argument('--pretrained', action='store_true', default=MODEL_DEFAULTS['pretrained'],
+    parser.add_argument('--pretrained', action=argparse.BooleanOptionalAction, default=MODEL_DEFAULTS['pretrained'],
                         help="Use pretrained weights for backbone networks")
+    parser.add_argument('--backbone_weights', type=str, default=None,
+                        help="Path to local backbone weights for offline initialization without downloads")
     parser.add_argument('--num_classes', type=int, default=MODEL_DEFAULTS['num_classes'],
                         help="Number of output classes")
     parser.add_argument('--init_type', type=str, default=MODEL_DEFAULTS['init_type'],
@@ -91,10 +95,12 @@ def parse_args():
                         help="Wavelet decomposition level")
     parser.add_argument('--wavelet_mode', type=str, default=WAVELET_DEFAULTS['mode'],
                         help="Signal extension mode")
-    parser.add_argument('--use_log_packets', action='store_true', default=WAVELET_DEFAULTS['log_packets'],
+    parser.add_argument('--use_log_packets', action=argparse.BooleanOptionalAction, default=WAVELET_DEFAULTS['log_packets'],
                         help="Apply log scaling to wavelet packets")
 
     # Training Hyperparameters
+    parser.add_argument('--wavelet_log_mode', choices=['signed_log1p', 'legacy'], default='signed_log1p',
+                        help='Stable signed log1p for new runs; legacy reproduces old checkpoints')
     parser.add_argument('--epochs', '--niter', dest='epochs', type=int, default=TRAINING_DEFAULTS['epochs'],
                         help="Number of epochs to train")
     parser.add_argument('--epochs_decay', '--niter_decay', dest='epochs_decay', type=int, default=TRAINING_DEFAULTS['epochs_decay'],
@@ -113,10 +119,17 @@ def parse_args():
                         help="Learning rate policy (none, step, cosine, plateau)")
     parser.add_argument('--continue_train', action='store_true', default=TRAINING_DEFAULTS['continue_train'],
                         help="Continue training from latest checkpoint")
+    parser.add_argument('--resume_checkpoint', type=str, default=None,
+                        help="Explicit full-protocol checkpoint to resume. Required with --continue_train.")
     parser.add_argument('--epoch', type=str, default='latest',
                         help="Which epoch to load when continue_train is set (e.g., 'latest' or '10')")
     parser.add_argument('--use_amp', action='store_true', default=TRAINING_DEFAULTS['use_amp'],
                         help="Enable Automatic Mixed Precision (AMP)")
+    parser.add_argument('--monitor_metric', type=str, default=TRAINING_DEFAULTS.get('monitor_metric', 'auc'),
+                        choices=['auc', 'balanced_accuracy', 'accuracy'],
+                        help="Validation metric monitored for saving best.pth (auc, balanced_accuracy, or accuracy)")
+    parser.add_argument('--grad_accum_steps', type=int, default=1,
+                        help="Number of gradient accumulation steps before optimizer step (simulates larger batch size on single/dual GPU)")
 
     # Runtime & GPU
     parser.add_argument('--gpu_ids', type=str, default='0',
@@ -143,7 +156,7 @@ def parse_args():
                         help="Number of attention heads for MHA fusion")
     parser.add_argument('--dropout', type=float, default=0.1,
                         help="Dropout rate for fusion models")
-    parser.add_argument('--fusion_type', type=str, default='cross_attention', choices=['cross_attention', 'self_attention', 'concat'],
+    parser.add_argument('--fusion_type', type=str, default='token_attention', choices=['token_attention', 'gated', 'concat', 'cross_attention', 'self_attention'],
                         help="Fusion strategy for MHA model")
     parser.add_argument('--freeze_base_models', action='store_true', default=True,
                         help="Freeze pre-trained base models during fusion training")
@@ -153,6 +166,8 @@ def parse_args():
     # Experiment & Logging
     parser.add_argument('--name', type=str, default='wang2020_experiment',
                         help="Name of the experiment run")
+    parser.add_argument('--run_id', type=str, default=None,
+                        help="Explicit immutable run/experiment identifier (e.g. 'seed42' or timestamp)")
     parser.add_argument('--checkpoints_dir', type=str, default='./experiments',
                         help="Base directory for saving experiments and checkpoints")
     parser.add_argument('--log_freq', type=int, default=50,
@@ -164,6 +179,18 @@ def parse_args():
     parser.add_argument('--val_epoch_freq', type=int, default=1,
                         help="Frequency of running validation (in epochs)")
 
+    parser.add_argument('--manifest', help='CSV with explicit labels and source groups')
+    parser.add_argument('--manifest_split', default='train')
+    parser.add_argument('--val_manifest')
+    parser.add_argument('--val_manifest_split', default='dev')
+    parser.add_argument('--audit_hashes', action='store_true')
+    parser.add_argument('--require_verified_manifest', action=argparse.BooleanOptionalAction, default=True,
+                        help='Require preparation audit gate to pass before training')
+    parser.add_argument('--allow_folder_training', action='store_true', help='Smoke/legacy experiments only: group independence cannot be audited')
+    parser.add_argument('--noise_prob', type=float, default=0.0)
+    parser.add_argument('--noise_std', type=float, nargs=2, default=[0.0, 3.0], help='Noise sigma in 0-255 pixel units')
+    parser.add_argument('--downscale_prob', type=float, default=0.0)
+    parser.add_argument('--downscale_range', type=float, nargs=2, default=[0.5, 1.0])
     # Parse args
     args = parser.parse_args()
 
@@ -205,7 +232,7 @@ def main():
         print(f"Dataset Root : {opt.dataroot}")
         print(f"Classes      : {opt.classes}")
         print(f"GPUs         : {opt.gpu_ids if opt.gpu_ids else 'CPU'}")
-        print(f"Batch Size   : {opt.batch_size}")
+        print(f"Batch Size   : {opt.batch_size} (Accum steps: {getattr(opt, 'grad_accum_steps', 1)})")
         print(f"Learning Rate: {opt.lr}")
 
     # 2. Convert to structured Config & validate
@@ -222,15 +249,65 @@ def main():
             print(f"\nConfiguration validation failed:\n{e}")
         sys.exit(1)
 
+    from data.manifest import read_manifest, audit_rows, PROTECTED_SPLITS, verify_manifest_gate
+    if not opt_clean.manifest and not opt_clean.allow_folder_training:
+        raise ValueError('Use --manifest for auditable training, or --allow_folder_training for a smoke experiment.')
+    if opt_clean.manifest:
+        require_hashes = getattr(opt_clean, 'audit_hashes', False)
+        if getattr(opt, 'require_verified_manifest', True):
+            if is_main:
+                print(f"Verifying preparation audit gate for {opt_clean.manifest}...")
+            verify_manifest_gate(opt_clean.manifest, enforce_class_coverage=True, require_hashes=require_hashes)
+            if opt_clean.val_manifest and opt_clean.val_manifest != opt_clean.manifest:
+                if is_main:
+                    print(f"Verifying preparation audit gate for val_manifest: {opt_clean.val_manifest}...")
+                verify_manifest_gate(opt_clean.val_manifest, enforce_class_coverage=True, require_hashes=require_hashes)
+        if opt_clean.manifest_split in PROTECTED_SPLITS or opt_clean.val_manifest_split in PROTECTED_SPLITS:
+            raise ValueError('Test splits must not be used for training or checkpoint selection.')
+        if opt_clean.manifest == opt_clean.val_manifest and opt_clean.manifest_split == opt_clean.val_manifest_split:
+            raise ValueError('Training and development split names must differ when using the same manifest.')
+        if not opt_clean.val_manifest:
+            opt_clean.val_manifest = opt_clean.manifest
+        rows = read_manifest(opt_clean.manifest, opt_clean.dataroot, opt_clean.manifest_split)
+        dev_rows = read_manifest(opt_clean.val_manifest, opt_clean.val_root or opt_clean.dataroot, opt_clean.val_manifest_split)
+        # Ensure dev_rows have split distinct from manifest_split for cross-manifest overlap detection
+        tagged_dev_rows = []
+        for r in dev_rows:
+            r_copy = dict(r)
+            if r_copy['split'] == opt_clean.manifest_split:
+                r_copy['split'] = 'dev'
+            tagged_dev_rows.append(r_copy)
+        report = audit_rows(rows + tagged_dev_rows, hash_files=require_hashes)
+        if not report['passed']:
+            raise ValueError('Dataset audit failed: ' + '; '.join(report['errors'][:20]))
+        if {r['label'] for r in rows} != {0, 1} or {r['label'] for r in dev_rows} != {0, 1}:
+            raise ValueError('Training and development each require real and fake samples.')
+        print('Dataset audit:', report)
+    # Seed BEFORE constructing datasets and model weights, not just the training loop.
+    if opt_clean.seed is not None:
+        seed_everything(opt_clean.seed, deterministic=opt_clean.deterministic)
+
     # Instantiate runtime early so process group is ready and we know is_main
     from training.runtime import DistributedRuntime
     runtime = DistributedRuntime(opt_clean)
 
-    # 3. Setup Experiment Manager
+    # 3. Setup Experiment Manager.  A resumed run must use the original
+    # checkpoint directory; creating a timestamped experiment first would make
+    # --continue_train silently start from scratch.
     if runtime.is_main:
         print("[2/5] Setting up experiment environment...")
     manager = ExperimentManager(base_dir=opt_clean.checkpoints_dir)
-    experiment = manager.create(opt_clean.name, opt_clean)
+    if opt_clean.continue_train:
+        if not opt_clean.resume_checkpoint:
+            raise ValueError('--continue_train requires --resume_checkpoint pointing to a full-protocol checkpoint.')
+        resume_path = os.path.abspath(opt_clean.resume_checkpoint)
+        if not os.path.isfile(resume_path):
+            raise FileNotFoundError(f'Resume checkpoint not found: {resume_path}')
+        checkpoint_dir = os.path.dirname(resume_path)
+        experiment = manager.load(os.path.dirname(checkpoint_dir))
+    else:
+        resume_path = None
+        experiment = manager.create(opt_clean.name, opt_clean)
     if runtime.is_main:
         print(f"  -> Experiment directory: {experiment.root_dir}")
         print(f"  -> Checkpoint directory: {experiment.checkpoint_dir}")
@@ -256,11 +333,14 @@ def main():
 
     val_loader = None
     val_root = getattr(opt_clean, 'val_root', None)
-    if val_root and os.path.exists(val_root):
+    if opt_clean.val_manifest or (val_root and os.path.exists(val_root)):
         if runtime.is_main:
             print("  -> Building validation dataloader...")
         val_opt = argparse.Namespace(**vars(opt_clean))
-        val_opt.dataroot = val_root
+        val_opt.dataroot = val_root or opt_clean.dataroot
+        val_opt.manifest = opt_clean.val_manifest
+        val_opt.manifest_split = opt_clean.val_manifest_split
+        val_opt.class_bal = False
         val_opt.isTrain = False
         val_opt.serial_batches = True
         if val_opt.arch in ['MHA_128', 'Fusion_128', 'Fusion_WWXC', 'MHA_WWXC']:
@@ -274,10 +354,15 @@ def main():
     if runtime.is_main:
         print(f"[4/5] Constructing model ({opt_clean.arch})...")
     model = build_model(opt_clean)
+    if runtime.is_main and hasattr(model, 'head_class_name'):
+        print(f"  -> Fusion head class   : {model.head_class_name}")
+        print(f"  -> Head param count    : {getattr(model, 'head_param_count', 0):,}")
 
     if runtime.is_main:
         print("[5/5] Initializing Trainer...")
     trainer = Trainer(model, train_loader, opt_clean, val_loader=val_loader, runtime=runtime, experiment_logger=experiment_logger)
+    if resume_path:
+        trainer.resume_training(resume_path)
 
     if runtime.is_main:
         print("\n" + "=" * 70)
@@ -287,13 +372,26 @@ def main():
         trainer.fit(num_epochs=opt_clean.niter)
         if runtime.is_main:
             print("\n[SUCCESS] Training completed successfully!")
+            manifest_path = os.path.join(experiment.root_dir, 'run_manifest.json')
+            if os.path.isfile(manifest_path):
+                with open(manifest_path, 'r', encoding='utf-8') as f:
+                    m_data = json.load(f)
+                m_data['status'] = 'completed'
+                m_data['completed_at'] = datetime.now().isoformat()
+                if hasattr(model, 'head_class_name'):
+                    m_data['head_class'] = model.head_class_name
+                    m_data['head_params'] = getattr(model, 'head_param_count', 0)
+                with open(manifest_path, 'w', encoding='utf-8') as f:
+                    json.dump(m_data, f, indent=2)
     except KeyboardInterrupt:
         if runtime.is_main:
             print("\n[INFO] Training interrupted by user.")
+        sys.exit(130)
     except Exception as e:
         if runtime.is_main:
             print(f"\n[ERROR] Training failed with error: {e}")
         raise
+
 
 
 if __name__ == "__main__":

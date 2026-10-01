@@ -1,0 +1,55 @@
+{
+  "plan_type": "declarative_study_plan",
+  "consumer": "tools/run_study_plan.py",
+  "study_name": "targeted_ablation_matrix",
+  "protocol": "targeted_1d_sweeps_avoiding_full_cartesian_grid",
+  "base_configuration": "pilot_100k_l4_single_gpu",
+  "ablations": [
+    {
+      "dimension": "wavelet_level",
+      "hypothesis": "Compare frequency decomposition levels 2 (48 ch), 3 (192 ch), and 4 (768 ch) under controlled architecture.",
+      "values": [2, 3, 4],
+      "fixed_settings": {
+        "embed_dim": 128,
+        "fusion_type": "token_attention",
+        "wavelet_log_mode": "signed_log1p"
+      }
+    },
+    {
+      "dimension": "embedding_dimension",
+      "hypothesis": "Test feature bottleneck capacity at expert and head stages.",
+      "values": [64, 128, 256],
+      "fixed_settings": {
+        "wavelet_level": 3,
+        "fusion_type": "token_attention"
+      }
+    },
+    {
+      "dimension": "augmentation_policy",
+      "hypothesis": "Examine effect of blur and JPEG robustness training augmentations.",
+      "conditions": [
+        {"name": "no_aug", "blur_prob": 0.0, "jpg_prob": 0.0},
+        {"name": "mild_aug", "blur_prob": 0.25, "jpg_prob": 0.25},
+        {"name": "standard_aug", "blur_prob": 0.5, "jpg_prob": 0.5}
+      ]
+    },
+    {
+      "dimension": "frame_capping_per_video",
+      "hypothesis": "Evaluate trade-off between video diversity and frame count at fixed 100K training budget.",
+      "values": [5, 15, 30],
+      "fixed_settings": {
+        "target_train_total": 100000
+      }
+    },
+    {
+      "dimension": "fusion_architecture",
+      "hypothesis": "Test whether multi-key token attention outperforms gated fusion, concat MLP, and late ensemble on frozen experts.",
+      "architectures": [
+        {"name": "concat_mlp", "fusion_type": "concat"},
+        {"name": "gated_fusion", "fusion_type": "gated"},
+        {"name": "corrected_token_attention", "fusion_type": "token_attention"},
+        {"name": "equal_weight_late_ensemble", "fusion_type": "ensemble"}
+      ]
+    }
+  ]
+}

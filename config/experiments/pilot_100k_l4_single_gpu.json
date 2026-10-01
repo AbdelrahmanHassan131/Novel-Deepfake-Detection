@@ -1,0 +1,53 @@
+{
+  "plan_type": "declarative_study_plan",
+  "consumer": "tools/run_study_plan.py",
+  "experiment_name": "pilot_100k_l4_single_gpu",
+  "hardware_target": "NVIDIA L4 (24 GB VRAM)",
+  "dataset": {
+    "target_total_train": 100000,
+    "target_real_train": 50000,
+    "target_fake_train": 50000,
+    "dev_ratio": 0.1,
+    "test_ratio": 0.1,
+    "frame_cap_per_video": 15,
+    "strict_connected_groups": true,
+    "seed": 42
+  },
+  "training": {
+    "batch_size": 32,
+    "grad_accum_steps": 2,
+    "effective_batch_size": 64,
+    "num_workers": 4,
+    "use_amp": true,
+    "optimizer": "adam",
+    "learning_rate": 0.0001,
+    "epochs": 10,
+    "monitor_metric": "auc",
+    "wavelet_log_mode": "signed_log1p"
+  },
+  "stages": {
+    "stage1_rgb": {
+      "arch": "Wang2020_128",
+      "pretrained": true,
+      "embed_dim": 128
+    },
+    "stage2_wavelet": {
+      "arch": "WolterWavelet2021_128",
+      "wavelet_type": "haar",
+      "wavelet_level": 3,
+      "wavelet_log_mode": "signed_log1p",
+      "embed_dim": 128
+    },
+    "stage3_fusion": {
+      "arch": "MHA_128",
+      "fusion_candidates": [
+        "gated",
+        "concat",
+        "token_attention"
+      ],
+      "freeze_base_models": true,
+      "embed_dim": 128
+    }
+  },
+  "seeds": [42, 43, 44]
+}

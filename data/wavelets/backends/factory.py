@@ -80,6 +80,7 @@ def create_wavelet_backend(opt, device=None):
     if backend_name == 'cpu':
         return CPUWaveletBackend(
             wavelet=wavelet, level=level, mode=mode, log_scale=log_scale,
+            log_mode=getattr(opt, 'wavelet_log_mode', 'signed_log1p'),
         )
 
     if backend_name == 'gpu':
@@ -88,6 +89,7 @@ def create_wavelet_backend(opt, device=None):
         return GPUWaveletBackend(
             wavelet=wavelet, level=level, mode=mode,
             log_scale=log_scale, device=device,
+            log_mode=getattr(opt, 'wavelet_log_mode', 'signed_log1p'),
         )
 
     if backend_name == 'precomputed':

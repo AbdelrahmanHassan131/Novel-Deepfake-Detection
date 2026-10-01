@@ -186,13 +186,27 @@ def resnet34(pretrained=False, **kwargs):
     return model
 
 
-def resnet50(pretrained=False, **kwargs):
+def resnet50(pretrained=False, weights_path=None, **kwargs):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
+        weights_path (str, optional): Path to local checkpoint file to load weights without downloads
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-    if pretrained:
+    if weights_path is not None:
+        import torch
+        from pathlib import Path
+        weights_file = Path(weights_path).resolve()
+        if not weights_file.is_file():
+            raise FileNotFoundError(f"Backbone weights file not found: {weights_file}")
+        state = torch.load(weights_file, map_location='cpu', weights_only=False)
+        if 'state_dict' in state:
+            state = state['state_dict']
+        elif 'model' in state:
+            state = state['model']
+        cleaned = {k.removeprefix('module.'): v for k, v in state.items()}
+        model.load_state_dict(cleaned, strict=False)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
 

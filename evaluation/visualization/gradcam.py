@@ -211,7 +211,7 @@ def generate_gradcam_figure(images, cams, labels, predictions,
     for i in range(n):
         # Original image
         axes[i, 0].imshow(images[i])
-        label_text = 'REAL' if labels[i] == 1 else 'FAKE'
+        label_text = 'REAL' if labels[i] == 0 else 'FAKE'
         axes[i, 0].set_title(f'Original ({label_text})', fontsize=11)
         axes[i, 0].axis('off')
 

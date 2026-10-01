@@ -51,6 +51,12 @@ class CPUWaveletBackend(WaveletBackend):
         log_scale: Apply log-scaling to coefficients (default ``True``).
     """
 
+    def __init__(self, wavelet='haar', level=3, mode='reflect', log_scale=True, log_mode='legacy'):
+        super().__init__(wavelet, level, mode, log_scale)
+        if log_mode not in ('legacy', 'signed_log1p'):
+            raise ValueError(log_mode)
+        self.log_mode = log_mode
+
     def __call__(self, data):
         """
         Compute wavelet packets from an image on CPU.
@@ -74,7 +80,10 @@ class CPUWaveletBackend(WaveletBackend):
         )
 
         if self.log_scale:
-            wavelet_coeffs = log_scale_packets(wavelet_coeffs)
+            if self.log_mode == 'signed_log1p':
+                wavelet_coeffs = np.sign(wavelet_coeffs) * np.log1p(np.abs(wavelet_coeffs))
+            else:
+                wavelet_coeffs = log_scale_packets(wavelet_coeffs)
 
         return torch.from_numpy(wavelet_coeffs).float()
 

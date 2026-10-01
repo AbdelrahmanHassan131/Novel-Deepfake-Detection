@@ -202,7 +202,7 @@ class DistributedRuntime:
 
         # Move any additional frozen sub-models to the correct device
         # (e.g. rgb_model, wavelet_model in MHA/Fusion trainers)
-        for attr_name in ('rgb_model', 'wavelet_model'):
+        for attr_name in ('rgb_model', 'wavelet_model', 'xception_model', 'convnext_model'):
             sub_model = getattr(model, attr_name, None)
             if sub_model is not None and isinstance(sub_model, torch.nn.Module):
                 sub_model.to(self.device)
@@ -260,24 +260,37 @@ class DistributedRuntime:
             return loader
 
         dataset = loader.dataset
-        sampler = DistributedSampler(
-            dataset,
-            num_replicas=self.world_size,
-            rank=self.rank,
-            shuffle=is_train,
-        )
+        from data.samplers.distributed import EvaluationSampler, DistributedWeightedSampler
+        from torch.utils.data import WeightedRandomSampler
+        if not is_train:
+            sampler = EvaluationSampler(dataset, self.rank, self.world_size)
+        elif isinstance(loader.sampler, WeightedRandomSampler):
+            sampler = DistributedWeightedSampler(loader.sampler.weights, self.rank, self.world_size,
+                                                  getattr(self._opt, 'seed', None) or 42)
+        else:
+            sampler = DistributedSampler(dataset, num_replicas=self.world_size,
+                                         rank=self.rank, shuffle=True, seed=getattr(self._opt, 'seed', None) or 42)
 
         # Reconstruct the loader with the distributed sampler.
-        # We preserve all original loader settings except sampler/shuffle.
-        new_loader = DataLoader(
-            dataset=dataset,
-            batch_size=loader.batch_size,
-            sampler=sampler,
-            num_workers=loader.num_workers,
-            pin_memory=loader.pin_memory,
-            drop_last=getattr(loader, 'drop_last', False),
-            collate_fn=loader.collate_fn,
-        )
+        # We preserve all original loader settings including worker initialization.
+        loader_kwargs = {
+            'dataset': dataset,
+            'batch_size': loader.batch_size,
+            'sampler': sampler,
+            'num_workers': loader.num_workers,
+            'pin_memory': loader.pin_memory,
+            'drop_last': getattr(loader, 'drop_last', False),
+            'collate_fn': loader.collate_fn,
+            'worker_init_fn': getattr(loader, 'worker_init_fn', None),
+        }
+        if hasattr(loader, 'prefetch_factor') and loader.prefetch_factor is not None:
+            loader_kwargs['prefetch_factor'] = loader.prefetch_factor
+        if hasattr(loader, 'persistent_workers'):
+            loader_kwargs['persistent_workers'] = loader.persistent_workers
+        if hasattr(loader, 'timeout') and loader.timeout is not None:
+            loader_kwargs['timeout'] = loader.timeout
+
+        new_loader = DataLoader(**loader_kwargs)
 
         if self.is_main:
             print(

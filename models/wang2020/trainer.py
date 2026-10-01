@@ -21,7 +21,7 @@ class Wang2020RawTrainer(BaseModel):
         super(Wang2020RawTrainer, self).__init__(opt)
 
         if self.isTrain and not opt.continue_train:
-            self.model = resnet50(pretrained=True)
+            self.model = resnet50(pretrained=getattr(opt, 'pretrained', True))
             self.model.fc = nn.Linear(2048, 1)
             torch.nn.init.normal_(self.model.fc.weight.data, 0.0, opt.init_gain)
 
@@ -33,16 +33,17 @@ class Wang2020RawTrainer(BaseModel):
             # initialize optimizers
             if opt.optim == 'adam':
                 self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                                  lr=opt.lr, betas=(opt.beta1, 0.999))
+                                                  lr=opt.lr, betas=(opt.beta1, 0.999),
+                                                  weight_decay=getattr(opt, 'weight_decay', 0.0))
             elif opt.optim == 'sgd':
                 self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                                 lr=opt.lr, momentum=0.0, weight_decay=0)
+                                                 lr=opt.lr, momentum=getattr(opt, 'momentum', 0.0), weight_decay=getattr(opt, 'weight_decay', 0.0))
             else:
                 raise ValueError("optim should be [adam, sgd]")
 
-        if not self.isTrain or opt.continue_train:
+        if not self.isTrain:
             self.load_networks(opt.epoch)
-        self.model.to(opt.gpu_ids[0])
+        self.model.to(self.device)
 
     def adjust_learning_rate(self, min_lr=1e-6):
         for param_group in self.optimizer.param_groups:

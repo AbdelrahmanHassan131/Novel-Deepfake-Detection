@@ -43,6 +43,8 @@ Usage::
     crop = config.data.crop_size
 """
 
+from config.protocol import DATA_PROTOCOL, AUGMENTATION_PROTOCOL
+
 from config.defaults import (
     DATA_DEFAULTS,
     AUGMENTATION_DEFAULTS,
@@ -127,6 +129,8 @@ class DataConfig(_FrozenMixin):
         self.compute_wavelets = defaults['compute_wavelets']
         self.train_split = defaults['train_split']
         self.val_split = defaults['val_split']
+        for key, value in DATA_PROTOCOL.items():
+            setattr(self, key, kwargs.get(key, value))
 
     def to_dict(self):
         """Return this section as a dictionary."""
@@ -160,6 +164,8 @@ class AugmentationConfig(_FrozenMixin):
         self.jpg_qual = defaults['jpg_qual']
         self.rz_interp = defaults['rz_interp']
         self.data_aug = defaults['data_aug']
+        for key, value in AUGMENTATION_PROTOCOL.items():
+            setattr(self, key, kwargs.get(key, value))
 
     def to_dict(self):
         """Return this section as a dictionary."""
@@ -192,6 +198,7 @@ class WaveletConfig(_FrozenMixin):
         self.level = defaults['level']
         self.mode = defaults['mode']
         self.log_packets = defaults['log_packets']
+        self.log_mode = defaults['log_mode']
         self.precomputed_dir = defaults['precomputed_dir']
 
     def to_dict(self):
@@ -241,6 +248,7 @@ class ModelConfig(_FrozenMixin):
         self.wavelet_model_path = defaults['wavelet_model_path']
         self.xception_model_path = defaults['xception_model_path']
         self.convnext_model_path = defaults['convnext_model_path']
+        self.backbone_weights = defaults.get('backbone_weights', None)
 
     def to_dict(self):
         """Return this section as a dictionary."""
@@ -296,6 +304,10 @@ class TrainingConfig(_FrozenMixin):
         self.new_optim = defaults['new_optim']
         self.epoch_count = defaults['epoch_count']
         self.last_epoch = defaults['last_epoch']
+        self.monitor_metric = defaults.get('monitor_metric', 'auc')
+        self.grad_accum_steps = defaults.get('grad_accum_steps', 1)
+        self.resume_checkpoint = defaults.get('resume_checkpoint', None)
+        self.additional_epochs = defaults.get('additional_epochs', None)
 
     def to_dict(self):
         """Return this section as a dictionary."""
@@ -352,6 +364,7 @@ class ExperimentConfig(_FrozenMixin):
         defaults = EXPERIMENT_DEFAULTS.copy()
         defaults.update(kwargs)
         self.name = defaults['name']
+        self.run_id = defaults.get('run_id', None)
         self.checkpoints_dir = defaults['checkpoints_dir']
         self.epoch = defaults['epoch']
         self.suffix = defaults['suffix']

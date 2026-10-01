@@ -1,0 +1,35 @@
+{
+  "plan_type": "declarative_study_plan",
+  "consumer": "tools/run_study_plan.py",
+  "protocol": "three_independent_training_seeds_pipeline",
+  "rationale": "Measure true training stochasticity across full independent runs. Repeated inference from the same checkpoint is rejected.",
+  "seeds": [42, 43, 44],
+  "models_to_compare": [
+    {
+      "model_id": "concat_mlp",
+      "arch": "Fusion_128",
+      "fusion_type": "concat",
+      "description": "Concatenation of RGB and Wavelet embeddings followed by nonlinear MLP"
+    },
+    {
+      "model_id": "gated_fusion",
+      "arch": "Fusion_128",
+      "fusion_type": "gated",
+      "description": "Normalized softmax gating between RGB and Wavelet streams"
+    },
+    {
+      "model_id": "token_attention",
+      "arch": "MHA_128",
+      "fusion_type": "token_attention",
+      "description": "Multi-key token self-attention over RGB and Wavelet tokens"
+    },
+    {
+      "model_id": "late_ensemble",
+      "arch": "Ensemble",
+      "fusion_type": "ensemble",
+      "description": "Equal-weight mean probability of standalone RGB and Wavelet experts"
+    }
+  ],
+  "expert_reuse_rule": "Within each seed run, all fusion heads share the exact same trained RGB and Wavelet expert checkpoints.",
+  "threshold_rule": "Independently development-selected threshold for each seed run via Youden's J on dev split. Test split untouched."
+}

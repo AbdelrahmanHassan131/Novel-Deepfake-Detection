@@ -48,7 +48,7 @@ class WolterWavelet128Trainer(BaseModel):
             # Create model from scratch
             self.model = WaveletPacketCNN128(
                 input_channels=input_channels,
-                num_classes=1
+                num_classes=1, embed_dim=getattr(opt, 'embed_dim', 128)
             )
             # Initialize weights using specified initialization
             init_weights(self.model, init_type='normal', gain=opt.init_gain)
@@ -57,7 +57,7 @@ class WolterWavelet128Trainer(BaseModel):
             # Create model architecture (will load weights later)
             self.model = WaveletPacketCNN128(
                 input_channels=input_channels,
-                num_classes=1
+                num_classes=1, embed_dim=getattr(opt, 'embed_dim', 128)
             )
 
         if self.isTrain:
@@ -69,23 +69,23 @@ class WolterWavelet128Trainer(BaseModel):
                     self.model.parameters(),
                     lr=opt.lr,
                     betas=(opt.beta1, 0.999),
-                    weight_decay=1e-4  # Regularization
+                    weight_decay=getattr(opt, 'weight_decay', 1e-4)
                 )
             elif opt.optim == 'sgd':
                 self.optimizer = torch.optim.SGD(
                     self.model.parameters(),
                     lr=opt.lr,
-                    momentum=0.9,
-                    weight_decay=1e-4  # Regularization
+                    momentum=getattr(opt, 'momentum', 0.9),
+                    weight_decay=getattr(opt, 'weight_decay', 1e-4)
                 )
             else:
                 raise ValueError("optim should be [adam, sgd]")
 
         # Load checkpoint if continuing training or evaluating
-        if not self.isTrain or opt.continue_train:
+        if not self.isTrain:
             self.load_networks(opt.epoch)
 
-        self.model.to(opt.gpu_ids[0])
+        self.model.to(self.device)
 
     def _get_gpu_wavelet_backend(self):
         """Lazy-init the GPU wavelet backend on first use."""
@@ -96,6 +96,7 @@ class WolterWavelet128Trainer(BaseModel):
                 level=self.wavelet_level,
                 mode=self.wavelet_mode,
                 log_scale=self.use_log_packets,
+                log_mode=getattr(self.opt, 'wavelet_log_mode', 'signed_log1p'),
                 device=self.device,
             )
         return self._gpu_wavelet
@@ -112,7 +113,7 @@ class WolterWavelet128Trainer(BaseModel):
         """
         Make trainer callable for validation.
         """
-        if input_tensor.shape[1] == 192:  # Already wavelet packets from dataloader
+        if input_tensor.shape[1] == 3 * 4 ** self.wavelet_level:  # Already wavelet packets from dataloader
             output = self.model(input_tensor.to(self.device))
             return output
 

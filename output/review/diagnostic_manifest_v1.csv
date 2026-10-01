@@ -1,0 +1,7 @@
+sample_id,path,label,split,dataset_source,group_id,provenance_status
+ldm-000000,F:\LDM\LDM\0.png,1,external_dev,LDM,unknown,unknown
+ldm-000001,F:\LDM\LDM\1.png,1,external_dev,LDM,unknown,unknown
+mixed-fake-000000,F:\val to be deleted 2\fake\0.png,1,external_dev,mixed_external,unknown,folder_label_only
+mixed-fake-000001,F:\val to be deleted 2\fake\1.png,1,external_dev,mixed_external,unknown,folder_label_only
+mixed-real-000000,F:\val to be deleted 2\real\0.png,0,external_dev,mixed_external,unknown,folder_label_only
+mixed-real-000001,F:\val to be deleted 2\real\1.png,0,external_dev,mixed_external,unknown,folder_label_only

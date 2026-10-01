@@ -132,6 +132,18 @@ class Evaluator:
                 report_paths={}
             )
 
+        threshold = 0.5
+        threshold_file = (opt_overrides or {}).get('threshold_file')
+        if threshold_file:
+            import json
+            with open(threshold_file, encoding='utf-8') as stream:
+                calibration = json.load(stream)
+            if calibration['checkpoint_sha256'] != metadata.get('checkpoint_sha256'):
+                raise ValueError('Threshold was selected for a different checkpoint')
+            if set(calibration.get('source_splits', [])) - {'dev', 'val', 'external_dev'}:
+                raise ValueError('Threshold must come from development data')
+            threshold = float(calibration['threshold'])
+        metadata['decision_threshold_source'] = threshold_file or 'fixed 0.5; no test calibration'
         # 2. Build Dataloader
         dataloader = self._build_dataloader(model.opt)
 
@@ -146,26 +158,29 @@ class Evaluator:
 
         # 4. Compute Classification Metrics
         print("Computing classification metrics...")
-        metric_calc = ClassificationMetrics(threshold=0.5)
+        metric_calc = ClassificationMetrics(threshold=threshold)
         metrics = metric_calc.compute_all(
             probabilities=inference_result.probabilities,
             labels=inference_result.labels
         )
 
-        # 5. Performance Profiling
+        from evaluation.generalization import export_predictions, summarize
+        import json
+        records = dataloader.dataset.records
+        inference_result.predictions = (inference_result.probabilities >= threshold).astype(float)
+        export_predictions(os.path.join(self.output_dir, 'predictions.csv'), records,
+                           inference_result.probabilities, metadata.get('checkpoint_sha256'))
+        generalization = summarize(records, inference_result.probabilities, threshold,
+                                  repeats=(opt_overrides or {}).get('bootstrap', 200))
+        generalization['checkpoint'] = metadata
+        with open(os.path.join(self.output_dir, 'generalization_report.json'), 'w', encoding='utf-8') as stream:
+            json.dump(generalization, stream, indent=2, allow_nan=False)
+        metrics['balanced_accuracy'] = generalization['overall']['balanced_accuracy']
+        # Profile all experts, not just the small fusion head.
         performance = {}
         if self.run_profiling:
-            print("Profiling model performance...")
-            profiler = PerformanceProfiler(model=model, device=self.device)
-            # Estimate input shape based on model type
-            in_shape = (1, 3, 256, 256)
-            if detected_arch in ('WolterWavelet2021Raw', 'WolterWavelet2021_128'):
-                in_shape = (1, 192, 128, 128)
-            elif detected_arch in ('Fusion_128', 'MHA_128'):
-                in_shape = [(1, 128), (1, 128)]
-            elif detected_arch in ('Fusion_WWXC', 'MHA_WWXC'):
-                in_shape = [(1, 128), (1, 128), (1, 128), (1, 128)]
-            performance = profiler.profile(dataloader=dataloader, input_shape=in_shape)
+            from evaluation.end_to_end_profile import profile_pipeline
+            performance = profile_pipeline(model)
 
         # 6. Generate Visualizations
         plot_paths = {}
@@ -192,7 +207,7 @@ class Evaluator:
                 probabilities=inference_result.probabilities,
                 labels=inference_result.labels,
                 save_path=os.path.join(plots_dir, 'confusion_matrix.png'),
-                title=f'{detected_arch} Confusion Matrix'
+                title=f'{detected_arch} Confusion Matrix', threshold=threshold
             )
 
             if self.collect_embeddings:

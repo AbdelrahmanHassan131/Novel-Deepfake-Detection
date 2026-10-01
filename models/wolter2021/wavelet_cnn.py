@@ -22,7 +22,7 @@ class WaveletPacketCNN(nn.Module):
     Used by: WolterWaveletRawTrainer (WolterWavelet2021Raw)
     """
 
-    def __init__(self, input_channels, num_classes=1):
+    def __init__(self, input_channels, num_classes=1, embed_dim=128):
         super(WaveletPacketCNN, self).__init__()
 
         # Convolutional layers - progressive architecture
@@ -67,7 +67,9 @@ class WaveletPacketCNN(nn.Module):
 
         # Conv block 4
         x = F.relu(self.bn4(self.conv4(x)))
-        x = self.pool4(x)
+        # Level-4 packets can be 1x1 after three pools. Preserve them.
+        if min(x.shape[-2:]) >= 2:
+            x = self.pool4(x)
 
         # Global pooling
         x = self.global_pool(x)
@@ -91,7 +93,7 @@ class WaveletPacketCNN128(nn.Module):
     Used by: WolterWavelet128Trainer (WolterWavelet2021_128)
     """
 
-    def __init__(self, input_channels, num_classes=1):
+    def __init__(self, input_channels, num_classes=1, embed_dim=128):
         super(WaveletPacketCNN128, self).__init__()
 
         # Convolutional layers
@@ -118,10 +120,10 @@ class WaveletPacketCNN128(nn.Module):
         # Classifier head with dropout for regularization
         # Last two layers: 512 -> 128 (embeddings) -> 1 (binary classification)
         self.classifier = nn.Sequential(
-            nn.Linear(512, 128),
+            nn.Linear(512, embed_dim),
             nn.ReLU(inplace=True),
             nn.Dropout(0.5),
-            nn.Linear(128, num_classes)
+            nn.Linear(embed_dim, num_classes)
         )
 
     def forward(self, x):
@@ -139,7 +141,9 @@ class WaveletPacketCNN128(nn.Module):
 
         # Conv block 4
         x = F.relu(self.bn4(self.conv4(x)))
-        x = self.pool4(x)
+        # Level-4 packets can be 1x1 after three pools. Preserve them.
+        if min(x.shape[-2:]) >= 2:
+            x = self.pool4(x)
 
         # Global pooling
         x = self.global_pool(x)

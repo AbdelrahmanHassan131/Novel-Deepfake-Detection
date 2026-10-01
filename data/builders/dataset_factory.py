@@ -51,44 +51,9 @@ def dataset_folder(opt, root):
     raise ValueError('opt.mode needs to be binary or filename.')
 
 def get_dataset(opt):
-    """Smart dataloader - handles both training structure (subfolders) and validation structure (direct images)"""
-    first_class_path = opt.dataroot + '/' + opt.classes[0]
-    
-    if has_subfolders(first_class_path):
-        # Training structure: fake/method1/, real/dataset1/, etc.
-        print("Detected training structure (subfolders)")
-        dset_lst = []
-        for cls in opt.classes:
-            root = opt.dataroot + '/' + cls
-            dset = dataset_folder(opt, root)
-            dset_lst.append(dset)
-        return torch.utils.data.ConcatDataset(dset_lst)
-    else:
-        # Validation structure: fake/img.jpg, real/img.jpg
-        print("Detected validation structure (direct images)")
-        # Use dataroot directly - ImageFolder will find fake and real folders
-        dset = dataset_folder(opt, opt.dataroot)
-        return dset
+    """Read the binary root once; nested source folders retain outer labels."""
+    return dataset_folder(opt, opt.dataroot)
+
 
 def get_mha_dataset(opt):
-    """
-    Create dataset that returns both RGB and Wavelet inputs.
-    Smart detection for training vs validation folder structure.
-    """
-    first_class_path = opt.dataroot + '/' + opt.classes[0]
-    
-    if has_subfolders(first_class_path):
-        # Training structure: fake/method1/, real/dataset1/, etc.
-        print("Detected training structure (subfolders) for MHA")
-        dset_lst = []
-        for cls in opt.classes:
-            root = opt.dataroot + '/' + cls
-            dset = FusionDataset(opt, root)
-            dset_lst.append(dset)
-        return torch.utils.data.ConcatDataset(dset_lst)
-    else:
-        # Validation structure: fake/img.jpg, real/img.jpg
-        print("Detected validation structure (direct images) for MHA")
-        # Use dataroot directly - FusionDataset will find fake and real folders
-        dset = FusionDataset(opt, opt.dataroot)
-        return dset
+    return FusionDataset(opt, opt.dataroot)

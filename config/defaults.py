@@ -59,6 +59,7 @@ WAVELET_DEFAULTS = {
     'level': 3,
     'mode': 'reflect',
     'log_packets': True,
+    'log_mode': 'signed_log1p',
     'precomputed_dir': None,
 }
 
@@ -74,12 +75,13 @@ MODEL_DEFAULTS = {
     'embed_dim': 128,
     'num_heads': 4,
     'dropout': 0.1,
-    'fusion_type': 'cross_attention',
+    'fusion_type': 'token_attention',
     'freeze_base_models': True,
     'rgb_model_path': None,
     'wavelet_model_path': None,
     'xception_model_path': None,
     'convnext_model_path': None,
+    'backbone_weights': None,
 }
 
 # ------------------------------------------------------------------
@@ -104,6 +106,10 @@ TRAINING_DEFAULTS = {
     'new_optim': False,
     'epoch_count': 1,
     'last_epoch': -1,
+    'monitor_metric': 'auc',
+    'grad_accum_steps': 1,
+    'resume_checkpoint': None,
+    'additional_epochs': None,
 }
 
 # ------------------------------------------------------------------
@@ -124,6 +130,7 @@ DISTRIBUTED_DEFAULTS = {
 # ------------------------------------------------------------------
 EXPERIMENT_DEFAULTS = {
     'name': 'experiment_name',
+    'run_id': None,
     'checkpoints_dir': './checkpoints',
     'epoch': 'latest',
     'suffix': '',

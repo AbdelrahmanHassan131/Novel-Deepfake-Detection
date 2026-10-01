@@ -85,10 +85,10 @@ class WolterWaveletRawTrainer(BaseModel):
                 raise ValueError("optim should be [adam, sgd]")
 
         # Load checkpoint if needed
-        if not self.isTrain or opt.continue_train:
+        if not self.isTrain:
             self.load_networks(opt.epoch)
 
-        self.model.to(opt.gpu_ids[0])
+        self.model.to(self.device)
 
     def _get_gpu_wavelet_backend(self):
         """Lazy-init the GPU wavelet backend on first use."""
@@ -99,6 +99,7 @@ class WolterWaveletRawTrainer(BaseModel):
                 level=self.wavelet_level,
                 mode=self.wavelet_mode,
                 log_scale=self.use_log_packets,
+                log_mode=getattr(self.opt, 'wavelet_log_mode', 'signed_log1p'),
                 device=self.device,
             )
         return self._gpu_wavelet
@@ -112,7 +113,7 @@ class WolterWaveletRawTrainer(BaseModel):
 
     def __call__(self, input_tensor):
         """For validation - accepts wavelet packets from dataloader"""
-        if input_tensor.shape[1] == 192:  # Already wavelet packets
+        if input_tensor.shape[1] == 3 * 4 ** self.wavelet_level:  # Already wavelet packets
             output = self.model(input_tensor.to(self.device))
             return output
 

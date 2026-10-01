@@ -154,9 +154,11 @@ class Trainer(BaseTrainer):
         # 4. Checkpoint — must come after Validation so it can react
         #    to on_validation_end with the updated best metric.
         save_freq = getattr(opt, 'save_epoch_freq', 1)
+        monitor_metric = getattr(opt, 'monitor_metric', 'auc')
         self.register_hook(CheckpointHook(
             checkpoint_manager=self.checkpoint_manager,
             save_epoch_freq=save_freq,
+            monitor_metric=monitor_metric,
         ))
 
     # ------------------------------------------------------------------

@@ -56,7 +56,7 @@ class ExperimentManager:
     # Public API
     # ------------------------------------------------------------------
 
-    def create(self, experiment_name, opt):
+    def create(self, experiment_name, opt, run_id=None, allow_existing=False):
         """
         Create a new experiment.
 
@@ -65,30 +65,117 @@ class ExperimentManager:
                 (e.g. ``'wang2020_progan'``).
             opt: The project options namespace.  Serialised into
                 ``opt.txt`` inside the experiment directory.
+            run_id (str, optional): Explicit immutable run/experiment identifier.
+            allow_existing (bool): Allow existing directory without error.
 
         Returns:
             An :class:`Experiment` instance with all paths set.
         """
-        experiment_id = self._generate_id()
+        experiment_id = (
+            run_id
+            or getattr(opt, 'run_id', None)
+            or getattr(opt, 'experiment_id', None)
+            or self._generate_id()
+        )
+        is_dist = False
+        rank = 0
         try:
             import torch.distributed as dist
-            if dist.is_initialized():
+            if dist.is_available() and dist.is_initialized():
+                is_dist = True
+                rank = dist.get_rank()
                 obj_list = [experiment_id]
                 dist.broadcast_object_list(obj_list, src=0)
                 experiment_id = obj_list[0]
-                rank = dist.get_rank()
-            else:
-                rank = 0
         except Exception:
+            is_dist = False
             rank = 0
 
         dir_name = f'{experiment_name}_{experiment_id}'
         experiment_dir = os.path.join(self.base_dir, dir_name)
+        is_continue = getattr(opt, 'continue_train', False) or (getattr(opt, 'resume_checkpoint', None) is not None)
 
-        if rank == 0:
-            # Create directory structure and save options only on rank 0
+        if is_dist:
+            import torch.distributed as dist
+            if rank == 0:
+                decision = {'status': 'OK', 'msg': None, 'dir': experiment_dir}
+                if os.path.isdir(experiment_dir) and not allow_existing and not is_continue:
+                    decision['status'] = 'COLLISION'
+                    decision['msg'] = (
+                        f"Experiment directory '{experiment_dir}' already exists. "
+                        "Running a fresh model in an existing directory would overwrite checkpoints. "
+                        "Specify a distinct --run_id or supply --resume_checkpoint to resume."
+                    )
+                else:
+                    try:
+                        self._create_structure(experiment_dir)
+                        self._save_opt(experiment_dir, opt)
+                        manifest_info = {
+                            'experiment_name': experiment_name,
+                            'experiment_id': str(experiment_id),
+                            'experiment_dir': str(os.path.abspath(experiment_dir)),
+                            'checkpoint_dir': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints'))),
+                            'best_checkpoint': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints', 'best.pth'))),
+                            'last_checkpoint': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints', 'last.pth'))),
+                            'latest_checkpoint': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints', 'last.pth'))),
+                            'status': 'initialized',
+                            'created_at': datetime.now().isoformat(),
+                        }
+                        try:
+                            with open(os.path.join(experiment_dir, 'run_manifest.json'), 'w', encoding='utf-8') as f:
+                                json.dump(manifest_info, f, indent=2)
+                            with open(os.path.join(self.base_dir, 'latest_run.json'), 'w', encoding='utf-8') as f:
+                                json.dump(manifest_info, f, indent=2)
+                        except Exception:
+                            pass
+                    except Exception as exc:
+                        decision['status'] = 'ERROR'
+                        decision['msg'] = f"Failed to initialize experiment directory on rank 0: {exc}"
+
+                decision_list = [decision]
+                dist.broadcast_object_list(decision_list, src=0)
+            else:
+                decision_list = [None]
+                dist.broadcast_object_list(decision_list, src=0)
+                decision = decision_list[0]
+
+            # Synchronize all ranks to ensure directory setup is complete before proceeding
+            dist.barrier()
+
+            if decision['status'] == 'COLLISION':
+                raise FileExistsError(decision['msg'])
+            elif decision['status'] == 'ERROR':
+                raise RuntimeError(decision['msg'])
+
+            experiment_dir = decision['dir']
+        else:
+            if os.path.isdir(experiment_dir) and not allow_existing and not is_continue:
+                raise FileExistsError(
+                    f"Experiment directory '{experiment_dir}' already exists. "
+                    "Running a fresh model in an existing directory would overwrite checkpoints. "
+                    "Specify a distinct --run_id or supply --resume_checkpoint to resume."
+                )
+
             self._create_structure(experiment_dir)
             self._save_opt(experiment_dir, opt)
+            manifest_info = {
+                'experiment_name': experiment_name,
+                'experiment_id': str(experiment_id),
+                'experiment_dir': str(os.path.abspath(experiment_dir)),
+                'checkpoint_dir': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints'))),
+                'best_checkpoint': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints', 'best.pth'))),
+                'last_checkpoint': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints', 'last.pth'))),
+                'latest_checkpoint': str(os.path.abspath(os.path.join(experiment_dir, 'checkpoints', 'last.pth'))),
+                'status': 'initialized',
+                'created_at': datetime.now().isoformat(),
+            }
+            try:
+                with open(os.path.join(experiment_dir, 'run_manifest.json'), 'w', encoding='utf-8') as f:
+                    json.dump(manifest_info, f, indent=2)
+                with open(os.path.join(self.base_dir, 'latest_run.json'), 'w', encoding='utf-8') as f:
+                    json.dump(manifest_info, f, indent=2)
+            except Exception:
+                pass
 
         return Experiment(
             name=experiment_name,
@@ -117,10 +204,11 @@ class ExperimentManager:
 
         dir_name = os.path.basename(experiment_dir)
 
-        # The ID format is YYYYMMDD_HHMMSS (contains an underscore),
-        # so we match the known timestamp suffix with a regex.
+        # Match either timestamp suffix YYYYMMDD_HHMMSS or any custom run identifier
         import re
         m = re.search(r'^(.+)_(\d{8}_\d{6})$', dir_name)
+        if not m:
+            m = re.search(r'^(.+)_([^_]+)$', dir_name)
         if m:
             name, experiment_id = m.group(1), m.group(2)
         else:
@@ -132,6 +220,7 @@ class ExperimentManager:
             experiment_id=experiment_id,
             root_dir=experiment_dir,
         )
+
 
     def list_experiments(self):
         """

@@ -22,7 +22,7 @@ class Xception128Trainer(BaseModel):
         super(Xception128Trainer, self).__init__(opt)
 
         # Determine if we should load pretrained weights
-        pretrained_flag = self.isTrain and not opt.continue_train
+        pretrained_flag = self.isTrain and not opt.continue_train and getattr(opt, 'pretrained', True)
 
         # Always create the same architecture!
         self.model = xception(pretrained=pretrained_flag)
@@ -59,7 +59,7 @@ class Xception128Trainer(BaseModel):
             else:
                 raise ValueError("optim should be [adam, sgd]")
 
-        if not self.isTrain or opt.continue_train:
+        if not self.isTrain:
             self.load_networks(opt.epoch)
 
         self.model.to(self.device)

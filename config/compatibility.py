@@ -30,6 +30,7 @@ Usage::
 """
 
 import argparse
+from config.protocol import DATA_PROTOCOL, AUGMENTATION_PROTOCOL
 
 from config.configuration import (
     Config,
@@ -73,6 +74,7 @@ def config_from_opt(opt):
     # Data section
     # ------------------------------------------------------------------
     data = DataConfig(
+        **{k: _get(opt, k, v) for k, v in DATA_PROTOCOL.items()},
         dataroot=_get(opt, 'dataroot', './dataset/'),
         val_root=_get(opt, 'val_root', None),
         crop_size=_get(opt, 'cropSize', _get(opt, 'crop_size', 224)),
@@ -112,6 +114,7 @@ def config_from_opt(opt):
         rz_interp = rz_interp.split(',')
 
     augmentation = AugmentationConfig(
+        **{k: _get(opt, k, v) for k, v in AUGMENTATION_PROTOCOL.items()},
         blur_prob=_get(opt, 'blur_prob', 0.0),
         blur_sig=blur_sig,
         jpg_prob=_get(opt, 'jpg_prob', 0.0),
@@ -130,6 +133,7 @@ def config_from_opt(opt):
         level=_get(opt, 'wavelet_level', 3),
         mode=_get(opt, 'wavelet_mode', 'reflect'),
         log_packets=_get(opt, 'use_log_packets', True),
+        log_mode=_get(opt, 'wavelet_log_mode', 'signed_log1p'),
         precomputed_dir=_get(opt, 'precomputed_dir', None),
     )
 
@@ -145,12 +149,13 @@ def config_from_opt(opt):
         embed_dim=_get(opt, 'embed_dim', 128),
         num_heads=_get(opt, 'num_heads', 4),
         dropout=_get(opt, 'dropout', 0.1),
-        fusion_type=_get(opt, 'fusion_type', 'cross_attention'),
+        fusion_type=_get(opt, 'fusion_type', 'token_attention'),
         freeze_base_models=_get(opt, 'freeze_base_models', True),
         rgb_model_path=_get(opt, 'rgb_model_path', None),
         wavelet_model_path=_get(opt, 'wavelet_model_path', None),
         xception_model_path=_get(opt, 'xception_model_path', None),
         convnext_model_path=_get(opt, 'convnext_model_path', None),
+        backbone_weights=_get(opt, 'backbone_weights', None),
     )
 
     # ------------------------------------------------------------------
@@ -160,7 +165,7 @@ def config_from_opt(opt):
         epochs=_get(opt, 'niter', 10000),
         epochs_decay=_get(opt, 'niter_decay', 0),
         learning_rate=_get(opt, 'lr', 0.0001),
-        optimizer=_get(opt, 'optim', 'adam'),
+        optimizer=_get(opt, 'optim', _get(opt, 'optimizer', 'adam')),
         beta1=_get(opt, 'beta1', 0.9),
         weight_decay=_get(opt, 'weight_decay', 0.0),
         momentum=_get(opt, 'momentum', 0.0),
@@ -175,6 +180,10 @@ def config_from_opt(opt):
         new_optim=_get(opt, 'new_optim', False),
         epoch_count=_get(opt, 'epoch_count', 1),
         last_epoch=_get(opt, 'last_epoch', -1),
+        monitor_metric=_get(opt, 'monitor_metric', 'auc'),
+        grad_accum_steps=_get(opt, 'grad_accum_steps', 1),
+        resume_checkpoint=_get(opt, 'resume_checkpoint', None),
+        additional_epochs=_get(opt, 'additional_epochs', None),
     )
 
     # ------------------------------------------------------------------
@@ -199,6 +208,7 @@ def config_from_opt(opt):
     # ------------------------------------------------------------------
     experiment = ExperimentConfig(
         name=_get(opt, 'name', 'experiment_name'),
+        run_id=_get(opt, 'run_id', None),
         checkpoints_dir=_get(opt, 'checkpoints_dir', './checkpoints'),
         epoch=_get(opt, 'epoch', 'latest'),
         suffix=_get(opt, 'suffix', ''),
@@ -264,6 +274,10 @@ def config_to_opt(config):
     # --- Data ---
     opt.dataroot = config.data.dataroot
     opt.val_root = config.data.val_root
+    for key in DATA_PROTOCOL:
+        setattr(opt, key, getattr(config.data, key))
+    for key in AUGMENTATION_PROTOCOL:
+        setattr(opt, key, getattr(config.augmentation, key))
     opt.cropSize = config.data.crop_size
     opt.loadSize = config.data.image_size
     opt.batch_size = config.data.batch_size
@@ -294,6 +308,7 @@ def config_to_opt(config):
     opt.wavelet_level = config.wavelets.level
     opt.wavelet_mode = config.wavelets.mode
     opt.use_log_packets = config.wavelets.log_packets
+    opt.wavelet_log_mode = config.wavelets.log_mode
     opt.precomputed_dir = config.wavelets.precomputed_dir
 
     # --- Model ---
@@ -311,6 +326,7 @@ def config_to_opt(config):
     opt.wavelet_model_path = config.model.wavelet_model_path
     opt.xception_model_path = config.model.xception_model_path
     opt.convnext_model_path = config.model.convnext_model_path
+    opt.backbone_weights = getattr(config.model, 'backbone_weights', None)
 
     # --- Training ---
     opt.niter = config.training.epochs
@@ -331,6 +347,10 @@ def config_to_opt(config):
     opt.new_optim = config.training.new_optim
     opt.epoch_count = config.training.epoch_count
     opt.last_epoch = config.training.last_epoch
+    opt.grad_accum_steps = getattr(config.training, 'grad_accum_steps', 1)
+    opt.monitor_metric = getattr(config.training, 'monitor_metric', 'auc')
+    opt.resume_checkpoint = getattr(config.training, 'resume_checkpoint', None)
+    opt.additional_epochs = getattr(config.training, 'additional_epochs', None)
 
     # --- Distributed ---
     opt.dist_backend = config.distributed.backend
@@ -339,6 +359,7 @@ def config_to_opt(config):
 
     # --- Experiment ---
     opt.name = config.experiment.name
+    opt.run_id = getattr(config.experiment, 'run_id', None)
     opt.checkpoints_dir = config.experiment.checkpoints_dir
     opt.epoch = config.experiment.epoch
     opt.suffix = config.experiment.suffix

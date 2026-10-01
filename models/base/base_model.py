@@ -31,8 +31,8 @@ class BaseModel(nn.Module):
         self.total_steps = 0
         self.isTrain = opt.isTrain
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        self.device = torch.device('cuda:{}'.format(
-            opt.gpu_ids[0])) if opt.gpu_ids else torch.device('cpu')
+        rank_device = int(os.environ.get('LOCAL_RANK', opt.gpu_ids[0] if opt.gpu_ids else 0))
+        self.device = torch.device(f'cuda:{rank_device}') if opt.gpu_ids and torch.cuda.is_available() else torch.device('cpu')
         print("used device is ", self.device)
 
     def name(self):

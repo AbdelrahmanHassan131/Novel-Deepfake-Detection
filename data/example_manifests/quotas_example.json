@@ -1,0 +1,18 @@
+{
+  "_comment": "Example source and generator quotas for 100K pilot (50K real, 50K fake)",
+  "sources": {
+    "CelebA": 30000,
+    "FaceForensics++": 20000,
+    "Celeb-DF-v2": 25000,
+    "DiffFace": 25000
+  },
+  "generators": {
+    "authentic": 50000,
+    "Deepfakes": 10000,
+    "Face2Face": 10000,
+    "FaceSwap": 10000,
+    "NeuralTextures": 10000,
+    "ADM": 5000,
+    "DDIM": 5000
+  }
+}

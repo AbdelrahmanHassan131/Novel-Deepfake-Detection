@@ -21,15 +21,16 @@ class Wang2020_128Trainer(BaseModel):
         super(Wang2020_128Trainer, self).__init__(opt)
 
         # Determine if we should load pretrained weights
-        pretrained_flag = self.isTrain and not opt.continue_train
+        pretrained_flag = self.isTrain and not opt.continue_train and getattr(opt, 'pretrained', True)
 
         # Always create the same architecture!
-        self.model = resnet50(pretrained=pretrained_flag)
+        weights_path = getattr(opt, 'backbone_weights', None)
+        self.model = resnet50(pretrained=pretrained_flag, weights_path=weights_path)
         self.model.fc = nn.Sequential(
-            nn.Linear(2048, 128),
+            nn.Linear(2048, getattr(opt, 'embed_dim', 128)),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(128, 1)
+            nn.Linear(getattr(opt, 'embed_dim', 128), 1)
         )
 
         # Only initialize weights for brand new training
@@ -41,19 +42,31 @@ class Wang2020_128Trainer(BaseModel):
 
         if self.isTrain:
             self.loss_fn = nn.BCEWithLogitsLoss()
+            weight_decay = getattr(opt, 'weight_decay', 0.0)
+            momentum = getattr(opt, 'momentum', 0.0)
             # initialize optimizers
             if opt.optim == 'adam':
-                self.optimizer = torch.optim.Adam(self.model.parameters(),
-                                                  lr=opt.lr, betas=(opt.beta1, 0.999))
+                self.optimizer = torch.optim.Adam(
+                    self.model.parameters(),
+                    lr=opt.lr,
+                    betas=(opt.beta1, 0.999),
+                    weight_decay=weight_decay,
+                )
             elif opt.optim == 'sgd':
-                self.optimizer = torch.optim.SGD(self.model.parameters(),
-                                                 lr=opt.lr, momentum=0.0, weight_decay=0)
+                self.optimizer = torch.optim.SGD(
+                    self.model.parameters(),
+                    lr=opt.lr,
+                    momentum=momentum,
+                    weight_decay=weight_decay,
+                )
             else:
                 raise ValueError("optim should be [adam, sgd]")
 
-        if not self.isTrain or opt.continue_train:
+        # Only call legacy load_networks if explicitly in evaluation mode,
+        # never during training resume which is handled centrally by BaseTrainer.
+        if not self.isTrain:
             self.load_networks(opt.epoch)
-        self.model.to(opt.gpu_ids[0])
+        self.model.to(self.device)
 
     def adjust_learning_rate(self, min_lr=1e-6):
         for param_group in self.optimizer.param_groups:

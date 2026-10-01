@@ -28,7 +28,19 @@ class MHAFusionWWXCTrainer(BaseModel):
     def __init__(self, opt):
         super(MHAFusionWWXCTrainer, self).__init__(opt)
 
+        import os
+        for expert in ('rgb', 'wavelet', 'xception', 'convnext'):
+            path = getattr(opt, expert + '_model_path', None)
+            if not path or not os.path.isfile(path):
+                raise FileNotFoundError(f'{expert} expert checkpoint required: {path!r}')
+        if not getattr(opt, 'freeze_base_models', True):
+            raise ValueError('Controlled fusion requires frozen experts.')
+
         # Fusion parameters
+        if getattr(opt, 'fusion_type', 'token_attention') == 'token_attention':
+            opt.fusion_type = 'self_attention'
+        if getattr(opt, 'fusion_type', '') == 'cross_attention' and not getattr(opt, '_loading_checkpoint', False):
+            raise ValueError('Single-key WWXC cross-attention is legacy-only; use self_attention.')
         self.embed_dim = getattr(opt, 'embed_dim', 128)
         self.num_heads = getattr(opt, 'num_heads', 4)
         self.dropout = getattr(opt, 'dropout', 0.1)
@@ -137,7 +149,7 @@ class MHAFusionWWXCTrainer(BaseModel):
         from models.shared.resnet import resnet50
 
         model = resnet50(num_classes=1)
-        state_dict = torch.load(self.rgb_model_path, map_location='cuda')
+        state_dict = torch.load(self.rgb_model_path, map_location=self.device)
         weights = self._get_weights_dict(state_dict)
 
         if 'fc.0.weight' in weights:
@@ -169,7 +181,7 @@ class MHAFusionWWXCTrainer(BaseModel):
         input_channels = 3 * num_packets_per_channel
 
         model = WaveletPacketCNN128(input_channels=input_channels, num_classes=1)
-        state_dict = torch.load(self.wavelet_model_path, map_location='cuda')
+        state_dict = torch.load(self.wavelet_model_path, map_location=self.device)
         weights = self._get_weights_dict(state_dict)
         model.load_state_dict(weights)
 
@@ -190,7 +202,7 @@ class MHAFusionWWXCTrainer(BaseModel):
         from models.shared.xception_arch import xception
 
         model = xception(pretrained=False, num_classes=1)
-        state_dict = torch.load(self.xception_model_path, map_location='cuda')
+        state_dict = torch.load(self.xception_model_path, map_location=self.device)
         weights = self._get_weights_dict(state_dict)
 
         if 'fc.0.weight' in weights:
@@ -225,7 +237,7 @@ class MHAFusionWWXCTrainer(BaseModel):
             nn.Linear(128, 1)
         )
 
-        state_dict = torch.load(self.convnext_model_path, map_location='cuda')
+        state_dict = torch.load(self.convnext_model_path, map_location=self.device)
         weights = self._get_weights_dict(state_dict)
         model.load_state_dict(weights)
 

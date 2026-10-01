@@ -6,6 +6,8 @@ import cv2
 from scipy.ndimage import gaussian_filter
 
 def data_augment(img, opt):
+    if not getattr(opt, 'isTrain', False):
+        return img
     img = np.array(img)
 
     if random() < opt.blur_prob:
@@ -17,7 +19,16 @@ def data_augment(img, opt):
         qual = sample_discrete(opt.jpg_qual)
         img = jpeg_from_key(img, qual, method)
 
-    return Image.fromarray(img)
+    if random() < getattr(opt, 'noise_prob', 0.0):
+        sigma = sample_continuous(getattr(opt, 'noise_std', [0.0, 3.0]))
+        img = np.clip(img.astype(np.float32) + np.random.normal(0, sigma, img.shape), 0, 255).astype(np.uint8)
+    image = Image.fromarray(img)
+    if random() < getattr(opt, 'downscale_prob', 0.0):
+        scale = sample_continuous(getattr(opt, 'downscale_range', [0.5, 1.0]))
+        size = image.size
+        image = image.resize((max(1, round(size[0] * scale)), max(1, round(size[1] * scale))), Image.Resampling.BILINEAR)
+        image = image.resize(size, Image.Resampling.BILINEAR)
+    return image
 
 def sample_continuous(s):
     if len(s) == 1:

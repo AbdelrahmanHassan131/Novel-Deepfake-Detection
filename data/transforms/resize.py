@@ -10,5 +10,5 @@ rz_dict = {
 }
 
 def custom_resize(img, opt):
-    interp = sample_discrete(opt.rz_interp)
+    interp = sample_discrete(opt.rz_interp) if opt.isTrain else opt.rz_interp[0]
     return TF.resize(img, opt.loadSize, interpolation=rz_dict[interp])

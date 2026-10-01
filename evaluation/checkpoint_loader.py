@@ -45,9 +45,8 @@ class CheckpointLoader:
         self.forced_arch = arch
         self.device = device or ('cuda:0' if torch.cuda.is_available()
                                  else 'cpu')
-        self.gpu_ids = gpu_ids if gpu_ids is not None else (
-            [0] if torch.cuda.is_available() else []
-        )
+        target = torch.device(self.device)
+        self.gpu_ids = gpu_ids if gpu_ids is not None else ([target.index or 0] if target.type == 'cuda' else [])
         self.is_pretrained_only = is_special
         self._checkpoint = None
         self._metadata = {}
@@ -99,6 +98,9 @@ class CheckpointLoader:
 
         # Extract metadata
         self._metadata = self._extract_metadata(arch)
+        from data.manifest import sha256
+        self._metadata['checkpoint_sha256'] = sha256(self.checkpoint_path)
+        self._metadata['protocol'] = self._checkpoint.get('protocol', {})
 
         # Build the model through the registry
         opt = self._build_opt(arch, opt_overrides)
@@ -239,10 +241,57 @@ class CheckpointLoader:
             opt.xception_model_path = getattr(opt, 'xception_model_path', '')
             opt.convnext_model_path = getattr(opt, 'convnext_model_path', '')
 
+        # Restore the actual training configuration before runtime overrides.
+        protocol = (self._checkpoint or {}).get('protocol', {})
+        saved = protocol.get('options', {})
+        if self._checkpoint is not None and not protocol:
+            import json
+            legacy_path = (opt_overrides or {}).get('legacy_config')
+            if not legacy_path:
+                raise ValueError('Legacy checkpoint has no label/preprocessing metadata. Supply --legacy_config JSON from its original run; do not guess score direction.')
+            with open(legacy_path, encoding='utf-8') as stream:
+                protocol = json.load(stream)
+            saved = protocol.get('options', {})
+            from config.protocol import PREPROCESSING_KEYS
+            missing = set(PREPROCESSING_KEYS) - set(saved)
+            if missing:
+                raise ValueError(f'Legacy config missing preprocessing fields: {sorted(missing)}')
+        for key, value in saved.items():
+            setattr(opt, key, value)
+        mapping = protocol.get('label_mapping', {'real': 0, 'fake': 1})
+        if mapping not in ({'real': 0, 'fake': 1}, {'real': 1, 'fake': 0}):
+            raise ValueError('Checkpoint must declare binary real/fake label_mapping')
+        if self._checkpoint is not None and 'label_mapping' not in protocol:
+            raise ValueError('Legacy config requires the ORIGINAL label_mapping')
+        opt.score_sign = 1.0 if mapping['fake'] == 1 else -1.0
+        opt.pretrained = False
+        opt.isTrain = True
+        opt.continue_train = False
+        opt.gpu_ids = self.gpu_ids
+        opt.manifest = None
+        opt._loading_checkpoint = True
+        opt._expert_state_dicts = (self._checkpoint or {}).get('expert_state_dicts', {})
+        if arch == 'MHA_128' and 'fusion_type' not in saved:
+            raise ValueError('Fusion checkpoint must declare fusion_type in its saved or legacy options')
         # Apply user overrides
         if opt_overrides:
             for key, value in opt_overrides.items():
                 setattr(opt, key, value)
+
+        # Labels are normalized for every modern evaluation dataset; never let
+        # a historical ImageFolder ordering leak into plot legends/reports.
+        opt.classes = ['real', 'fake']
+        opt.class_bal = False
+        opt.serial_batches = True
+        opt.blur_prob = opt.jpg_prob = opt.noise_prob = opt.downscale_prob = 0.0
+        # Embedded weights make two-stream checkpoints self-contained. For older
+        # multi-stream trainers, validate the external dependencies before loading.
+        if arch in ('Fusion_WWXC', 'MHA_WWXC'):
+            from data.manifest import sha256
+            for name, info in protocol.get('experts', {}).items():
+                path = getattr(opt, name + '_model_path', None)
+                if not path or not os.path.isfile(path) or sha256(path) != info['sha256']:
+                    raise ValueError(f'{name} checkpoint does not match the fusion training dependency')
 
         return opt
 
@@ -266,6 +315,7 @@ class CheckpointLoader:
             raw_model = raw_model.module
 
         raw_model.load_state_dict(state_dict, strict=True)
+        model.score_sign = getattr(opt, 'score_sign', 1.0)
         print(f'[CheckpointLoader] Weights restored successfully')
 
         model.eval()
@@ -284,6 +334,8 @@ class CheckpointLoader:
         # Legacy format: model
         if 'model' in checkpoint:
             return checkpoint['model']
+        if 'state_dict' in checkpoint:
+            return checkpoint['state_dict']
 
         # Direct state_dict
         return checkpoint
