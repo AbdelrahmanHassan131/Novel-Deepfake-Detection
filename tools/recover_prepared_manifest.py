@@ -1,6 +1,7 @@
 """Recover a completed hash audit without reopening an explicitly unchanged dataset.
 
-Preserves evaluation rows; removes entire training components linked to evaluation.
+Preserves evaluation rows by default; optional explicit quarantine excludes whole
+components containing contradictory labels from a new derived cohort.
 Only reads/writes CSV and JSON files. Never deletes images or invents extra samples.
 """
 import argparse
@@ -13,7 +14,7 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-VERSION = 1
+VERSION = 2
 GROUP_FIELDS = ('group_id', 'source_video_id', 'identity_id', 'original_id')
 UNKNOWN = {'', 'unknown', 'none', 'nan', 'n/a', 'null', 'n/a_photograph', 'n/a_synthesis', 'n/a_still'}
 EVALUATION = {'dev', 'val', 'external_dev', 'test', 'internal_test', 'external_test', 'final_test'}
@@ -59,14 +60,17 @@ def write_csv(path, rows, fields):
     temp.replace(path)
 
 
-def recover(manifest, audit_report, output_dir, immutable_dataset=False, allow_shortfall=False):
+def recover(manifest, audit_report, output_dir, immutable_dataset=False, allow_shortfall=False,
+            quarantine_label_conflicts=False):
     if not immutable_dataset:
         raise ValueError('Hash reuse requires --immutable_dataset: images and paths must be unchanged since the completed audit.')
     manifest, audit_report, output = Path(manifest), Path(audit_report), Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     target, gate_path = output / 'selected_manifest.csv', output / 'selected_manifest.verified.json'
     report_path = output / 'recovery_report.json'
-    destinations = {p.resolve() for p in (target, gate_path, report_path, output / 'audit_report.json', output / 'excluded_training.csv')}
+    destinations = {p.resolve() for p in (target, gate_path, report_path, output / 'audit_report.json',
+                    output / 'excluded_training.csv', output / 'excluded_samples.csv',
+                    output / 'label_conflicts.csv', output / 'conflict_summary.json')}
     if manifest.resolve() in destinations or audit_report.resolve() in destinations:
         raise ValueError('Use a separate output directory; preserve the original audited manifest.')
     print('Checking saved manifest and completed audit evidence (no images opened)...', flush=True)
@@ -79,7 +83,8 @@ def recover(manifest, audit_report, output_dir, immutable_dataset=False, allow_s
         if not re.match(r'^(sha256|path|sample_id|group_id|source_video_id|identity_id|original_id) overlaps ', error):
             raise ValueError(f'Unsupported original audit failure requires review: {error}')
     identity = dict(version=VERSION, source_manifest_sha256=manifest_hash, source_audit_sha256=audit_hash,
-                    immutable_dataset=True, allow_shortfall=allow_shortfall)
+                    immutable_dataset=True, allow_shortfall=allow_shortfall,
+                    quarantine_label_conflicts=quarantine_label_conflicts)
     if gate_path.exists():
         gate = json.loads(gate_path.read_text())
         if (gate.get('recovery_identity') == identity and gate.get('verified') is True
@@ -136,21 +141,37 @@ def recover(manifest, audit_report, output_dir, immutable_dataset=False, allow_s
     for i in range(len(rows)):
         groups[find(i)].append(i)
     removed, removal_reason = set(), {}
+    conflict_rows, partition_conflicts = [], []
+    conflicting_component_count = 0
+    conflicting_hash_set = set()
+    evaluation_label_conflicts = 0
     for indices in groups.values():
         splits = {rows[i]['split'] for i in indices}
         eval_splits = splits - {'train'}
         if len(eval_splits) > 1:
             examples = [rows[i]['path'] for i in indices[:5]]
-            raise ValueError(f'Linked evaluation partitions {sorted(eval_splits)} require review; not changing them: {examples}')
+            partition_conflicts.append(dict(splits=sorted(eval_splits), example_paths=examples))
         conflicting_hashes, eval_labels = defaultdict(set), defaultdict(set)
         for i in indices:
             conflicting_hashes[rows[i]['sha256']].add(rows[i]['label'])
             if rows[i]['split'] != 'train':
                 eval_labels[rows[i]['sha256']].add(rows[i]['label'])
         label_conflict = any(len(labels) > 1 for labels in conflicting_hashes.values())
+        ambiguous_hashes = {h for h, labels in conflicting_hashes.items() if len(labels) > 1}
+        if label_conflict:
+            conflicting_component_count += 1
+            conflicting_hash_set.update(ambiguous_hashes)
+            for i in indices:
+                conflict_rows.append(dict(rows[i], conflict_role=(
+                    'contradictory_content_label' if rows[i]['sha256'] in ambiguous_hashes
+                    else 'linked_component_member')))
         if any(len(labels) > 1 for labels in eval_labels.values()):
-            raise ValueError('Identical evaluation images have conflicting labels. Correct the evaluation metadata explicitly.')
-        if eval_splits or label_conflict:
+            evaluation_label_conflicts += 1
+        if label_conflict and quarantine_label_conflicts:
+            for i in indices:
+                removed.add(i)
+                removal_reason[i] = 'quarantined_label_conflict_component'
+        elif eval_splits or label_conflict:
             for i in indices:
                 if rows[i]['split'] == 'train':
                     removed.add(i)
@@ -160,28 +181,57 @@ def recover(manifest, audit_report, output_dir, immutable_dataset=False, allow_s
         group_id = 'recovered:' + hashlib.sha256(anchor.encode()).hexdigest()
         for i in indices:
             rows[i]['group_id'] = group_id
+    # Always leave actionable diagnostics before rejecting ambiguous evaluation data.
+    write_csv(output / 'label_conflicts.csv', conflict_rows,
+              list(dict.fromkeys(fields + ['conflict_role'])))
+    conflict_summary = dict(conflicting_components=conflicting_component_count,
+                            conflicting_content_hashes=len(conflicting_hash_set),
+                            affected_rows=len(conflict_rows),
+                            evaluation_label_conflict_components=evaluation_label_conflicts,
+                            evaluation_partition_conflicts=partition_conflicts,
+                            quarantine_label_conflicts=quarantine_label_conflicts)
+    write_json(output / 'conflict_summary.json', conflict_summary)
+    print(f'Conflict scan complete: {len(conflicting_hash_set):,} contradictory hashes in '
+          f'{conflicting_component_count:,} components. Details: {output / "label_conflicts.csv"}', flush=True)
+    if partition_conflicts:
+        raise ValueError('Linked evaluation partitions require review; see conflict_summary.json. No gate issued.')
+    if evaluation_label_conflicts and not quarantine_label_conflicts:
+        raise ValueError('Identical evaluation images have conflicting labels. See label_conflicts.csv. '
+                         'Correct verified metadata or use --quarantine_label_conflicts to explicitly exclude '
+                         'all ambiguous connected groups from a NEW cohort without assigning guessed labels. No gate issued.')
     kept = [r for i, r in enumerate(rows) if i not in removed]
     before = Counter((r['split'], r['label']) for r in rows)
     after = Counter((r['split'], r['label']) for r in kept)
+    removed_training = sum(rows[i]['split'] == 'train' for i in removed)
+    removed_evaluation = len(removed) - removed_training
     counts = lambda counter: [{'split': s, 'label': int(l), 'count': n} for (s, l), n in sorted(counter.items())]
     report = dict(recovery_identity=identity, input_samples=len(rows), output_samples=len(kept),
-                  removed_training_samples=len(removed), before=counts(before), after=counts(after),
-                  evaluation_rows_preserved=True, image_files_changed=False,
+                  removed_training_samples=removed_training, removed_evaluation_samples=removed_evaluation,
+                  before=counts(before), after=counts(after),
+                  evaluation_rows_preserved=removed_evaluation == 0, image_files_changed=False,
+                  cohort_policy=('exclude_whole_label_conflict_components' if quarantine_label_conflicts
+                                 else 'preserve_evaluation'),
+                  label_conflict_summary=conflict_summary,
                   hash_verification_mode='inherited_completed_audit_on_explicitly_unchanged_dataset',
                   original_training_target=before[('train', '0')] + before[('train', '1')],
                   actual_training_samples=after[('train', '0')] + after[('train', '1')])
     write_json(report_path, report)
     write_csv(output / 'excluded_training.csv',
+              [dict(rows[i], exclusion_reason=removal_reason[i]) for i in sorted(removed) if rows[i]['split'] == 'train'],
+              list(dict.fromkeys(fields + ['exclusion_reason'])))
+    write_csv(output / 'excluded_samples.csv',
               [dict(rows[i], exclusion_reason=removal_reason[i]) for i in sorted(removed)],
               list(dict.fromkeys(fields + ['exclusion_reason'])))
     if any(after[('train', label)] == 0 or after[('dev', label)] == 0 for label in ('0', '1')):
         raise ValueError('Recovery must retain both classes in train and dev. See recovery_report.json.')
-    if removed and not allow_shortfall:
-        raise ValueError(f'Removing {len(removed):,} training rows leaves {report["actual_training_samples"]:,}. '
+    if removed_training and not allow_shortfall:
+        raise ValueError(f'Removing {removed_training:,} training rows leaves {report["actual_training_samples"]:,}. '
                          'Review recovery_report.json and rerun with --allow_shortfall to explicitly accept this count. No gate issued.')
     # Independent post-filter audit over ALL declared relationships and paths.
-    checked = {}
+    checked, remaining_labels = {}, {}
     for row in kept:
+        if remaining_labels.setdefault(row['sha256'], row['label']) != row['label']:
+            raise ValueError('Recovery still has contradictory content labels; no gate issued')
         for token in tokens(row):
             previous = checked.setdefault(token, row['split'])
             if previous != row['split']:
@@ -210,8 +260,11 @@ def main():
     parser.add_argument('--output_dir', required=True)
     parser.add_argument('--immutable_dataset', action='store_true')
     parser.add_argument('--allow_shortfall', action='store_true')
+    parser.add_argument('--quarantine_label_conflicts', action='store_true',
+                        help='Explicitly exclude whole components with identical content but conflicting labels, including evaluation rows; produces a changed cohort without guessing labels.')
     args = parser.parse_args()
-    recover(args.manifest, args.audit_report, args.output_dir, args.immutable_dataset, args.allow_shortfall)
+    recover(args.manifest, args.audit_report, args.output_dir, args.immutable_dataset, args.allow_shortfall,
+            args.quarantine_label_conflicts)
 
 
 if __name__ == '__main__':

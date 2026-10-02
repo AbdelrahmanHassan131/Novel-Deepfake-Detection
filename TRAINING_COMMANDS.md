@@ -6,7 +6,7 @@ If independent-image inventory fails with `Conflicting fixed partition assignmen
 
 ## Reuse completed preparation; recover a failed duplicate audit
 
-If your audit finished with SHA256 overlaps, use [KAGGLE_PREPARATION_RECOVERY.md](KAGGLE_PREPARATION_RECOVERY.md). It uses your saved completed hash evidence, preserves validation, and excludes linked training groups without rereading images. Do not rerun inventory to fix real duplicates.
+If your audit finished with SHA256 overlaps, use [KAGGLE_PREPARATION_RECOVERY.md](KAGGLE_PREPARATION_RECOVERY.md). It uses your saved completed hash evidence, preserves validation by default and excludes linked training groups without rereading images. Its explicit label-conflict quarantine option creates a documented new cohort and can exclude ambiguous validation groups too. Do not rerun inventory to fix real duplicates.
 
 For a new model/run using an existing verified selection, set `PREPARED_MANIFEST` in the setup below. Keep the dataset contents and paths unchanged. The preparation cell will verify the saved CSV/gate and skip selection and hashing. Only checkpoints/results need a new `RUN_ROOT`. This fast reuse does not assert that changed image contents have been rechecked.
 
@@ -46,7 +46,7 @@ if not (REPO_ROOT / 'train.py').is_file():
 # Your existing Kaggle folder, including BOTH train/ and val/.
 DATA_ROOT = Path('/kaggle/input/datasets/abdelrahmanhassani/prepareddatasetdiffgan/Preapred Dataset')
 POOL_MANIFEST = Path('/kaggle/working/pool_manifest.csv')
-PREPARED_MANIFEST = None  # Or Path('/kaggle/working/prepared_data/recovered_100k_seed42/selected_manifest.csv')
+PREPARED_MANIFEST = None  # Or Path('/kaggle/working/prepared_data/recovered_100k_seed42_v2/selected_manifest.csv')
 OUTPUT_BASE = Path('/kaggle/working/deepfake_experiments')
 # On Colab, change these paths to your actual /content/... dataset and mounted Drive output.
 

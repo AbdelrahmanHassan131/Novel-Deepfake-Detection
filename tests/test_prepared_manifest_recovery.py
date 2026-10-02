@@ -81,6 +81,42 @@ class PreparedRecovery(unittest.TestCase):
         self.save_evidence()
         with self.assertRaisesRegex(ValueError, 'conflicting labels'):
             recover(self.source, self.audit, self.output, True, True)
+        self.assertTrue((self.output / 'label_conflicts.csv').is_file())
+        summary = json.loads((self.output / 'conflict_summary.json').read_text())
+        self.assertEqual(summary['conflicting_content_hashes'], 1)
+        self.assertFalse((self.output / 'selected_manifest.verified.json').exists())
+
+    def test_explicit_quarantine_preserves_labels_and_excludes_linked_group(self):
+        ambiguous_hash = hashlib.sha256(b'ambiguous').hexdigest()
+        for split, label, sid in [('dev', '0', 'bad_real'), ('dev', '1', 'bad_fake'),
+                                  ('train', '0', 'bad_train')]:
+            self.rows.append(dict(self.rows[0], sample_id=sid, split=split, label=label,
+                                  sha256=ambiguous_hash, group_id=sid, identity_id='ambiguous_person',
+                                  path=str(self.root / (sid + '.png'))))
+        self.rows.append(dict(self.rows[0], sample_id='related', group_id='related',
+                              identity_id='ambiguous_person', path=str(self.root / 'related.png'),
+                              sha256=hashlib.sha256(b'related').hexdigest()))
+        self.save_evidence()
+        original_digest = digest(self.source)
+        report = recover(self.source, self.audit, self.output, True, True, True)
+        self.assertEqual(report['removed_training_samples'], 2)
+        self.assertEqual(report['removed_evaluation_samples'], 2)
+        self.assertFalse(report['evaluation_rows_preserved'])
+        self.assertEqual(digest(self.source), original_digest)
+        with (self.output / 'selected_manifest.csv').open(newline='') as stream:
+            kept = list(csv.DictReader(stream))
+        self.assertEqual({r['sample_id']: r['label'] for r in kept},
+                         {'train_0': '0', 'train_1': '1', 'dev_0': '0', 'dev_1': '1'})
+        recover(self.source, self.audit, self.output, True, True, True)
+        with self.assertRaisesRegex(ValueError, 'different inputs/policy'):
+            recover(self.source, self.audit, self.output, True, True, False)
+
+    def test_quarantine_cannot_issue_gate_if_evaluation_class_is_lost(self):
+        self.rows[3]['sha256'] = self.rows[2]['sha256']
+        self.save_evidence()
+        with self.assertRaisesRegex(ValueError, 'both classes'):
+            recover(self.source, self.audit, self.output, True, True, True)
+        self.assertFalse((self.output / 'selected_manifest.verified.json').exists())
 
     def test_changed_output_is_not_reused(self):
         self.save_evidence()
