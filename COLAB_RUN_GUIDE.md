@@ -1,5 +1,7 @@
 # Google Colab Execution Guide: 100K Deepfake Detection Pilot Pipeline
 
+**Completed audit reports SHA256 train/dev overlaps?** Follow [KAGGLE_PREPARATION_RECOVERY.md](KAGGLE_PREPARATION_RECOVERY.md). Reuse the completed hash evidence and preserve validation; do not rerun inventory to repair actual duplicate content. The main notebook now accepts `PREPARED_MANIFEST` to reuse the recovered selection.
+
 This guide details the exact manual steps for training and evaluating the 100K pilot pipeline on Google Colab using an **NVIDIA L4 (24 GB)** or **two NVIDIA T4 (16 GB)** GPUs.
 
 ---

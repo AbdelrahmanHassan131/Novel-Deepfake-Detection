@@ -7,6 +7,7 @@ Saves cache periodically and atomically to prevent corruption upon interruption.
 import hashlib
 import json
 import os
+import sqlite3
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -68,3 +69,54 @@ class HashCache:
     def close(self) -> None:
         if self.dirty_count > 0:
             self.save()
+
+
+class SQLiteHashCache:
+    """Incremental cache for large audits; avoids rewriting a growing JSON file.
+
+    Reuse requires matching path, byte size and nanosecond mtime. This is a local
+    cache for an unchanged dataset, not protection against adversarial changes.
+    """
+
+    def __init__(self, cache_path):
+        path = Path(cache_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.connection = sqlite3.connect(str(path), timeout=60)
+        self.connection.execute('CREATE TABLE IF NOT EXISTS hashes '
+                                '(path TEXT PRIMARY KEY, size INTEGER, mtime_ns INTEGER, sha256 TEXT)')
+        self.connection.commit()
+        self.dirty_count = 0
+        self.hits = 0
+        self.misses = 0
+
+    def get_or_compute(self, file_path):
+        path = Path(file_path).resolve()
+        key = str(path)
+        before = path.stat()
+        entry = self.connection.execute('SELECT size, mtime_ns, sha256 FROM hashes WHERE path=?', (key,)).fetchone()
+        if entry and entry[:2] == (before.st_size, before.st_mtime_ns):
+            self.hits += 1
+            return entry[2]
+        value = hashlib.sha256()
+        with path.open('rb') as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                value.update(chunk)
+        after = path.stat()
+        if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+            raise RuntimeError(f'File changed while hashing: {path}')
+        result = value.hexdigest()
+        self.connection.execute('INSERT OR REPLACE INTO hashes VALUES (?, ?, ?, ?)',
+                                (key, after.st_size, after.st_mtime_ns, result))
+        self.dirty_count += 1
+        self.misses += 1
+        if self.dirty_count >= 1000:
+            self.save()
+        return result
+
+    def save(self):
+        self.connection.commit()
+        self.dirty_count = 0
+
+    def close(self):
+        self.save()
+        self.connection.close()

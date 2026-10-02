@@ -15,7 +15,7 @@ from PIL import Image
 import re
 from data.manifest import read_manifest, write_manifest, audit_rows, GROUP_FIELDS, UNKNOWN, PROTECTED_SPLITS, known, sha256, extract_entity_tokens
 from data.adapters import apply_adapter, ADAPTERS
-from data.hash_cache import HashCache
+from data.hash_cache import HashCache, SQLiteHashCache
 
 
 def connected_components(rows: List[Dict[str, Any]], require_groups: bool = True) -> Dict[str, List[int]]:
@@ -532,7 +532,8 @@ def main():
         args.train_size = size_text
 
     root = Path(args.root).resolve() if args.root else None
-    hash_cache = HashCache(args.hash_cache) if args.hash_cache else None
+    hash_cache = (SQLiteHashCache(args.hash_cache) if Path(args.hash_cache).suffix.lower() in {'.sqlite', '.db'}
+                  else HashCache(args.hash_cache)) if args.hash_cache and args.hashes else None
 
     if args.action == 'inventory':
         if not root:
@@ -540,6 +541,7 @@ def main():
         if not args.source:
             raise ValueError('--source is required; do not label several repositories as one source')
         rows = []
+        print(f'Inventory: scanning directory entries under {root}; this may take time for a large pool...', flush=True)
         for image in sorted(root.rglob('*')):
             if image.suffix.lower() not in {'.png', '.jpg', '.jpeg', '.bmp', '.webp'}:
                 continue
@@ -600,6 +602,8 @@ def main():
                 generator='authentic' if lbl == 0 else 'manipulated',
                 sha256=file_hash,
             ))
+            if len(rows) % 50000 == 0:
+                print(f'Inventory progress: {len(rows):,} images recorded...', flush=True)
         if hash_cache:
             hash_cache.close()
         if not rows:
@@ -635,7 +639,7 @@ def main():
 
     if args.action == 'pilot' and Path(args.output).resolve() == Path(manifest_path).resolve():
         raise ValueError('Selection output must differ from the pool manifest; keep the full pool reusable.')
-    rows = read_manifest(manifest_path, root=root, remap_prefixes=remap_prefixes, source_roots=source_roots)
+    rows = read_manifest(manifest_path, root=root, remap_prefixes=remap_prefixes, source_roots=source_roots, progress_every=50000)
 
     if args.action == 'adapt':
         if not args.adapter:
@@ -682,7 +686,11 @@ def main():
         print(json.dumps(report['shortage_summary'], indent=2))
         return
 
-    report = audit_rows(rows, hash_files=args.hashes)
+    try:
+        report = audit_rows(rows, hash_files=args.hashes, hash_cache=hash_cache, progress_every=5000)
+    finally:
+        if hash_cache:
+            hash_cache.close()
     if args.hashes:
         write_manifest(manifest_path, rows)
 
@@ -698,7 +706,10 @@ def main():
 
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output).write_text(json.dumps(report, indent=2), encoding='utf-8')
-    print(json.dumps(report, indent=2))
+    print(json.dumps({key: value for key, value in report.items() if key != 'errors'}, indent=2), flush=True)
+    if report['errors']:
+        print(f"Audit failed with {len(report['errors']):,} issues; full details saved to {args.output}.", flush=True)
+        print(json.dumps(report['errors'][:10], indent=2), flush=True)
 
     gate_path = Path(manifest_path).with_suffix('.verified.json')
     if report['passed']:

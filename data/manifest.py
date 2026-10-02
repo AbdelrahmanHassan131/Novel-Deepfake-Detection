@@ -3,6 +3,7 @@ import csv
 import hashlib
 import json
 import re
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -47,7 +48,7 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def read_manifest(path, root=None, split=None, check_files=True, remap_prefixes=None, source_roots=None):
+def read_manifest(path, root=None, split=None, check_files=True, remap_prefixes=None, source_roots=None, progress_every=0):
     path = Path(path).resolve()
     default_root = Path(root).resolve() if root else path.parent
     if remap_prefixes is None:
@@ -63,6 +64,9 @@ def read_manifest(path, root=None, split=None, check_files=True, remap_prefixes=
         if missing:
             raise ValueError(f'Manifest missing columns: {sorted(missing)}')
         rows, ids = [], set()
+        last_progress = time.monotonic()
+        if progress_every:
+            print(f'Reading manifest and checking paths: {path}', flush=True)
         for line, row in enumerate(reader, 2):
             if row['label'] not in ('0', '1'):
                 raise ValueError(f'{path}:{line}: label must be 0 (real) or 1 (fake)')
@@ -114,17 +118,23 @@ def read_manifest(path, root=None, split=None, check_files=True, remap_prefixes=
                 raise FileNotFoundError(f"Could not resolve image at '{image_path}' (source path: '{row['path']}', root: '{effective_root}')")
             row.update(path=str(image_path), label=int(row['label']))
             rows.append(row)
+            if progress_every and (len(rows) % progress_every == 0 or time.monotonic() - last_progress >= 30):
+                print(f'Manifest progress: {len(rows):,} rows loaded...', flush=True)
+                last_progress = time.monotonic()
     if not rows:
         raise ValueError(f'No samples in {path} for split={split!r}')
     return rows
 
 
-def audit_rows(rows, require_groups=True, hash_files=False):
+def audit_rows(rows, require_groups=True, hash_files=False, hash_cache=None, progress_every=0):
     """IDs must be globally namespaced; linked originals/derivatives share groups."""
     errors, warnings = [], []
     seen = {key: {} for key in ('sample_id', 'path', 'sha256') + GROUP_FIELDS}
     counts, source_labels = Counter(), defaultdict(Counter)
-    for row in rows:
+    last_progress = time.monotonic()
+    if progress_every:
+        print(f'Auditing {len(rows):,} rows; content hashing={hash_files}...', flush=True)
+    for index, row in enumerate(rows, 1):
         split = row['split']
         counts[(split, int(row['label']))] += 1
         source_labels[(split, row.get('dataset_source', 'unknown'))][int(row['label'])] += 1
@@ -133,7 +143,7 @@ def audit_rows(rows, require_groups=True, hash_files=False):
         if not known(row.get('dataset_source')):
             errors.append(f"Missing dataset_source: {row['sample_id']}")
         if hash_files:
-            actual = sha256(row['path'])
+            actual = hash_cache.get_or_compute(row['path']) if hash_cache else sha256(row['path'])
             if known(row.get('sha256')) and row['sha256'] != actual:
                 errors.append(f"Content hash mismatch: {row['sample_id']}")
             row['sha256'] = actual
@@ -145,6 +155,9 @@ def audit_rows(rows, require_groups=True, hash_files=False):
                 if previous and previous != split:
                     errors.append(f'{key} overlaps {previous} and {split}: {token}')
                 values[token] = split
+        if progress_every and (index % progress_every == 0 or time.monotonic() - last_progress >= 30 or index == len(rows)):
+            print(f'Audit progress: {index:,}/{len(rows):,} rows; {len(errors):,} issues so far.', flush=True)
+            last_progress = time.monotonic()
     for (split, source), labels in sorted(source_labels.items()):
         if len(labels) == 1:
             warnings.append(f'{split}/{source} contains only label {next(iter(labels))}; inspect source shortcuts')
