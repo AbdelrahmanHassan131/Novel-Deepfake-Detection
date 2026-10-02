@@ -518,9 +518,10 @@ def main():
             parser.error('--train_size is supported only for the pilot selection action')
         if args.target_real is not None or args.target_fake is not None:
             parser.error('Choose --train_size OR --target_real/--target_fake, not both')
-        size_text = args.train_size.strip().lower()
+        size_text = args.train_size.strip().strip("'\"").lower().replace('_', '')
         if size_text != 'all' and (not size_text.isdecimal() or int(size_text) <= 0 or int(size_text) % 2):
             parser.error('--train_size must be a positive even image count or all')
+        args.train_size = size_text
 
     root = Path(args.root).resolve() if args.root else None
     hash_cache = HashCache(args.hash_cache) if args.hash_cache else None
