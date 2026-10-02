@@ -193,9 +193,17 @@ def build_pilot_100k(
 
         # Check for conflicting fixed partitions
         if len(existing_fixed) > 1:
+            examples = [
+                {key: rows[i].get(key) for key in
+                 ('sample_id', 'path', 'split', 'source_video_id', 'identity_id', 'original_id', 'sha256')}
+                for split in sorted(existing_fixed)
+                for i in [next(j for j in indices if rows[j].get('split') == split)]
+            ]
             raise ValueError(
                 f"Conflicting fixed partition assignments in connected component '{group_id}': {sorted(existing_fixed)}. "
-                "Connected original/manipulated records cannot span multiple splits."
+                "Connected original/manipulated records cannot span multiple splits. "
+                f"Representative records: {json.dumps(examples, ensure_ascii=False)}. "
+                "Inspect the shared group/identity/original/video/hash metadata; do not bypass the overlap check."
             )
 
         # Check holdout source/generator rules across ALL rows in this connected component
@@ -562,10 +570,15 @@ def main():
                     'directly under root or under a split directory (e.g. train/real, val/fake).'
                 )
 
+            # Both identifiers include the source and FULL relative path (including
+            # split, class, directories, and extension). Stems alone collide across
+            # e.g. train/real/0001.png and val/fake/0001.jpg.
+            identity_digest = hashlib.sha256(f"{args.source}:{rel_path}".encode()).hexdigest()
+
             # Never fabricate video/group IDs unless explicit independent photographs
             if args.independent_images:
                 vid_id = 'none'
-                grp_id = f"{args.source}_{image.stem}"
+                grp_id = f"independent:{identity_digest}"
             else:
                 vid_id = 'unknown'
                 grp_id = 'unknown'
@@ -575,7 +588,7 @@ def main():
                 file_hash = hash_cache.get_or_compute(str(image)) if hash_cache else sha256(image)
 
             rows.append(dict(
-                sample_id=hashlib.sha256(f"{args.source}:{rel_path}".encode()).hexdigest()[:16],
+                sample_id=identity_digest[:16],
                 path=rel_path,
                 label=lbl,
                 split=split_hint,

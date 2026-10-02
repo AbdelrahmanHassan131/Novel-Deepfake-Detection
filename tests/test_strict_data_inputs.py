@@ -133,7 +133,9 @@ class TestStrictDataInputs(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             row = rows[0]
             self.assertEqual(row['source_video_id'], 'none')
-            self.assertEqual(row['group_id'], 'celeba_photographs_face_01')
+            import hashlib
+            expected = hashlib.sha256(b'celeba_photographs:real/face_01.png').hexdigest()
+            self.assertEqual(row['group_id'], f'independent:{expected}')
 
     def test_cross_platform_path_portability_and_relocation(self):
         """Verify read_manifest resolves relative paths deterministically and relocates absolute paths without basename matching."""
