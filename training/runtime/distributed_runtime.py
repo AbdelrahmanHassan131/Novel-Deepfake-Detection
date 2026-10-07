@@ -115,6 +115,8 @@ class DistributedRuntime:
         init_url = getattr(opt, 'dist_url', 'env://')
 
         if not dist.is_initialized():
+            print(f'[DDP rank={self.rank}] Initializing {backend} process group '
+                  f'({self.world_size} ranks); waiting for all workers...', flush=True)
             dist.init_process_group(
                 backend=backend,
                 init_method=init_url,
@@ -122,6 +124,7 @@ class DistributedRuntime:
                 rank=self.rank,
             )
             self._distributed_initialized = True
+            print(f'[DDP rank={self.rank}] Process group ready.', flush=True)
 
             if self.is_main:
                 print(

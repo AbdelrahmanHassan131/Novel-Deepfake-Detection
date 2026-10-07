@@ -1,0 +1,50 @@
+# Model Evaluation Report
+**Generated:** 2026-10-07 23:08:05
+
+## 1. Checkpoint Metadata
+| Field | Value |
+| :--- | :--- |
+| `arch` | MHA_128 |
+| `epoch` | 1 |
+| `best_metric` | 0.9964959434641677 |
+| `global_step` | 1541 |
+| `model_name` | MHA_128 |
+| `checkpoint_path` | F:\Discovery AI\First expirement 100K models\train_100000_seed42_06482e0771\token_seed42\checkpoints\best.pth |
+| `checkpoint_size_mb` | 99.88530731201172 |
+| `checkpoint_sha256` | c8dcac3adf2721526bec9be1e30c03493b3336487da2d288cb9332255eab9925 |
+| `protocol` | {'format_version': 2, 'label_mapping': {'real': 0, 'fake': 1}, 'options': {'dataroot': '/kaggle/input/datasets/abdelrahmanhassani/prepareddatasetdiffgan/Preapred Dataset', 'val_root': None, 'manifest': '/kaggle/working/prepared_data/recovered_100k_seed42_v2/selected_manifest.csv', 'manifest_split': 'train', 'val_manifest': '/kaggle/working/prepared_data/recovered_100k_seed42_v2/selected_manifest.csv', 'val_manifest_split': 'dev', 'audit_hashes': False, 'allow_folder_training': False, 'noise_prob': 0.0, 'noise_std': [0.0, 3.0], 'downscale_prob': 0.0, 'downscale_range': [0.5, 1.0], 'cropSize': 224, 'loadSize': 256, 'batch_size': 16, 'serial_batches': False, 'no_flip': False, 'no_crop': False, 'no_resize': False, 'class_bal': False, 'mode': 'binary', 'classes': ['fake', 'real'], 'resize_or_crop': 'scale_and_crop', 'compute_wavelets': False, 'train_split': 'train', 'val_split': 'val', 'blur_prob': 0.5, 'blur_sig': [0.0, 3.0], 'jpg_prob': 0.0, 'jpg_method': ['cv2'], 'jpg_qual': [75], 'rz_interp': ['bilinear'], 'data_aug': False, 'wavelet_backend': 'cpu', 'wavelet_type': 'haar', 'wavelet_level': 3, 'wavelet_mode': 'reflect', 'use_log_packets': True, 'wavelet_log_mode': 'signed_log1p', 'precomputed_dir': None, 'arch': 'MHA_128', 'pretrained': False, 'num_classes': 1, 'init_type': 'normal', 'init_gain': 0.02, 'embed_dim': 128, 'num_heads': 4, 'dropout': 0.1, 'fusion_type': 'token_attention', 'freeze_base_models': True, 'rgb_model_path': '/kaggle/working/deepfake_experiments/train_100000_seed42_27cf24839a/rgb128_seed42/checkpoints/best.pth', 'wavelet_model_path': '/kaggle/working/deepfake_experiments/train_100000_seed42_f5c32ae782/wavelet128_seed42/checkpoints/best.pth', 'xception_model_path': None, 'convnext_model_path': None, 'backbone_weights': None, 'niter': 2, 'niter_decay': 0, 'lr': 0.0001, 'optim': 'adam', 'beta1': 0.9, 'weight_decay': 0.0, 'momentum': 0.0, 'lr_policy': 'none', 'lr_decay_iters': 10, 'lr_gamma': 0.1, 'lr_patience': 5, 'earlystop_epoch': 5, 'use_amp': True, 'isTrain': True, 'continue_train': False, 'new_optim': False, 'epoch_count': 1, 'last_epoch': -1, 'grad_accum_steps': 2, 'monitor_metric': 'auc', 'resume_checkpoint': None, 'additional_epochs': None, 'dist_backend': None, 'dist_url': 'env://', 'find_unused_parameters': False, 'name': '', 'run_id': 'seed42', 'checkpoints_dir': '/kaggle/working/deepfake_experiments/train_100000_seed42_06482e0771/token_seed42/checkpoints', 'epoch': 'latest', 'suffix': '', 'log_freq': 10, 'loss_freq': 400, 'val_epoch_freq': 1, 'save_epoch_freq': 1, 'save_latest_freq': 2000, 'gpu_ids': [0, 1], 'num_threads': 2, 'num_workers': 2, 'seed': 42, 'deterministic': False, 'pin_memory': True}, 'manifests': {'manifest': {'path': '/kaggle/working/prepared_data/recovered_100k_seed42_v2/selected_manifest.csv', 'sha256': '407726e461ba9513e8155b655baff3822adcc5cd5ef59323d1cad7a22bd94ae2'}, 'val_manifest': {'path': '/kaggle/working/prepared_data/recovered_100k_seed42_v2/selected_manifest.csv', 'sha256': '407726e461ba9513e8155b655baff3822adcc5cd5ef59323d1cad7a22bd94ae2'}}, 'experts': {'rgb': {'path': '/kaggle/working/deepfake_experiments/train_100000_seed42_27cf24839a/rgb128_seed42/checkpoints/best.pth', 'sha256': '589a54444daba0c1f23d0e590a5fcf6605dc444e75f324bf44f3a605547f9ae5'}, 'wavelet': {'path': '/kaggle/working/deepfake_experiments/train_100000_seed42_f5c32ae782/wavelet128_seed42/checkpoints/best.pth', 'sha256': '7c4f9d5a912e6ffabceb58a11aa26be7cd1c3a32298570062cdacd33771e720d'}}, 'head_class': 'TokenAttentionFusion', 'head_params': 199425, 'head_trainable_params': 199425} |
+| `decision_threshold_source` | F:\Discovery AI\First expirement 100K models\train_100000_seed42_06482e0771\token_seed42\checkpoints\threshold.json |
+
+## 2. Classification Summary
+| Metric | Value |
+| :--- | :--- |
+| **Accuracy** | 0.5022 |
+| **ROC AUC** | 0.8177 |
+| **PR AUC** | 0.8126 |
+| **F1 Score** | 0.6676 |
+| **Precision** | 0.5011 |
+| **Recall** | 1.0000 |
+| **Equal Error Rate (EER)** | 0.2623 |
+| **False Accept Rate (FAR)** | 0.9956 |
+| **False Reject Rate (FRR)** | 0.0000 |
+| **Specificity** | 0.0044 |
+| **Sensitivity** | 1.0000 |
+
+### Per-Class Performance
+| Metric | Class 0 (Real) | Class 1 (Fake) |
+| :--- | :--- | :--- |
+| Precision | 1.0000 | 0.5011 |
+| Recall | 0.0044 | 1.0000 |
+| F1 Score | 0.0087 | 0.6676 |
+| Support | 30000 | 30000 |
+
+### Confusion Matrix
+| | Predicted Real (0) | Predicted Fake (1) |
+| :--- | :--- | :--- |
+| **Actual Real (0)** | 131 | 29869 |
+| **Actual Fake (1)** | 0 | 30000 |
+
+## 4. Visualizations
+- **roc_curve**: [roc_curve.png](plots\roc_curve.png)
+- **precision_recall_curve**: [precision_recall_curve.png](plots\precision_recall_curve.png)
+- **confusion_matrix**: [confusion_matrix.png](plots\confusion_matrix.png)

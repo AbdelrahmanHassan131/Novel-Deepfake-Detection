@@ -1,0 +1,9 @@
+{
+  "threshold": 0.37032756209373474,
+  "criterion": "development Youden J",
+  "checkpoint_sha256": "7c4f9d5a912e6ffabceb58a11aa26be7cd1c3a32298570062cdacd33771e720d",
+  "prediction_sha256": "5e1d5ae236d8e49905cda123d0a28489c2a7a184088e4202e7683bf0abb99d86",
+  "source_splits": [
+    "dev"
+  ]
+}

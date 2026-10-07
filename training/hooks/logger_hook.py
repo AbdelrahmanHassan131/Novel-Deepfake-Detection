@@ -96,6 +96,8 @@ class LoggerHook:
     def on_batch_end(self, trainer):
         if self.log_freq <= 0:
             return
+        if trainer.epoch_batches == 1 and self._should_log():
+            print(f'[Train] First batch completed; rank 0 local loss={trainer.last_batch_loss:.6f}', flush=True)
         if trainer.epoch_batches % self.log_freq == 0:
             loss = trainer.last_batch_loss
             loss, world_size = self._get_world_size_and_reduce_loss(loss)

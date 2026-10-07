@@ -1,0 +1,28 @@
+﻿[
+    {
+        "Model":  "RGB",
+        "Samples":  60000,
+        "Threshold":  0.5632256269454956,
+        "Accuracy":  0.5037,
+        "BalancedAccuracy":  0.5037,
+        "AUC":  0.8254877105555555,
+        "RealRecall":  0.007466666666666667,
+        "FakeRecall":  0.9999333333333333,
+        "MacroF1":  0.34156103774066676,
+        "CheckpointSha256":  "589a54444daba0c1f23d0e590a5fcf6605dc444e75f324bf44f3a605547f9ae5",
+        "Report":  "G:\\Master\u0027s Of Science Computer Engineering\\thesis deepfake detection\\Thesis Revisions SP\\First revesion\\Novel Deepfake Detection\\output\\external_evaluation\\expert_diagnosis_20261007_231142_58008331\\Wang2020_128\\generalization_report.json"
+    },
+    {
+        "Model":  "Wavelet",
+        "Samples":  60000,
+        "Threshold":  0.37032756209373474,
+        "Accuracy":  0.5209166666666667,
+        "BalancedAccuracy":  0.5209166666666667,
+        "AUC":  0.7507034155555555,
+        "RealRecall":  0.044033333333333334,
+        "FakeRecall":  0.9978,
+        "MacroF1":  0.3798934537153227,
+        "CheckpointSha256":  "7c4f9d5a912e6ffabceb58a11aa26be7cd1c3a32298570062cdacd33771e720d",
+        "Report":  "G:\\Master\u0027s Of Science Computer Engineering\\thesis deepfake detection\\Thesis Revisions SP\\First revesion\\Novel Deepfake Detection\\output\\external_evaluation\\expert_diagnosis_20261007_231142_58008331\\WolterWavelet2021_128\\generalization_report.json"
+    }
+]

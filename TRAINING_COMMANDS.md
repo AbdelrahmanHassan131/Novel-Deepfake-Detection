@@ -10,6 +10,8 @@ If your audit finished with SHA256 overlaps, use [KAGGLE_PREPARATION_RECOVERY.md
 
 For a new model/run using an existing verified selection, set `PREPARED_MANIFEST` in the setup below. Keep the dataset contents and paths unchanged. The preparation cell will verify the saved CSV/gate and skip selection and hashing. Only checkpoints/results need a new `RUN_ROOT`. This fast reuse does not assert that changed image contents have been rechecked.
 
+For a silent training cell, see [KAGGLE_TRAINING_PROGRESS.md](KAGGLE_TRAINING_PROGRESS.md) for an unbuffered launch with a saved console log and stage-by-stage diagnostics.
+
 ## 1. How to use this file
 
 1. Put the updated repository in your notebook's working directory and install its dependencies as in the existing Colab/smoke guide.
@@ -110,6 +112,7 @@ Run once before training. All model stages below use this exact selected manifes
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 if [[ "${REUSE_PREPARED:-0}" == "1" ]]; then
   python - <<'PY'
@@ -155,6 +158,7 @@ The main experiment uses **B then C**, followed by Section 5. **A and D** are op
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 python train.py \
   --arch Wang2020Raw \
@@ -176,6 +180,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 torchrun --standalone --nproc_per_node=2 train.py \
   --arch Wang2020Raw \
@@ -200,6 +205,7 @@ torchrun --standalone --nproc_per_node=2 train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 python train.py \
   --arch Wang2020_128 \
@@ -221,6 +227,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 torchrun --standalone --nproc_per_node=2 train.py \
   --arch Wang2020_128 \
@@ -245,6 +252,7 @@ torchrun --standalone --nproc_per_node=2 train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 python train.py \
   --arch WolterWavelet2021_128 \
@@ -266,6 +274,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 torchrun --standalone --nproc_per_node=2 train.py \
   --arch WolterWavelet2021_128 \
@@ -290,6 +299,7 @@ torchrun --standalone --nproc_per_node=2 train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 python train.py \
   --arch WolterWavelet2021Raw \
@@ -311,6 +321,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 torchrun --standalone --nproc_per_node=2 train.py \
   --arch WolterWavelet2021Raw \
@@ -340,6 +351,7 @@ These commands load the fresh `rgb128` and `wavelet128` best checkpoints from th
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"
@@ -366,6 +378,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"
@@ -395,6 +408,7 @@ torchrun --standalone --nproc_per_node=2 train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"
@@ -421,6 +435,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"
@@ -450,6 +465,7 @@ torchrun --standalone --nproc_per_node=2 train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"
@@ -476,6 +492,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"
@@ -516,6 +533,7 @@ Then run ONE of the following. A `last.pth` file from that stage must exist.
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"
@@ -545,6 +563,7 @@ python train.py \
 ```bash
 %%bash
 set -euo pipefail
+export PYTHONUNBUFFERED=1
 cd "$REPO_ROOT"
 test -f "$RGB_CKPT"
 test -f "$WAV_CKPT"

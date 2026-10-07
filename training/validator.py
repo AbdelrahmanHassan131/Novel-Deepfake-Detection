@@ -85,6 +85,9 @@ class Validator:
         """
         import torch.distributed as dist
         is_dist = dist.is_initialized() and dist.get_world_size() > 1
+        log_progress = not is_dist or dist.get_rank() == 0
+        if log_progress:
+            print(f'[Validation] Starting {len(dataloader):,} local batches; synchronizing model buffers...', flush=True)
 
         # Check if model.model is wrapped in DDP
         ddp_wrapped = False
@@ -116,7 +119,7 @@ class Validator:
         cursor = 0
 
         try:
-            for batch in dataloader:
+            for batch_number, batch in enumerate(dataloader, 1):
                 model.set_input(batch)
                 model.forward()
 
@@ -136,6 +139,8 @@ class Validator:
                     batch_idx = rank_indices[cursor : cursor + batch_size]
                     all_indices.extend(batch_idx)
                     cursor += batch_size
+                if log_progress and (batch_number == 1 or batch_number % 100 == 0):
+                    print(f'[Validation] Rank 0 progress: {batch_number:,}/{len(dataloader):,} batches.', flush=True)
         finally:
             # Exception-safe restoration of DDP wrapper and original training mode
             if ddp_wrapped:
@@ -143,6 +148,8 @@ class Validator:
             if orig_training_mode:
                 model.train()
 
+        if log_progress:
+            print('[Validation] Local batches complete; aggregating ranks and calculating metrics...', flush=True)
         # Aggregate local arrays
         local_preds = np.concatenate(all_preds) if len(all_preds) > 0 else np.array([], dtype=np.float32)
         local_labels = np.concatenate(all_labels) if len(all_labels) > 0 else np.array([], dtype=np.float32)

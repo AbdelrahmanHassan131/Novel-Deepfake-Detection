@@ -1,7 +1,9 @@
+from functools import partial
 from torchvision import transforms
 from .base_dataset import BaseDataset
 from ..transforms.augmentations import data_augment
 from ..transforms.resize import custom_resize
+from ..transforms.identity import identity_image
 
 class RGBDataset(BaseDataset):
     """
@@ -13,23 +15,23 @@ class RGBDataset(BaseDataset):
         if opt.isTrain:
             crop_func = transforms.RandomCrop(opt.cropSize)
         elif opt.no_crop:
-            crop_func = transforms.Lambda(lambda img: img)
+            crop_func = transforms.Lambda(identity_image)
         else:
             crop_func = transforms.CenterCrop(opt.cropSize)
 
         if opt.isTrain and not opt.no_flip:
             flip_func = transforms.RandomHorizontalFlip()
         else:
-            flip_func = transforms.Lambda(lambda img: img)
+            flip_func = transforms.Lambda(identity_image)
 
         if not opt.isTrain and opt.no_resize:
-            rz_func = transforms.Lambda(lambda img: img)
+            rz_func = transforms.Lambda(identity_image)
         else:
-            rz_func = transforms.Lambda(lambda img: custom_resize(img, opt))
+            rz_func = transforms.Lambda(partial(custom_resize, opt=opt))
 
         image_transform = transforms.Compose([
             rz_func,
-            transforms.Lambda(lambda img: data_augment(img, opt)),
+            transforms.Lambda(partial(data_augment, opt=opt)),
             crop_func,
             flip_func,
             transforms.ToTensor(),

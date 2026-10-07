@@ -19,7 +19,18 @@ import sys
 import argparse
 import json
 from datetime import datetime
+
+# Notebook shells pipe stdout: announce worker startup BEFORE expensive imports,
+# and flush subsequent progress instead of buffering it until process exit.
+if __name__ == '__main__':
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(line_buffering=True, write_through=True)
+    print(f"[startup rank={os.environ.get('RANK', '0')} pid={os.getpid()}] Loading PyTorch...", flush=True)
 import torch
+
+if __name__ == '__main__':
+    print(f"[startup rank={os.environ.get('RANK', '0')}] PyTorch loaded; loading project modules...", flush=True)
 
 from config import load_config, config_to_opt, ConfigValidator
 from config.defaults import DATA_DEFAULTS, TRAINING_DEFAULTS, MODEL_DEFAULTS, RUNTIME_DEFAULTS, EXPERIMENT_DEFAULTS, WAVELET_DEFAULTS, AUGMENTATION_DEFAULTS
@@ -27,6 +38,9 @@ from models import build_model, get_registered_models
 from data.loaders.dataloader_factory import create_dataloader, create_mha_dataloader
 from training import Trainer, seed_everything
 from experiment import ExperimentManager
+
+if __name__ == '__main__':
+    print(f"[startup rank={os.environ.get('RANK', '0')}] Project imports complete.", flush=True)
 
 
 def parse_args():
@@ -226,6 +240,7 @@ def main():
         print("=" * 70)
 
     # 1. Parse command line arguments
+    print(f"[rank={os.environ.get('RANK', '0')}] Parsing options and loading model registry...", flush=True)
     opt = parse_args()
     if is_main:
         print(f"Architecture : {opt.arch}")
@@ -268,8 +283,11 @@ def main():
             raise ValueError('Training and development split names must differ when using the same manifest.')
         if not opt_clean.val_manifest:
             opt_clean.val_manifest = opt_clean.manifest
-        rows = read_manifest(opt_clean.manifest, opt_clean.dataroot, opt_clean.manifest_split)
-        dev_rows = read_manifest(opt_clean.val_manifest, opt_clean.val_root or opt_clean.dataroot, opt_clean.val_manifest_split)
+        print(f"[rank={os.environ.get('RANK', '0')}] Checking training/development metadata and image paths; "
+              f"content rehashing={require_hashes}. No model batches have started yet.", flush=True)
+        rows = read_manifest(opt_clean.manifest, opt_clean.dataroot, opt_clean.manifest_split, progress_every=10000)
+        dev_rows = read_manifest(opt_clean.val_manifest, opt_clean.val_root or opt_clean.dataroot,
+                                 opt_clean.val_manifest_split, progress_every=10000)
         # Ensure dev_rows have split distinct from manifest_split for cross-manifest overlap detection
         tagged_dev_rows = []
         for r in dev_rows:
@@ -277,12 +295,13 @@ def main():
             if r_copy['split'] == opt_clean.manifest_split:
                 r_copy['split'] = 'dev'
             tagged_dev_rows.append(r_copy)
-        report = audit_rows(rows + tagged_dev_rows, hash_files=require_hashes)
+        report = audit_rows(rows + tagged_dev_rows, hash_files=require_hashes, progress_every=10000)
         if not report['passed']:
             raise ValueError('Dataset audit failed: ' + '; '.join(report['errors'][:20]))
         if {r['label'] for r in rows} != {0, 1} or {r['label'] for r in dev_rows} != {0, 1}:
             raise ValueError('Training and development each require real and fake samples.')
-        print('Dataset audit:', report)
+        print(f"[rank={os.environ.get('RANK', '0')}] Dataset audit passed: "
+              f"{len(rows):,} train / {len(dev_rows):,} development rows.", flush=True)
     # Seed BEFORE constructing datasets and model weights, not just the training loop.
     if opt_clean.seed is not None:
         seed_everything(opt_clean.seed, deterministic=opt_clean.deterministic)
@@ -353,6 +372,8 @@ def main():
     # 5. Build Model & Trainer
     if runtime.is_main:
         print(f"[4/5] Constructing model ({opt_clean.arch})...")
+        if opt_clean.pretrained and not resume_path:
+            print('Pretrained backbone requested: loading cached/local weights or downloading if absent.', flush=True)
     model = build_model(opt_clean)
     if runtime.is_main and hasattr(model, 'head_class_name'):
         print(f"  -> Fusion head class   : {model.head_class_name}")

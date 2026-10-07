@@ -266,7 +266,12 @@ class BaseTrainer(AmpMixin, ABC):
         if hasattr(self.model, 'optimizer') and self.model.optimizer is not None:
             self.model.optimizer.zero_grad()
 
+        if self.runtime.is_main:
+            print(f'[Train] Epoch {self.current_epoch}: {num_batches:,} batches per rank; '
+                  'waiting for first batch from the image loader...', flush=True)
         for batch_idx, batch in enumerate(self.train_loader):
+            if batch_idx == 0 and self.runtime.is_main:
+                print('[Train] First batch received; starting forward/backward computation...', flush=True)
             self._fire('on_batch_start', self)
 
             window_start = (batch_idx // accum_steps) * accum_steps

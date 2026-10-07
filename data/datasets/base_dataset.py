@@ -13,7 +13,8 @@ class BaseDataset(datasets.ImageFolder):
         manifest = getattr(opt, 'manifest', None)
         if manifest:
             VisionDataset.__init__(self, root, transform=transform)
-            self.records = read_manifest(manifest, root, getattr(opt, 'manifest_split', None))
+            self.records = read_manifest(manifest, root, getattr(opt, 'manifest_split', None),
+                                         progress_every=10000)
             self.samples = [(r['path'], r['label']) for r in self.records]
             self.targets = [label for _, label in self.samples]
             self.imgs = self.samples
