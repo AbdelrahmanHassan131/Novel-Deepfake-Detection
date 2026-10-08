@@ -136,13 +136,19 @@ class Evaluator:
         threshold_file = (opt_overrides or {}).get('threshold_file')
         if threshold_file:
             import json
+            from evaluation.generalization import ALLOWED_CALIBRATION_SPLITS, FORBIDDEN_CALIBRATION_SPLITS
             with open(threshold_file, encoding='utf-8') as stream:
                 calibration = json.load(stream)
             if calibration['checkpoint_sha256'] != metadata.get('checkpoint_sha256'):
                 raise ValueError('Threshold was selected for a different checkpoint')
-            if set(calibration.get('source_splits', [])) - {'dev', 'val', 'external_dev'}:
-                raise ValueError('Threshold must come from development data')
+            source_splits = set(calibration.get('source_splits', []))
+            if not source_splits or source_splits.intersection(FORBIDDEN_CALIBRATION_SPLITS) or (source_splits - ALLOWED_CALIBRATION_SPLITS):
+                raise ValueError(f"Threshold must come from development data {sorted(ALLOWED_CALIBRATION_SPLITS)}, got {sorted(source_splits)}")
             threshold = float(calibration['threshold'])
+            recorded_precision = calibration.get('eval_precision', 'unknown')
+            if recorded_precision not in ('unknown', 'fp32'):
+                raise ValueError('Standalone evaluation uses FP32. Recompute development predictions '
+                                 'in FP32 before calibrating a matching threshold.')
         metadata['decision_threshold_source'] = threshold_file or 'fixed 0.5; no test calibration'
         # 2. Build Dataloader
         dataloader = self._build_dataloader(model.opt)
@@ -169,9 +175,11 @@ class Evaluator:
         records = dataloader.dataset.records
         inference_result.predictions = (inference_result.probabilities >= threshold).astype(float)
         export_predictions(os.path.join(self.output_dir, 'predictions.csv'), records,
-                           inference_result.probabilities, metadata.get('checkpoint_sha256'))
+                           inference_result.probabilities, metadata.get('checkpoint_sha256'),
+                           logits=getattr(inference_result, 'logits', None), eval_precision='fp32')
         generalization = summarize(records, inference_result.probabilities, threshold,
-                                  repeats=(opt_overrides or {}).get('bootstrap', 200))
+                                  repeats=(opt_overrides or {}).get('bootstrap', 200),
+                                  logits=getattr(inference_result, 'logits', None))
         generalization['checkpoint'] = metadata
         with open(os.path.join(self.output_dir, 'generalization_report.json'), 'w', encoding='utf-8') as stream:
             json.dump(generalization, stream, indent=2, allow_nan=False)
@@ -270,7 +278,10 @@ class Evaluator:
         # Override with evaluation target settings
         opt.dataroot = target_root or self.dataroot
         opt.batch_size = self.batch_size
+        opt.val_batch_size = self.batch_size
         opt.isTrain = False
+        print(f"[Evaluator] Effective evaluation batch size: {self.batch_size}")
+        print(f"[Evaluator] Precision: fp32; workers: {getattr(opt, 'val_num_workers', None) or getattr(opt, 'num_workers', 0)}")
 
         # Ensure opt has necessary dataset and transform defaults
         defaults = {

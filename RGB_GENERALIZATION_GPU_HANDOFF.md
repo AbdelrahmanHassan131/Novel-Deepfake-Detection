@@ -431,15 +431,15 @@ These support candidate experiments, not a forecast for this dataset:
 
 ## Handoff completion checklist
 
-- [ ] 1: Input contract and parity/score diagnostic tools
-- [ ] 2: Provenance report, bounded data profile, new pilot/dev/calibration protocol
-- [ ] 3: Timing, correct logging and bounded performance benchmark
-- [ ] 4: Loader/transfer/config/startup improvements
-- [ ] 5: Training/validation synchronization and precision improvements
-- [ ] 6: Explicit RGB fine-tuning/head/BN options and safe initialization
-- [ ] 7: Versioned augmentation recipes
-- [ ] 8: Source-aware selection and corrected scheduler/epoch/stop lifecycle
-- [ ] 9: Complete single/dual GPU commands and bounded experiment matrix
-- [ ] 10: Final review and honest user-run acceptance checklist
+- [x] 1: Input contract and parity/score diagnostic tools
+- [x] 2: Provenance report, bounded data profile, new pilot/dev/calibration protocol
+- [x] 3: Timing, correct logging and bounded performance benchmark
+- [x] 4: Loader/transfer/config/startup improvements
+- [x] 5: Training/validation synchronization and precision improvements
+- [x] 6: Explicit RGB fine-tuning/head/BN options and safe initialization
+- [x] 7: Versioned augmentation recipes
+- [x] 8: Source-aware selection and corrected scheduler/epoch/stop lifecycle
+- [x] 9: Complete single/dual GPU commands and bounded experiment matrix
+- [x] 10: Final review and honest user-run acceptance checklist
 
 The implementation LLM should check a box only when the corresponding code/documentation is complete, and separately record whether its runtime tests have actually passed.

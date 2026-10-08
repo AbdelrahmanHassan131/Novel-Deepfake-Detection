@@ -33,8 +33,12 @@ class TestPredictionAndEvidenceContracts(unittest.TestCase):
             class MockManager:
                 save_dir = str(ckpt_dir)
                 rank = 0
-                def save_best(self, epoch, best_metric, global_step, scheduler=None, amp_state=None):
+                def save_best(self, epoch, best_metric, global_step, scheduler=None, amp_state=None, **kwargs):
                     return str(best_pth)
+                def save_last(self, epoch, best_metric, global_step, scheduler=None, amp_state=None, **kwargs):
+                    return str(ckpt_dir / "last.pth")
+                def save_epoch(self, epoch, best_metric, global_step, scheduler=None, amp_state=None, **kwargs):
+                    return str(ckpt_dir / f"epoch_{epoch}.pth")
 
             class MockDataset:
                 samples = [
@@ -66,7 +70,9 @@ class TestPredictionAndEvidenceContracts(unittest.TestCase):
             )
 
             hook = CheckpointHook(MockManager(), monitor_metric='auc')
-            hook.on_validation_end(MockTrainer(), result)
+            mock_trainer = MockTrainer()
+            hook.on_validation_end(mock_trainer, result)
+            hook.on_epoch_end(mock_trainer)
 
             # Check metadata
             meta_file = ckpt_dir / "best_selection_metadata.json"

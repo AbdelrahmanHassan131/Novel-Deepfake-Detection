@@ -15,7 +15,7 @@ import copy
 import torch
 import torch.nn as nn
 
-from config.configuration import load_config
+from config.loader import load_config
 from config.compatibility import opt_to_config, config_to_opt
 from training.base_trainer import BaseTrainer
 

@@ -36,13 +36,17 @@ def _write_experts(root, opt):
     rgb.fc = nn.Sequential(nn.Linear(rgb.fc.in_features, opt.embed_dim), nn.ReLU(),
                            nn.Dropout(0.5), nn.Linear(opt.embed_dim, 1))
     wavelet = WaveletPacketCNN128(3 * 4 ** opt.wavelet_level, embed_dim=opt.embed_dim)
-    protocol = {'options': {key: getattr(opt, key) for key in (
+    base_options = {key: getattr(opt, key) for key in (
         'cropSize', 'loadSize', 'no_crop', 'no_resize', 'rz_interp',
         'wavelet_type', 'wavelet_level', 'wavelet_mode', 'use_log_packets',
-        'wavelet_log_mode')}}
+        'wavelet_log_mode')}
+    rgb_opts = dict(base_options, arch='Wang2020_128')
+    wavelet_opts = dict(base_options, arch='WolterWavelet2021_128')
+    rgb_protocol = {'options': rgb_opts, 'label_mapping': {'real': 0, 'fake': 1}}
+    wavelet_protocol = {'options': wavelet_opts, 'label_mapping': {'real': 0, 'fake': 1}}
     rgb_path, wavelet_path = root / 'rgb.pth', root / 'wavelet.pth'
-    torch.save({'model_state_dict': rgb.state_dict(), 'protocol': protocol}, rgb_path)
-    torch.save({'model_state_dict': wavelet.state_dict(), 'protocol': protocol}, wavelet_path)
+    torch.save({'model_state_dict': rgb.state_dict(), 'protocol': rgb_protocol}, rgb_path)
+    torch.save({'model_state_dict': wavelet.state_dict(), 'protocol': wavelet_protocol}, wavelet_path)
     opt.rgb_model_path, opt.wavelet_model_path = str(rgb_path), str(wavelet_path)
     return rgb_path, wavelet_path
 

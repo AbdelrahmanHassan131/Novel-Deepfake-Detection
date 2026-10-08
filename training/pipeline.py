@@ -114,7 +114,7 @@ class FreshTrainingPipeline:
         fusion_type: str = 'token_attention',
         rgb_arch: str = 'Wang2020_128',
         wavelet_arch: str = 'WolterWavelet2021_128',
-        fusion_arch: str = 'MHA_128',
+        fusion_arch: Optional[str] = None,
         batch_size: int = 32,
         lr: float = 0.0001,
         epochs: int = 10,

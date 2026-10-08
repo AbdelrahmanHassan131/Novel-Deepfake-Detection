@@ -205,9 +205,22 @@ def resnet50(pretrained=False, weights_path=None, **kwargs):
         elif 'model' in state:
             state = state['model']
         cleaned = {k.removeprefix('module.'): v for k, v in state.items()}
-        model.load_state_dict(cleaned, strict=False)
+        missing_keys, unexpected_keys = model.load_state_dict(cleaned, strict=False)
+        missing_backbone = [k for k in missing_keys if not k.startswith('fc.')]
+        if missing_backbone:
+            raise RuntimeError(
+                f"Incomplete backbone initialization: missing backbone keys: {missing_backbone[:10]} "
+                f"(total missing: {len(missing_backbone)}) in {weights_file}"
+            )
     elif pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+        state = model_zoo.load_url(model_urls['resnet50'])
+        cleaned = {k.removeprefix('module.'): v for k, v in state.items()}
+        missing_keys, unexpected_keys = model.load_state_dict(cleaned, strict=False)
+        missing_backbone = [k for k in missing_keys if not k.startswith('fc.')]
+        if missing_backbone:
+            raise RuntimeError(
+                f"Pretrained ImageNet ResNet-50 weights missing backbone keys: {missing_backbone[:10]}"
+            )
     return model
 
 

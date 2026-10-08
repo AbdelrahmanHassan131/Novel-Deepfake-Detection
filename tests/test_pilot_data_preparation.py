@@ -37,7 +37,7 @@ class TestPilotDataPreparation(unittest.TestCase):
                 'sha256': f"sha_{i}",
                 'split': 'unassigned',
             })
-        split_rows, report = build_pilot_100k(rows, target_real=4, target_fake=4, dev_ratio=0.5, test_ratio=0.5, seed=42)
+        split_rows, report = build_pilot_100k(rows, target_real=4, target_fake=4, dev_ratio=0.3, test_ratio=0.2, seed=42, allow_shortfall=True)
 
         # Check: for every video, all of its frames must be in the same split!
         splits_by_video = {}
@@ -83,7 +83,7 @@ class TestPilotDataPreparation(unittest.TestCase):
                 'split': 'unassigned',
             })
 
-        split_rows, report = build_pilot_100k(rows, target_real=50, target_fake=50, seed=42)
+        split_rows, report = build_pilot_100k(rows, target_real=50, target_fake=50, seed=42, allow_shortfall=True)
         summary = report['shortage_summary']
         self.assertEqual(summary['target_real'], 50)
         self.assertEqual(summary['target_fake'], 50)

@@ -1,7 +1,9 @@
+> **Latest RGB review (2026-10-08):** See [RGB_REVIEW_FIXES.md](RGB_REVIEW_FIXES.md) and [RGB_READY_TO_RUN.md](RGB_READY_TO_RUN.md). Earlier completion/readiness claims below are historical; runtime verification remains pending.
+
 # Code-Ready Status Report (Round 3 Re-Review)
 
 **Date**: 2026-09-29  
-**Status**: **IMPLEMENTED & STATICALLY CHECKED — UNEXECUTED (AWAITING RUNTIME SMOKE RUN)**  
+**Status**: **IMPLEMENTED & STATICALLY CHECKED — CODE READY FOR MANUAL COLAB EXECUTION (AWAITING RUNTIME SMOKE RUN)**
 **Execution Boundary Adhered To**: Strict code-only boundary. Code, configuration, notebook cells, and regression tests only. No models initialized, no weights downloaded, no test suites executed, no image pools scanned.
 
 ---
@@ -35,7 +37,7 @@ The test suites remain unexecuted per the code-only boundary. This latest pass p
 - Preexisting suites: `test_training_correctness_and_resume.py`, `test_metadata_relationship_integrity.py`, `test_stable_pilot_selection.py`, `test_staged_pipeline_and_fusion_heads.py`, `test_distributed_validation_safety.py`, `test_prediction_and_evidence_contracts.py`, `test_colab_workflow_and_commands.py`, `test_fresh_training_pipeline.py`, `test_pilot_data_preparation.py`, `test_selection_and_reporting.py`, `test_preprocessing_and_gpu_reliability.py`, `test_baseline_adapters.py`, `test_integration_checkpoint.py`, `test_generalization.py`.
 
 ### Category C: Known Gaps, Incomplete Stubs & Future Work
-- **Optional Baseline Adapters**: `models/baselines/` (UniversalFakeDetect, SBI, UCF, Effort) remain specification stubs labeled `incomplete_stub_future_work`. Native preprocessing and CLI interfaces exist, but official pre-trained weights and benchmark inference are deferred to future optional comparative trials.
+- **Optional Baseline Adapters / Architectural stubs**: `models/baselines/` (UniversalFakeDetect, SBI, UCF, Effort) remain specification stubs labeled `incomplete_stub_future_work`. Architectural stubs have native preprocessing and CLI interfaces exist, but official pre-trained weights and benchmark inference are deferred to future optional comparative trials.
 - **Unimplemented Study Plan Types**: `tools/run_study_plan.py` explicitly rejects unknown schemas and unhandled sweep dimensions with `NotImplementedError` (marking them pending). Full Cartesian grid search and complex cross-dataset retraining sweeps are not generated.
 - **Runtime Convergence & Empirical Proof**: Static parsing checks syntax. The new smoke checker reconstructs supported literal CLI options from source without application imports and checks the eight command templates. Dynamic choices, runtime behavior, numerical correctness, convergence, and GPU memory use remain unverified.
 

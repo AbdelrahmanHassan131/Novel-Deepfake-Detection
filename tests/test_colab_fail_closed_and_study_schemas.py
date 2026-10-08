@@ -30,8 +30,8 @@ class TestAuditGateAndFailClosed(unittest.TestCase):
         self.base_dir = Path(self.temp_dir.name)
         self.manifest_path = self.base_dir / "pilot_manifest.csv"
         self.manifest_content = "sample_id,path,label,split,group_id,dataset_source\n1,1.png,0,train,g1,s1\n2,2.png,1,train,g2,s1\n"
-        self.manifest_path.write_text(self.manifest_content, encoding='utf-8')
-        self.manifest_digest = hashlib.sha256(self.manifest_content.encode('utf-8')).hexdigest()
+        self.manifest_path.write_bytes(self.manifest_content.encode('utf-8'))
+        self.manifest_digest = hashlib.sha256(self.manifest_path.read_bytes()).hexdigest()
         self.gate_path = self.manifest_path.with_suffix('.verified.json')
 
     def tearDown(self):

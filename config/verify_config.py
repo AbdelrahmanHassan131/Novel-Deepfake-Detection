@@ -29,6 +29,10 @@ import os
 import sys
 import argparse
 import traceback
+from pathlib import Path
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 # ======================================================================
@@ -96,10 +100,12 @@ def test_enum_types():
 
     # OptimizerType
     _assert(OptimizerType.from_string('adam') == OptimizerType.ADAM)
+    _assert(OptimizerType.from_string('adamw') == OptimizerType.ADAMW)
     _assert(OptimizerType.from_string('SGD') == OptimizerType.SGD)
 
     # SchedulerType
     _assert(SchedulerType.from_string('step') == SchedulerType.STEP)
+    _assert(SchedulerType.from_string('linear') == SchedulerType.LINEAR)
     _assert(SchedulerType.from_string('none') == SchedulerType.NONE)
     _assert(SchedulerType.from_string('cosine') == SchedulerType.COSINE)
 

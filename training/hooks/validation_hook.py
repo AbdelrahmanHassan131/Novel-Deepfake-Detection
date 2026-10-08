@@ -36,7 +36,10 @@ class ValidationHook:
             return
 
         if trainer.current_epoch % self.val_epoch_freq == 0:
-            result = self.validator.validate(trainer.model, self.val_loader)
+            from contextlib import nullcontext
+            profiler = getattr(trainer, 'profiler', None)
+            with profiler.phase('validation_and_metrics') if profiler else nullcontext():
+                result = self.validator.validate(trainer.model, self.val_loader)
             self.last_result = result
 
             # Notify all hooks (including CheckpointHook) about val result

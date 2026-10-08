@@ -10,5 +10,10 @@ rz_dict = {
 }
 
 def custom_resize(img, opt):
-    interp = sample_discrete(opt.rz_interp) if opt.isTrain else opt.rz_interp[0]
-    return TF.resize(img, opt.loadSize, interpolation=rz_dict[interp])
+    rz_interp = getattr(opt, 'rz_interp', ['bilinear'])
+    if isinstance(rz_interp, str):
+        rz_interp = [x.strip() for x in rz_interp.split(',') if x.strip()]
+    interp = sample_discrete(rz_interp) if getattr(opt, 'isTrain', False) else rz_interp[0]
+    interp_flag = rz_dict.get(interp, Image.BILINEAR)
+    load_size = getattr(opt, 'loadSize', getattr(opt, 'image_size', 256))
+    return TF.resize(img, load_size, interpolation=interp_flag)

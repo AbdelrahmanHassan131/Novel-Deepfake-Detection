@@ -220,11 +220,11 @@ class TestRound3DataContracts(unittest.TestCase):
         ]
         # Requesting 10 real but only 1 available: must fail without allow_shortfall
         with self.assertRaises(ValueError) as ctx:
-            build_pilot_100k(rows, target_real=10, target_fake=10, allow_shortfall=False)
+            build_pilot_100k(rows, target_real=10, target_fake=10, dev_ratio=0.0, allow_shortfall=False)
         self.assertIn("Pilot selection shortfall", str(ctx.exception))
 
         # With allow_shortfall: succeeds and records shortage in report
-        out_rows, report = build_pilot_100k(rows, target_real=10, target_fake=10, allow_shortfall=True)
+        out_rows, report = build_pilot_100k(rows, target_real=10, target_fake=10, dev_ratio=0.0, allow_shortfall=True)
         self.assertEqual(report['shortage_summary']['selected_real'], 1)
         self.assertEqual(report['shortage_summary']['real_shortage'], 9)
 

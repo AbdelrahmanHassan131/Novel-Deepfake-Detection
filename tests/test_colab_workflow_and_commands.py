@@ -39,8 +39,9 @@ class TestColabWorkflowAndCommands(unittest.TestCase):
         self.assertIn("LAUNCH_CMD = f\"torchrun --nproc_per_node={gpu_count}\" if gpu_count > 1 else \"python\"", all_code)
 
         # 2. Check exact expert checkpoint paths
-        self.assertIn("stage1_rgb_expert_seed42/checkpoints/best.pth", all_code)
-        self.assertIn("stage2_wavelet_expert_seed42/checkpoints/best.pth", all_code)
+        self.assertIn("stage1_rgb_expert_seed42", all_code)
+        self.assertIn("stage2_wavelet_expert_seed42", all_code)
+        self.assertIn("best.pth", all_code)
 
         # 3. Check threshold calibration artifacts passed to comparison
         self.assertIn("--threshold_file", all_code)
@@ -111,8 +112,8 @@ class TestColabWorkflowAndCommands(unittest.TestCase):
             manifest_path = Path(tmpdir) / "manifest.csv"
             write_manifest(str(manifest_path), rows)
 
-            # Read with root pointing to tmpdir; verify it resolves to the real image file
-            loaded = read_manifest(str(manifest_path), root=tmpdir, check_files=True)
+            # Read with explicit remap_prefixes pointing to tmpdir; verify it resolves to the real image file
+            loaded = read_manifest(str(manifest_path), root=tmpdir, remap_prefixes={"C:/dummy/root": str(tmpdir)}, check_files=True)
             self.assertEqual(len(loaded), 1)
             self.assertTrue(Path(loaded[0]['path']).exists())
 

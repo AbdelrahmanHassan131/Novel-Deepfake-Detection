@@ -63,6 +63,7 @@ class OptimizerType(Enum):
     model trainers to select the optimizer.
     """
     ADAM = 'adam'
+    ADAMW = 'adamw'
     SGD = 'sgd'
 
     @classmethod
@@ -70,7 +71,7 @@ class OptimizerType(Enum):
         """Convert a legacy string value to an OptimizerType enum.
 
         Args:
-            value (str): One of ``'adam'``, ``'sgd'``
+            value (str): One of ``'adam'``, ``'adamw'``, ``'sgd'``
                 (case-insensitive).
 
         Returns:
@@ -100,6 +101,7 @@ class SchedulerType(Enum):
     STEP = 'step'
     PLATEAU = 'plateau'
     COSINE = 'cosine'
+    LINEAR = 'linear'
     NONE = 'none'
 
     @classmethod
@@ -108,7 +110,7 @@ class SchedulerType(Enum):
 
         Args:
             value (str): One of ``'step'``, ``'plateau'``, ``'cosine'``,
-                ``'none'`` (case-insensitive).
+                ``'linear'``, ``'none'`` (case-insensitive).
 
         Returns:
             SchedulerType

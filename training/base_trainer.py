@@ -64,8 +64,18 @@ class BaseTrainer(AmpMixin, ABC):
             If ``None``, one is created automatically from ``opt``.
     """
 
-    def __init__(self, model, train_loader, opt, val_loader=None,
+    def __init__(self, model, train_loader=None, opt=None, val_loader=None,
                  runtime=None):
+        # Flexible argument detection for test/legacy signature: BaseTrainer(opt, model, runtime)
+        if (hasattr(model, 'batch_size') or hasattr(model, 'niter')) and hasattr(train_loader, 'train') and (hasattr(opt, 'is_distributed') or hasattr(opt, 'world_size')):
+            actual_opt = model
+            actual_model = train_loader
+            actual_runtime = opt
+            train_loader = None
+            opt = actual_opt
+            model = actual_model
+            runtime = actual_runtime
+
         # --- runtime ---
         if runtime is not None:
             self.runtime = runtime
@@ -73,32 +83,40 @@ class BaseTrainer(AmpMixin, ABC):
             self.runtime = DistributedRuntime(opt)
 
         # Convenience aliases (the Trainer queries these, not DDP)
-        self.rank = self.runtime.rank
-        self.device = self.runtime.device
+        self.rank = getattr(self.runtime, 'rank', 0)
+        self.device = getattr(self.runtime, 'device', 'cpu')
 
         # --- seed ---
-        base_seed = getattr(opt, 'seed', None)
-        deterministic = getattr(opt, 'deterministic', False)
+        base_seed = getattr(opt, 'seed', None) if opt is not None else None
+        deterministic = getattr(opt, 'deterministic', False) if opt is not None else False
         if base_seed is not None:
             seed_everything(base_seed, rank=self.rank,
                             deterministic=deterministic)
 
         # --- model ---
         self.model = model
-        self.runtime.wrap_model(model)
+        if hasattr(self.runtime, 'wrap_model'):
+            self.runtime.wrap_model(model)
 
         # --- dataloaders ---
-        self.train_loader = self.runtime.wrap_loader(
-            train_loader, is_train=True
-        )
-        if val_loader is not None:
+        if train_loader is not None and hasattr(self.runtime, 'wrap_loader'):
+            self.train_loader = self.runtime.wrap_loader(
+                train_loader, is_train=True
+            )
+        else:
+            self.train_loader = train_loader
+
+        if val_loader is not None and hasattr(self.runtime, 'wrap_loader'):
             self.val_loader = self.runtime.wrap_loader(
                 val_loader, is_train=False
             )
         else:
-            self.val_loader = None
+            self.val_loader = val_loader
 
         self.opt = opt
+        from training.runtime.profiler import PhaseProfiler
+        self.profiler = PhaseProfiler(rank=self.rank, world_size=getattr(self.runtime, 'world_size', 1),
+                                      device=self.device)
 
         # --- state ---
         self.current_epoch = 0
@@ -107,7 +125,10 @@ class BaseTrainer(AmpMixin, ABC):
         self.epoch_loss = 0.0
         self.epoch_batches = 0
         self.last_batch_loss = 0.0
-        self.grad_accum_steps = max(1, getattr(opt, 'grad_accum_steps', 1))
+        self.optimizer_steps_attempted = 0
+        self.optimizer_steps_successful = 0
+        self.grad_accum_steps = max(1, getattr(opt, 'grad_accum_steps', 1)) if opt is not None else 1
+        self.should_stop = False
 
         # --- AMP ---
         self._init_amp(opt)
@@ -117,12 +138,15 @@ class BaseTrainer(AmpMixin, ABC):
         self.scheduler = self.configure_scheduler()
 
         # Save dir
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+        checkpoints_dir = getattr(opt, 'checkpoints_dir', './checkpoints') if opt is not None else './checkpoints'
+        opt_name = getattr(opt, 'name', 'experiment') if opt is not None else 'experiment'
+        self.save_dir = os.path.join(checkpoints_dir, opt_name)
         self.checkpoint_manager = CheckpointManager(
             save_dir=self.save_dir,
             model=self.model,
             rank=self.rank,
         )
+        self.checkpoint_manager.trainer = self
 
         # Validator
         self.validator = Validator()
@@ -131,16 +155,18 @@ class BaseTrainer(AmpMixin, ABC):
         self._hooks = []
 
     # ------------------------------------------------------------------
-    # Abstract methods
+    # Lifecycle hook points (can be overridden by subclasses)
     # ------------------------------------------------------------------
 
-    @abstractmethod
     def configure_optimizer(self):
-        """Return the optimizer.  Called once during __init__."""
+        """Return the optimizer. Defaults to model.optimizer if available."""
+        if hasattr(self, 'model') and hasattr(self.model, 'optimizer'):
+            return self.model.optimizer
+        return None
 
-    @abstractmethod
     def configure_scheduler(self):
-        """Return the LR scheduler (or None).  Called once during __init__."""
+        """Return the LR scheduler (or None). Defaults to None."""
+        return None
 
     # ------------------------------------------------------------------
     # Hook management
@@ -217,13 +243,33 @@ class BaseTrainer(AmpMixin, ABC):
 
             self._fire('on_epoch_start', self)
 
-            self.train_epoch()
+            with self.profiler.phase('training_epoch_host'):
+                self.train_epoch()
 
             # Hooks fire validation, scheduler, checkpoint, logging
             self._fire('on_epoch_end', self)
 
             # Barrier: ensure all ranks finish the epoch before proceeding
             self.runtime.barrier()
+            cuda_timings = self.profiler.sync_cuda_events()
+            performance = self.profiler.get_global_summary(
+                getattr(self.opt, 'batch_size', 32), self.grad_accum_steps)
+            performance['sampled_cuda_seconds_per_phase_call'] = cuda_timings
+            performance['note'] = ('Cumulative end-to-end throughput includes startup/validation/checkpoints. '
+                                   'Host phase timers measure wall/enqueue time; CUDA samples are bounded '
+                                   'to the first 64 phase calls per epoch, not steady-state GPU utilization.')
+            import json
+            with open(os.path.join(self.save_dir, f'performance_rank{self.rank}.json'), 'w', encoding='utf-8') as stream:
+                json.dump(performance, stream, indent=2)
+
+            if getattr(self, 'should_stop', False):
+                if self.runtime.is_main:
+                    print(
+                        f'[EarlyStopping] Early stopping triggered at epoch {epoch}. '
+                        'Terminating training loop gracefully across all ranks.',
+                        flush=True
+                    )
+                break
 
         return {
             'best_metric': self.best_metric,
@@ -235,6 +281,9 @@ class BaseTrainer(AmpMixin, ABC):
         self.model.train()
         self.epoch_loss = 0.0
         self.epoch_batches = 0
+        total_epoch_samples = 0
+        device = getattr(self.runtime, 'device', 'cpu')
+        epoch_loss_sum_tensor = torch.tensor(0.0, device=device)
         accum_steps = self.grad_accum_steps
         num_batches = len(self.train_loader)
 
@@ -269,7 +318,15 @@ class BaseTrainer(AmpMixin, ABC):
         if self.runtime.is_main:
             print(f'[Train] Epoch {self.current_epoch}: {num_batches:,} batches per rank; '
                   'waiting for first batch from the image loader...', flush=True)
-        for batch_idx, batch in enumerate(self.train_loader):
+        def timed_batches():
+            with self.profiler.phase('loader_iterator_startup'):
+                iterator = iter(self.train_loader)
+            for index in range(num_batches):
+                with self.profiler.phase('first_batch_latency' if index == 0 else 'steady_data_wait'):
+                    batch = next(iterator)
+                yield batch
+
+        for batch_idx, batch in enumerate(timed_batches()):
             if batch_idx == 0 and self.runtime.is_main:
                 print('[Train] First batch received; starting forward/backward computation...', flush=True)
             self._fire('on_batch_start', self)
@@ -308,21 +365,45 @@ class BaseTrainer(AmpMixin, ABC):
                     current_batch_samples = (cur_last_size if batch_idx == num_batches - 1 else nominal_batch_size)
                     loss_weight = current_batch_samples / max(1, window_total_samples)
 
-            batch_loss = self.train_step(
+            batch_loss_tensor = self.train_step(
                 batch,
                 is_accum_end=is_accum_end,
                 accum_steps=current_window_size,
                 loss_weight=loss_weight,
             )
 
-            self.last_batch_loss = batch_loss
-            self.epoch_loss += batch_loss
+            cur_samples = int(batch['label'].shape[0] if isinstance(batch, dict) else batch[-1].shape[0])
+            self.profiler.add_samples(cur_samples, is_optimizer_step=is_accum_end)
+            if not isinstance(batch_loss_tensor, torch.Tensor):
+                batch_loss_tensor = torch.tensor(batch_loss_tensor, device=device)
+
+            epoch_loss_sum_tensor = epoch_loss_sum_tensor + (batch_loss_tensor * cur_samples)
+            total_epoch_samples += cur_samples
             self.epoch_batches += 1
+
+            # Only synchronize CPU scalar at logging boundaries or final batch
+            log_freq = getattr(self.opt, 'log_freq', 50)
+            should_sync = (
+                batch_idx == 0 or
+                (log_freq > 0 and self.epoch_batches % log_freq == 0) or
+                (batch_idx == num_batches - 1)
+            )
+            if should_sync:
+                self.last_batch_loss = float(batch_loss_tensor.item())
+
             if is_accum_end:
                 self.global_step += 1
                 self.model.total_steps = self.global_step
 
             self._fire('on_batch_end', self)
+
+        # Finalize sample-weighted epoch loss
+        if total_epoch_samples > 0:
+            avg_loss = float((epoch_loss_sum_tensor / total_epoch_samples).item())
+        else:
+            avg_loss = 0.0
+        self.sample_weighted_epoch_loss = avg_loss
+        self.epoch_loss = avg_loss * max(1, self.epoch_batches)
 
     def train_step(self, batch, is_accum_end=True, accum_steps=1, loss_weight=None):
         """
@@ -344,7 +425,8 @@ class BaseTrainer(AmpMixin, ABC):
         Returns:
             float – the scalar loss for this batch.
         """
-        self.model.set_input(batch)
+        with self.profiler.phase('host_to_device_transfer', sample_cuda=True):
+            self.model.set_input(batch)
         raw_model = self.model.model
 
         # In DDP, avoid unnecessary gradient synchronization during intermediate accumulation steps
@@ -354,7 +436,7 @@ class BaseTrainer(AmpMixin, ABC):
 
         effective_scale = loss_weight if loss_weight is not None else (1.0 / max(1, accum_steps))
 
-        with sync_context:
+        with sync_context, self.profiler.phase('forward_backward_optimizer', sample_cuda=True):
             if self._amp_enabled:
                 with self.amp_autocast():
                     self.model.forward()
@@ -368,7 +450,7 @@ class BaseTrainer(AmpMixin, ABC):
                     self.model.optimizer.zero_grad()
 
                 self.model.loss = loss
-                return loss.item()
+                return loss.detach()
             else:
                 if accum_steps > 1 or loss_weight is not None:
                     self.model.forward()
@@ -379,12 +461,16 @@ class BaseTrainer(AmpMixin, ABC):
                     if is_accum_end:
                         self.model.optimizer.step()
                         self.model.optimizer.zero_grad()
+                        self.optimizer_steps_attempted += 1
+                        self.optimizer_steps_successful += 1
 
                     self.model.loss = loss
-                    return loss.item()
+                    return loss.detach()
                 else:
                     self.model.optimize_parameters()
-                    return self.model.loss.item()
+                    self.optimizer_steps_attempted += 1
+                    self.optimizer_steps_successful += 1
+                    return self.model.loss.detach()
 
     # ------------------------------------------------------------------
     # Validation
@@ -430,6 +516,14 @@ class BaseTrainer(AmpMixin, ABC):
         self.current_epoch = info['epoch']
         self.best_metric = info['best_metric']
         self.global_step = info['global_step']
+        self.optimizer_steps_attempted = info.get('optimizer_steps_attempted', self.global_step)
+        self.optimizer_steps_successful = info.get('optimizer_steps_successful', self.global_step)
+
+        # Restore early stopping state if present
+        if info.get('early_stopping_state'):
+            for hook in self._hooks:
+                if hasattr(hook, 'load_state_dict'):
+                    hook.load_state_dict(info['early_stopping_state'])
 
         # Restore AMP scaler state
         amp_state = info.get('amp_state', None)

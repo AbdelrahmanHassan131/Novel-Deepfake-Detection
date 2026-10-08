@@ -41,7 +41,15 @@ class TestStagedPipelineAndFusionHeads(unittest.TestCase):
         self.manifest = Path(self.temp_dir.name) / "manifest.csv"
         self.exp_dir.mkdir(parents=True, exist_ok=True)
         self.dataroot.mkdir(parents=True, exist_ok=True)
-        self.manifest.write_text("filepath,label,source_group,split\na.png,0,g1,train\n", encoding="utf-8")
+        import hashlib
+        self.manifest.write_bytes(b"filepath,label,source_group,split\na.png,0,g1,train\nb.png,1,g2,train\n")
+        gate_info = {
+            'verified': True,
+            'manifest_path': str(self.manifest),
+            'manifest_sha256': hashlib.sha256(self.manifest.read_bytes()).hexdigest(),
+            'samples': 2,
+        }
+        self.manifest.with_suffix('.verified.json').write_text(json.dumps(gate_info), encoding="utf-8")
 
     def tearDown(self):
         self.temp_dir.cleanup()

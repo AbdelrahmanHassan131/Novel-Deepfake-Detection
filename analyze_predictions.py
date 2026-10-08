@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from evaluation.generalization import (read_predictions, summarize, calibrate,
                                        group_intervals, export_predictions, summarize_seeds,
-                                       FORBIDDEN_CALIBRATION_SPLITS)
+                                       ALLOWED_CALIBRATION_SPLITS, FORBIDDEN_CALIBRATION_SPLITS)
 from data.manifest import known
 
 
@@ -20,12 +20,12 @@ def load_threshold(threshold_arg, threshold_file_arg, default=0.5, expected_chec
             raise ValueError(f"Invalid threshold {val} in {threshold_file_arg}; must be in [0, 1]")
 
         # Validate calibration split provenance
-        source_splits = data.get('source_splits', [])
-        forbidden = set(source_splits).intersection(FORBIDDEN_CALIBRATION_SPLITS)
-        if forbidden:
+        source_splits = set(data.get('source_splits', []))
+        forbidden = source_splits.intersection(FORBIDDEN_CALIBRATION_SPLITS)
+        if not source_splits or forbidden or (source_splits - ALLOWED_CALIBRATION_SPLITS):
             raise ValueError(
-                f"Threshold artifact {threshold_file_arg} was calibrated on forbidden evaluation split(s): {forbidden}. "
-                "Thresholds must only be calibrated on development splits ('dev', 'external_dev')."
+                f"Threshold artifact {threshold_file_arg} was calibrated on forbidden evaluation split(s) / invalid split(s). "
+                f"Allowed: {sorted(ALLOWED_CALIBRATION_SPLITS)}, forbidden: {sorted(FORBIDDEN_CALIBRATION_SPLITS)}, got: {sorted(source_splits)}"
             )
 
         # Validate checkpoint hash binding
@@ -66,13 +66,28 @@ def main():
                         help='Paths to JSON threshold artifacts for each run in multi-seed analysis')
     parser.add_argument('--run_ids', type=str, nargs='+', default=None,
                         help='Optional explicit independent training run IDs for multi-seed verification')
+    parser.add_argument('--eval_precision', type=str, default=None,
+                        help='Optional evaluation precision (e.g. fp32, amp, fp16) recorded in threshold artifact')
+    parser.add_argument('--selection_predictions', type=str, default=None,
+                        help='Path to selection development predictions to verify calibration cohort independence')
+    parser.add_argument('--selection_manifest', type=str, default=None,
+                        help='Path to selection development manifest to verify calibration cohort independence')
+    parser.add_argument('--train_manifest', type=str, default=None,
+                        help='Path to training manifest to verify calibration cohort independence')
+    parser.add_argument('--allow_external_dev', action='store_true', default=False,
+                        help='Permit threshold calibration on external development split (external_dev)')
     args = parser.parse_args()
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
 
     if args.action == 'calibrate':
         if len(args.predictions) != 1:
             raise ValueError('Calibrate one checkpoint at a time')
-        calibrate(args.predictions[0], args.output)
+        calibrate(args.predictions[0], args.output, eval_precision=args.eval_precision,
+                  allow_external_dev=args.allow_external_dev,
+                  selection_predictions_path=args.selection_predictions,
+                  selection_manifest=args.selection_manifest,
+                  train_manifest=args.train_manifest)
+        print(f"Calibrated threshold artifact saved to {args.output}")
         return
 
     if args.action == 'seeds':

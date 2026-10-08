@@ -91,11 +91,19 @@ def config_from_opt(opt):
         compute_wavelets=_get(opt, 'compute_wavelets', True),
         train_split=_get(opt, 'train_split', 'train'),
         val_split=_get(opt, 'val_split', 'val'),
+        val_batch_size=_get(opt, 'val_batch_size', None),
+        val_num_workers=_get(opt, 'val_num_workers', None),
+        crop_policy=_get(opt, 'crop_policy', 'scale_and_crop'),
     )
 
     # ------------------------------------------------------------------
     # Augmentation section
     # ------------------------------------------------------------------
+    from data.transforms.augmentations import resolve_augmentation_recipe
+    if isinstance(opt, dict):
+        opt = argparse.Namespace(**opt)
+    opt = resolve_augmentation_recipe(opt)
+
     # Handle both pre-processed list and raw comma-separated strings
     blur_sig = _get(opt, 'blur_sig', [0.5])
     if isinstance(blur_sig, str):
@@ -122,6 +130,7 @@ def config_from_opt(opt):
         jpg_qual=jpg_qual,
         rz_interp=rz_interp,
         data_aug=_get(opt, 'data_aug', False),
+        aug_recipe=_get(opt, 'aug_recipe', 'legacy'),
     )
 
     # ------------------------------------------------------------------
@@ -156,6 +165,12 @@ def config_from_opt(opt):
         xception_model_path=_get(opt, 'xception_model_path', None),
         convnext_model_path=_get(opt, 'convnext_model_path', None),
         backbone_weights=_get(opt, 'backbone_weights', None),
+        rgb_head_type=_get(opt, 'rgb_head_type', '128d'),
+        rgb_dropout=_get(opt, 'rgb_dropout', 0.0 if _get(opt, 'rgb_head_type', '128d') == 'linear' else 0.5),
+        fine_tune_policy=_get(opt, 'fine_tune_policy', 'full'),
+        backbone_lr_mult=_get(opt, 'backbone_lr_mult', 1.0),
+        bn_policy=_get(opt, 'bn_policy', 'train'),
+        decay_bias_norm=_get(opt, 'decay_bias_norm', False),
     )
 
     # ------------------------------------------------------------------
@@ -174,7 +189,16 @@ def config_from_opt(opt):
         lr_gamma=_get(opt, 'lr_gamma', 0.1),
         lr_patience=_get(opt, 'lr_patience', 5),
         earlystop_epoch=_get(opt, 'earlystop_epoch', 5),
+        early_stopping=_get(opt, 'early_stopping', False),
+        early_stopping_patience=_get(opt, 'early_stopping_patience', 5),
+        early_stopping_min_delta=_get(opt, 'early_stopping_min_delta', 0.0),
+        early_stopping_min_epochs=_get(opt, 'early_stopping_min_epochs', 0),
+        eligible_sources=_get(opt, 'eligible_sources', None),
+        allow_aggregate_sources=_get(opt, 'allow_aggregate_sources', False),
+        allow_source_overlap=_get(opt, 'allow_source_overlap', False),
         use_amp=_get(opt, 'use_amp', False),
+        amp_dtype=_get(opt, 'amp_dtype', 'fp16'),
+        val_precision=_get(opt, 'val_precision', 'fp32'),
         is_train=_get(opt, 'isTrain', True),
         continue_train=_get(opt, 'continue_train', False),
         new_optim=_get(opt, 'new_optim', False),
@@ -239,6 +263,9 @@ def config_from_opt(opt):
         seed=_get(opt, 'seed', None),
         deterministic=_get(opt, 'deterministic', False),
         pin_memory=_get(opt, 'pin_memory', True),
+        prefetch_factor=_get(opt, 'prefetch_factor', 2),
+        persistent_workers=_get(opt, 'persistent_workers', True),
+        channels_last=_get(opt, 'channels_last', False),
     )
 
     return Config(
@@ -292,6 +319,9 @@ def config_to_opt(config):
     opt.compute_wavelets = config.data.compute_wavelets
     opt.train_split = config.data.train_split
     opt.val_split = config.data.val_split
+    opt.val_batch_size = getattr(config.data, 'val_batch_size', None)
+    opt.val_num_workers = getattr(config.data, 'val_num_workers', None)
+    opt.crop_policy = getattr(config.data, 'crop_policy', 'scale_and_crop')
 
     # --- Augmentation ---
     opt.blur_prob = config.augmentation.blur_prob
@@ -301,6 +331,7 @@ def config_to_opt(config):
     opt.jpg_qual = config.augmentation.jpg_qual
     opt.rz_interp = config.augmentation.rz_interp
     opt.data_aug = config.augmentation.data_aug
+    opt.aug_recipe = getattr(config.augmentation, 'aug_recipe', 'legacy')
 
     # --- Wavelets ---
     opt.wavelet_backend = config.wavelets.backend
@@ -327,6 +358,9 @@ def config_to_opt(config):
     opt.xception_model_path = config.model.xception_model_path
     opt.convnext_model_path = config.model.convnext_model_path
     opt.backbone_weights = getattr(config.model, 'backbone_weights', None)
+    for key in ('rgb_head_type', 'rgb_dropout', 'fine_tune_policy',
+                'backbone_lr_mult', 'bn_policy', 'decay_bias_norm'):
+        setattr(opt, key, getattr(config.model, key))
 
     # --- Training ---
     opt.niter = config.training.epochs
@@ -341,7 +375,16 @@ def config_to_opt(config):
     opt.lr_gamma = config.training.lr_gamma
     opt.lr_patience = config.training.lr_patience
     opt.earlystop_epoch = config.training.earlystop_epoch
+    opt.early_stopping = getattr(config.training, 'early_stopping', False)
+    opt.early_stopping_patience = getattr(config.training, 'early_stopping_patience', 5)
+    opt.early_stopping_min_delta = getattr(config.training, 'early_stopping_min_delta', 0.0)
+    opt.early_stopping_min_epochs = getattr(config.training, 'early_stopping_min_epochs', 0)
+    opt.eligible_sources = getattr(config.training, 'eligible_sources', None)
+    opt.allow_aggregate_sources = getattr(config.training, 'allow_aggregate_sources', False)
+    opt.allow_source_overlap = getattr(config.training, 'allow_source_overlap', False)
     opt.use_amp = config.training.use_amp
+    opt.amp_dtype = getattr(config.training, 'amp_dtype', 'fp16')
+    opt.val_precision = getattr(config.training, 'val_precision', 'fp32')
     opt.isTrain = config.training.is_train
     opt.continue_train = config.training.continue_train
     opt.new_optim = config.training.new_optim
@@ -378,5 +421,12 @@ def config_to_opt(config):
     opt.seed = config.runtime.seed
     opt.deterministic = config.runtime.deterministic
     opt.pin_memory = config.runtime.pin_memory
+    opt.prefetch_factor = getattr(config.runtime, 'prefetch_factor', 2)
+    opt.persistent_workers = getattr(config.runtime, 'persistent_workers', True)
+    opt.channels_last = getattr(config.runtime, 'channels_last', False)
 
     return opt
+
+
+# Alias for backward-compatibility with tests and tools
+opt_to_config = config_from_opt

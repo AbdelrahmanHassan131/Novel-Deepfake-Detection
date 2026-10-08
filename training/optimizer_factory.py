@@ -55,6 +55,13 @@ def build_optimizer(opt, model_or_params):
             betas=(opt.beta1, 0.999),
             weight_decay=weight_decay,
         )
+    elif optim_name == 'adamw':
+        return torch.optim.AdamW(
+            params,
+            lr=opt.lr,
+            betas=(opt.beta1, 0.999),
+            weight_decay=weight_decay,
+        )
     elif optim_name == 'sgd':
         momentum = getattr(opt, 'momentum', 0.0)
         return torch.optim.SGD(
@@ -66,5 +73,5 @@ def build_optimizer(opt, model_or_params):
     else:
         raise ValueError(
             f"Unsupported optimizer '{opt.optim}'. "
-            f"Supported: ['adam', 'sgd']"
+            f"Supported: ['adam', 'adamw', 'sgd']"
         )

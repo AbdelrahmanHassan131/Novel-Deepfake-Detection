@@ -60,7 +60,7 @@ class TestStablePilotSelection(unittest.TestCase):
     def test_shortage_reporting_and_exact_quotas(self):
         # Request more than available
         pool = create_synthetic_pool(10, 2)  # 5 real groups (10 frames), 5 fake groups (10 frames)
-        rows, report = build_pilot_100k(pool, target_real=50, target_fake=50, dev_ratio=0.2, test_ratio=0.2)
+        rows, report = build_pilot_100k(pool, target_real=50, target_fake=50, dev_ratio=0.2, test_ratio=0.2, allow_shortfall=True)
         s_rep = report['shortage_summary']
 
         self.assertGreater(s_rep['real_shortage'], 0)
@@ -73,20 +73,20 @@ class TestStablePilotSelection(unittest.TestCase):
         pool = create_synthetic_pool(20, 2)
         # Pre-assign group 0 to final_test
         for r in pool:
-            if r['group_id'] == 'group_0':
+            if r['source_video_id'] == 'vid_0':
                 r['split'] = 'final_test'
 
-        rows, report = build_pilot_100k(pool, target_real=20, target_fake=20, dev_ratio=0.2, test_ratio=0.2)
+        rows, report = build_pilot_100k(pool, target_real=20, target_fake=20, dev_ratio=0.2, test_ratio=0.2, allow_shortfall=True)
         # Verify group 0 rows are still final_test
-        g0_splits = {r['split'] for r in rows if r['group_id'] == 'group_0'}
+        g0_splits = {r['split'] for r in rows if r['source_video_id'] == 'vid_0'}
         self.assertEqual(g0_splits, {'final_test'}, "Protected holdout final_test must be preserved.")
 
     def test_same_input_repeatability(self):
         pool1 = create_synthetic_pool(30, 2)
         pool2 = create_synthetic_pool(30, 2)
 
-        rows1, _ = build_pilot_100k(pool1, target_real=15, target_fake=15, seed=42)
-        rows2, _ = build_pilot_100k(pool2, target_real=15, target_fake=15, seed=42)
+        rows1, _ = build_pilot_100k(pool1, target_real=15, target_fake=15, seed=42, allow_shortfall=True)
+        rows2, _ = build_pilot_100k(pool2, target_real=15, target_fake=15, seed=42, allow_shortfall=True)
 
         splits1 = [r['split'] for r in rows1]
         splits2 = [r['split'] for r in rows2]

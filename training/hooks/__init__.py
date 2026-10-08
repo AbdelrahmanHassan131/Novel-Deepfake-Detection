@@ -14,10 +14,12 @@ from .checkpoint_hook import CheckpointHook
 from .validation_hook import ValidationHook
 from .logger_hook import LoggerHook
 from .scheduler_hook import SchedulerHook
+from .early_stopping_hook import EarlyStoppingHook
 
 __all__ = [
     'CheckpointHook',
     'ValidationHook',
     'LoggerHook',
     'SchedulerHook',
+    'EarlyStoppingHook',
 ]

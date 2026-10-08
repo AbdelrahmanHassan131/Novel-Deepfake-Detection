@@ -28,13 +28,13 @@ def validate_expert_checkpoint(checkpoint, expected_type: str, expected_embed_di
             raise ValueError("RGB expert checkpoint missing 'fc.0.weight' embedding layer")
         actual_dim = weights['fc.0.weight'].shape[0]
         if actual_dim != dim:
-            raise ValueError(f"RGB expert embedding dim mismatch: expected {dim}, got {actual_dim}")
+            raise ValueError(f"RGB expert embedding dim mismatch: expected {dim}, got {actual_dim} (RGB expert must have a {dim}-D embedding checkpoint)")
     elif expected_type == 'wavelet':
         if 'classifier.0.weight' not in weights:
             raise ValueError("Wavelet expert checkpoint missing 'classifier.0.weight' layer")
         actual_dim = weights['classifier.0.weight'].shape[0]
         if actual_dim != dim:
-            raise ValueError(f"Wavelet expert embedding dim mismatch: expected {dim}, got {actual_dim}")
+            raise ValueError(f"Wavelet expert embedding dim mismatch: expected {dim}, got {actual_dim} (Wavelet expert must have a {dim}-D embedding checkpoint)")
     else:
         raise ValueError(f"Unknown expert type: {expected_type}")
 

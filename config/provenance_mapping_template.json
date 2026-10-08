@@ -1,0 +1,59 @@
+{
+  "$schema_version": "1.0",
+  "description": "Template for mapping raw directory paths, aggregated collections, and ambiguous filenames to verified generator, source, and identity metadata.",
+  "instructions": [
+    "Fill in the mappings array for each distinct collection or source folder in your dataset.",
+    "Do not treat collection names (e.g. 'diffgan') as generator names; specify the actual generator (e.g. 'DDPM', 'LDM', 'StyleGAN2').",
+    "Specify source_roots if datasets reside on different drives or relocated folder paths.",
+    "Do not invent synthetic group IDs; provide verified source_video_id or identity_id if known."
+  ],
+  "source_roots": {
+    "celeb_df_v2": "/path/to/Celeb-DF-v2",
+    "faceforensics_c23": "/path/to/FaceForensics_c23",
+    "diffgan_ldm": "/path/to/diffgan_extracted/ldm",
+    "diffgan_ddpm": "/path/to/diffgan_extracted/ddpm",
+    "authentic_ffhq": "/path/to/FFHQ_512"
+  },
+  "remap_path_prefixes": {
+    "F:/val to be deleted 2": "/kaggle/input/val-to-be-deleted-2",
+    "G:/datasets/raw": "/workspace/datasets"
+  },
+  "mappings": [
+    {
+      "pattern": ".*diffgan.*ddpm.*",
+      "target_source": "diffgan_ddpm",
+      "target_generator": "DDPM",
+      "is_authentic": false,
+      "manipulation_type": "diffusion_synthesis",
+      "identity_known": false,
+      "notes": "Verified DDPM synthetic faces extracted from diffgan pool."
+    },
+    {
+      "pattern": ".*diffgan.*ldm.*",
+      "target_source": "diffgan_ldm",
+      "target_generator": "LDM",
+      "is_authentic": false,
+      "manipulation_type": "latent_diffusion",
+      "identity_known": false,
+      "notes": "Verified Latent Diffusion synthetic faces."
+    },
+    {
+      "pattern": ".*Celeb-DF.*YouTube-real.*",
+      "target_source": "celeb_df_v2",
+      "target_generator": "authentic",
+      "is_authentic": true,
+      "manipulation_type": "none",
+      "identity_known": true,
+      "notes": "Original YouTube celebrity interview videos from Celeb-DF v2."
+    },
+    {
+      "pattern": ".*Celeb-DF.*Celeb-synthesis.*",
+      "target_source": "celeb_df_v2",
+      "target_generator": "DeepFake_v2",
+      "is_authentic": false,
+      "manipulation_type": "face_swap",
+      "identity_known": true,
+      "notes": "High-quality deepfake swaps from Celeb-DF v2."
+    }
+  ]
+}

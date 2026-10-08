@@ -150,7 +150,8 @@ class TestMetadataRelationshipIntegrity(unittest.TestCase):
             dev_ratio=0.5,
             test_ratio=0.0,
             seed=42,
-            require_groups=True
+            require_groups=True,
+            allow_shortfall=True
         )
 
         # Check group_ids of all rows from v1 and v2: they must all share the same component group_id

@@ -110,7 +110,7 @@ class DistributedRuntime:
         """
         backend = getattr(opt, 'dist_backend', None)
         if backend is None:
-            backend = 'nccl' if (torch.cuda.is_available() and os.name != 'nt') else 'gloo'
+            backend = 'nccl' if (getattr(opt, 'gpu_ids', []) and torch.cuda.is_available() and os.name != 'nt') else 'gloo'
 
         init_url = getattr(opt, 'dist_url', 'env://')
 
@@ -156,11 +156,12 @@ class DistributedRuntime:
         """
         gpu_ids = getattr(opt, 'gpu_ids', [])
 
-        if self.is_distributed and torch.cuda.is_available():
+        if self.is_distributed and gpu_ids and torch.cuda.is_available():
             torch.cuda.set_device(self.local_rank)
             return torch.device(f'cuda:{self.local_rank}')
 
         if gpu_ids and torch.cuda.is_available():
+            torch.cuda.set_device(gpu_ids[0])
             return torch.device(f'cuda:{gpu_ids[0]}')
 
         return torch.device('cpu')
@@ -213,8 +214,8 @@ class DistributedRuntime:
         if self.is_distributed:
             model.model = DDP(
                 model.model,
-                device_ids=[self.local_rank],
-                output_device=self.local_rank,
+                device_ids=[self.local_rank] if self.device.type == 'cuda' else None,
+                output_device=self.local_rank if self.device.type == 'cuda' else None,
                 find_unused_parameters=getattr(
                     self._opt, 'find_unused_parameters', False
                 ),
@@ -286,10 +287,14 @@ class DistributedRuntime:
             'collate_fn': loader.collate_fn,
             'worker_init_fn': getattr(loader, 'worker_init_fn', None),
         }
-        if hasattr(loader, 'prefetch_factor') and loader.prefetch_factor is not None:
-            loader_kwargs['prefetch_factor'] = loader.prefetch_factor
-        if hasattr(loader, 'persistent_workers'):
-            loader_kwargs['persistent_workers'] = loader.persistent_workers
+        if loader.num_workers > 0:
+            if hasattr(loader, 'prefetch_factor') and loader.prefetch_factor is not None:
+                loader_kwargs['prefetch_factor'] = loader.prefetch_factor
+            if hasattr(loader, 'persistent_workers'):
+                loader_kwargs['persistent_workers'] = loader.persistent_workers
+        else:
+            if hasattr(loader, 'persistent_workers'):
+                loader_kwargs['persistent_workers'] = False
         if hasattr(loader, 'timeout') and loader.timeout is not None:
             loader_kwargs['timeout'] = loader.timeout
 

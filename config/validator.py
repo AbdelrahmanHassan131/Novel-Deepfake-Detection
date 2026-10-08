@@ -114,6 +114,7 @@ class ConfigValidator:
         report = ValidationReport()
 
         ConfigValidator._check_data(config, report)
+        ConfigValidator._check_augmentation(config, report)
         ConfigValidator._check_training(config, report)
         ConfigValidator._check_wavelets(config, report)
         ConfigValidator._check_model(config, report)
@@ -169,9 +170,23 @@ class ConfigValidator:
                 f'data.crop_size ({d.crop_size}) must be <= '
                 f'data.image_size ({d.image_size})')
 
+        if d.val_batch_size is not None and d.val_batch_size <= 0:
+            report.add_error(f'data.val_batch_size must be > 0, got {d.val_batch_size}')
+        if getattr(d, 'crop_policy', 'scale_and_crop') not in ('scale_and_crop', 'random_resized_crop', 'patch_crop'):
+            report.add_error(f"data.crop_policy must be 'scale_and_crop', 'random_resized_crop', or 'patch_crop', got {getattr(d, 'crop_policy', None)}")
+
+        if d.val_num_workers is not None and d.val_num_workers < 0:
+            report.add_error(f'data.val_num_workers must be >= 0, got {d.val_num_workers}')
+
         if d.dataroot and not os.path.exists(d.dataroot):
             report.add_warning(
                 f'data.dataroot does not exist: {d.dataroot}')
+
+    @staticmethod
+    def _check_augmentation(config, report):
+        a = config.augmentation
+        if getattr(a, 'aug_recipe', 'legacy') not in ('legacy', 'rgb_v1', 'custom'):
+            report.add_error(f"augmentation.aug_recipe must be 'legacy', 'rgb_v1', or 'custom', got {getattr(a, 'aug_recipe', None)}")
 
     @staticmethod
     def _check_training(config, report):
@@ -204,6 +219,25 @@ class ConfigValidator:
                 f'training.lr_policy is not a supported scheduler: '
                 f'{t.lr_policy!r}. '
                 f'Valid: {[m.value for m in SchedulerType]}')
+
+        if getattr(t, 'amp_dtype', 'fp16') not in ('fp16', 'bf16'):
+            report.add_error(f"training.amp_dtype must be 'fp16' or 'bf16', got {getattr(t, 'amp_dtype', None)}")
+
+        if getattr(t, 'val_precision', 'fp32') not in ('fp32', 'amp', 'fp16', 'bf16'):
+            report.add_error(f"training.val_precision must be 'fp32', 'amp', 'fp16', or 'bf16', got {getattr(t, 'val_precision', None)}")
+
+        valid_monitors = ('auc', 'balanced_accuracy', 'accuracy', 'source_macro_auc', 'worst_source_recall_05')
+        if getattr(t, 'monitor_metric', 'auc') not in valid_monitors:
+            report.add_error(f"training.monitor_metric must be one of {valid_monitors}, got {getattr(t, 'monitor_metric', None)}")
+
+        if getattr(t, 'early_stopping_patience', 5) < 0:
+            report.add_error(f"training.early_stopping_patience must be >= 0, got {getattr(t, 'early_stopping_patience', None)}")
+
+        if getattr(t, 'early_stopping_min_delta', 0.0) < 0.0:
+            report.add_error(f"training.early_stopping_min_delta must be >= 0.0, got {getattr(t, 'early_stopping_min_delta', None)}")
+
+        if getattr(t, 'early_stopping_min_epochs', 0) < 0:
+            report.add_error(f"training.early_stopping_min_epochs must be >= 0, got {getattr(t, 'early_stopping_min_epochs', None)}")
 
         if t.weight_decay < 0:
             report.add_warning(
@@ -250,6 +284,21 @@ class ConfigValidator:
                 f'the known architecture list: {known}. '
                 f'Ensure it is registered in the model registry.')
 
+        if getattr(m, 'rgb_head_type', '128d') not in ('128d', 'linear'):
+            report.add_error(f"model.rgb_head_type must be '128d' or 'linear', got {getattr(m, 'rgb_head_type', None)}")
+
+        if getattr(m, 'rgb_dropout', 0.5) < 0.0 or getattr(m, 'rgb_dropout', 0.5) > 1.0:
+            report.add_error(f"model.rgb_dropout must be between 0.0 and 1.0, got {getattr(m, 'rgb_dropout', None)}")
+
+        if getattr(m, 'fine_tune_policy', 'full') not in ('full', 'head_only', 'layer4_and_head'):
+            report.add_error(f"model.fine_tune_policy must be 'full', 'head_only', or 'layer4_and_head', got {getattr(m, 'fine_tune_policy', None)}")
+
+        if getattr(m, 'backbone_lr_mult', 1.0) < 0.0:
+            report.add_error(f"model.backbone_lr_mult must be >= 0.0, got {getattr(m, 'backbone_lr_mult', None)}")
+
+        if getattr(m, 'bn_policy', 'train') not in ('train', 'frozen'):
+            report.add_error(f"model.bn_policy must be 'train' or 'frozen', got {getattr(m, 'bn_policy', None)}")
+
         if m.init_gain <= 0:
             report.add_warning(
                 f'model.init_gain is non-positive: {m.init_gain}')
@@ -264,6 +313,9 @@ class ConfigValidator:
                 if gid < -1:
                     report.add_error(
                         f'runtime.gpu_ids contains invalid ID: {gid}')
+
+        if r.prefetch_factor is not None and r.prefetch_factor <= 0:
+            report.add_error(f'runtime.prefetch_factor must be > 0, got {r.prefetch_factor}')
 
         if r.num_workers < 0:
             report.add_error(

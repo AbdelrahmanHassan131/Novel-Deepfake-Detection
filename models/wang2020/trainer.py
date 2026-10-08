@@ -43,6 +43,8 @@ class Wang2020RawTrainer(BaseModel):
 
         if not self.isTrain:
             self.load_networks(opt.epoch)
+        if getattr(opt, 'channels_last', False):
+            self.model = self.model.to(memory_format=torch.channels_last)
         self.model.to(self.device)
 
     def adjust_learning_rate(self, min_lr=1e-6):
@@ -53,8 +55,12 @@ class Wang2020RawTrainer(BaseModel):
         return True
 
     def set_input(self, input):
-        self.input = input[0].to(self.device)
-        self.label = input[1].to(self.device).float()
+        non_blocking = (self.device.type == 'cuda' and getattr(self.opt, 'pin_memory', True))
+        inp = input[0].to(self.device, non_blocking=non_blocking)
+        if getattr(self.opt, 'channels_last', False):
+            inp = inp.to(memory_format=torch.channels_last)
+        self.input = inp
+        self.label = input[1].to(self.device, non_blocking=non_blocking).float()
 
     def forward(self):
         self.output = self.model(self.input)

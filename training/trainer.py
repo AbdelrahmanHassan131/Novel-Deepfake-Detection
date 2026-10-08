@@ -51,6 +51,7 @@ from training.scheduler_factory import build_scheduler
 from training.hooks.logger_hook import LoggerHook
 from training.hooks.scheduler_hook import SchedulerHook
 from training.hooks.validation_hook import ValidationHook
+from training.hooks.early_stopping_hook import EarlyStoppingHook
 from training.hooks.checkpoint_hook import CheckpointHook
 
 
@@ -131,19 +132,25 @@ class Trainer(BaseTrainer):
         """Register the four standard hooks."""
         opt = self.opt
 
-        # 1. Logger — always on, rank-safe
-        log_freq = getattr(opt, 'loss_freq', getattr(opt, 'log_freq', 50))
+        # 1. Logger — always on, rank-safe.
+        # Explicit precedence: log_freq governs stdout logging frequency.
+        # If only loss_freq is supplied (legacy), respect it for backward compatibility.
+        explicit_log_freq = getattr(opt, 'log_freq', None)
+        explicit_loss_freq = getattr(opt, 'loss_freq', None)
+        if explicit_log_freq is not None:
+            effective_log_freq = explicit_log_freq
+        elif explicit_loss_freq is not None:
+            effective_log_freq = explicit_loss_freq
+        else:
+            effective_log_freq = 50
+
         self.register_hook(LoggerHook(
-            log_freq=log_freq,
+            log_freq=effective_log_freq,
             rank=self.rank,
             experiment_logger=self.experiment_logger,
         ))
 
-        # 2. Scheduler
-        if self.scheduler is not None:
-            self.register_hook(SchedulerHook(self.scheduler))
-
-        # 3. Validation
+        # 2. Validation — runs before scheduler and checkpoint so fresh metrics are available
         if self.val_loader is not None:
             val_freq = getattr(opt, 'val_epoch_freq', 1)
             self.register_hook(ValidationHook(
@@ -151,10 +158,26 @@ class Trainer(BaseTrainer):
                 val_epoch_freq=val_freq,
             ))
 
-        # 4. Checkpoint — must come after Validation so it can react
-        #    to on_validation_end with the updated best metric.
-        save_freq = getattr(opt, 'save_epoch_freq', 1)
+        # 3. Scheduler — steps after validation, consuming fresh metric for ReduceLROnPlateau
         monitor_metric = getattr(opt, 'monitor_metric', 'auc')
+        if self.scheduler is not None:
+            self.register_hook(SchedulerHook(
+                self.scheduler,
+                monitor_metric=monitor_metric,
+            ))
+
+        # 4. Early Stopping — checks patience on validation and broadcasts stop flag to all ranks
+        if getattr(opt, 'early_stopping', False):
+            self.register_hook(EarlyStoppingHook(
+                monitor_metric=monitor_metric,
+                patience=getattr(opt, 'early_stopping_patience', 5),
+                min_delta=getattr(opt, 'early_stopping_min_delta', 0.0),
+                min_epochs=getattr(opt, 'early_stopping_min_epochs', 0),
+                runtime=self.runtime,
+            ))
+
+        # 5. Checkpoint — saves best, last, and epoch checkpoints with consistent scheduler state
+        save_freq = getattr(opt, 'save_epoch_freq', 1)
         self.register_hook(CheckpointHook(
             checkpoint_manager=self.checkpoint_manager,
             save_epoch_freq=save_freq,

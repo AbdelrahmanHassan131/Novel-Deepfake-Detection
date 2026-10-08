@@ -1,5 +1,5 @@
 {
-  "plan_type": "declarative_smoke_test_plan",
+  "plan_type": "declarative_study_plan",
   "consumer": "colab_smoke_pipeline.ipynb",
   "status": "RUNTIME NOT RUN",
   "hardware_target": "single GPU",

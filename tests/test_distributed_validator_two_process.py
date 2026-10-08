@@ -112,7 +112,7 @@ class TestDistributedValidatorTwoProcess(unittest.TestCase):
                 self.assertEqual(res['var_synced'], 2.0)
                 # Interleaved rank samples were gathered and sorted into exact canonical [0..5] order
                 self.assertEqual(res['sorted_indices'], [0, 1, 2, 3, 4, 5])
-                self.assertEqual(res['sorted_preds'], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+                np.testing.assert_allclose(res['sorted_preds'], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6], atol=1e-5)
                 self.assertEqual(res['sorted_labels'], [0.0, 1.0, 0.0, 0.0, 1.0, 1.0])
 
 

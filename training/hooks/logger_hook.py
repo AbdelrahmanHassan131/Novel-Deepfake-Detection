@@ -48,18 +48,19 @@ class LoggerHook:
 
     def _get_world_size_and_reduce_loss(self, loss_val):
         """Average scalar loss across all DDP ranks and get world size."""
-        world_size = 1
+        import torch
+        import torch.distributed as dist
+        if not (dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1):
+            return loss_val, 1
+
+        world_size = dist.get_world_size()
+        device = 'cuda' if dist.get_backend() == 'nccl' else 'cpu'
+        tensor_loss = torch.tensor([loss_val], dtype=torch.float32, device=device)
         try:
-            import torch
-            import torch.distributed as dist
-            if dist.is_initialized() and dist.get_world_size() > 1:
-                world_size = dist.get_world_size()
-                device = 'cuda' if torch.cuda.is_available() else 'cpu'
-                tensor_loss = torch.tensor([loss_val], dtype=torch.float32, device=device)
-                dist.all_reduce(tensor_loss, op=dist.ReduceOp.SUM)
-                loss_val = (tensor_loss[0] / world_size).item()
-        except Exception:
-            pass
+            dist.all_reduce(tensor_loss, op=dist.ReduceOp.SUM)
+        except Exception as exc:
+            raise RuntimeError(f"[Rank {self.rank}] Distributed collective all_reduce failed in LoggerHook: {exc}") from exc
+        loss_val = (tensor_loss[0] / world_size).item()
         return loss_val, world_size
 
     def on_epoch_end(self, trainer):
@@ -105,8 +106,13 @@ class LoggerHook:
                 return
             total_batches = trainer.epoch_batches * world_size
             batch_str = f"{total_batches} ({trainer.epoch_batches}/GPU)" if world_size > 1 else f"{total_batches}"
+            accum_steps = getattr(trainer, 'grad_accum_steps', 1)
+            if accum_steps > 1:
+                step_prefix = f'[opt_step {trainer.global_step} | microbatch {trainer.epoch_batches}]'
+            else:
+                step_prefix = f'[step {trainer.global_step}]'
             print(
-                f'  [step {trainer.global_step}] '
+                f'  {step_prefix} '
                 f'batch {batch_str} '
                 f'| loss: {loss:.6f}'
             )

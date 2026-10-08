@@ -265,6 +265,7 @@ class CheckpointLoader:
             raise ValueError('Legacy config requires the ORIGINAL label_mapping')
         opt.score_sign = 1.0 if mapping['fake'] == 1 else -1.0
         opt.pretrained = False
+        opt.backbone_weights = None
         opt.isTrain = True
         opt.continue_train = False
         opt.gpu_ids = self.gpu_ids

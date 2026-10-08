@@ -89,6 +89,18 @@ class CheckpointManager:
         # Unwrap DDP if needed
         raw_model = _raw_model(self.model)
 
+        attempted_steps = global_step
+        successful_steps = global_step
+        early_stopping_state = None
+        trainer = getattr(self, 'trainer', None)
+        if trainer is not None:
+            attempted_steps = getattr(trainer, 'optimizer_steps_attempted', global_step)
+            successful_steps = getattr(trainer, 'optimizer_steps_successful', global_step)
+            for hook in getattr(trainer, '_hooks', []):
+                if hasattr(hook, 'state_dict'):
+                    early_stopping_state = hook.state_dict()
+                    break
+
         state = {
             'model_state_dict': raw_model.state_dict(),
             'optimizer_state_dict': (
@@ -96,6 +108,7 @@ class CheckpointManager:
                 if hasattr(self.model, 'optimizer') and self.model.optimizer is not None
                 else None
             ),
+            'optimizer_policy_version': 2,
             'scheduler_state_dict': (
                 scheduler.state_dict() if scheduler is not None else None
             ),
@@ -103,6 +116,9 @@ class CheckpointManager:
             'epoch': epoch,
             'best_metric': best_metric,
             'global_step': global_step,
+            'optimizer_steps_attempted': attempted_steps,
+            'optimizer_steps_successful': successful_steps,
+            'early_stopping_state': early_stopping_state,
             'model_name': self.model.name(),
         }
         from config.protocol import checkpoint_metadata
@@ -193,18 +209,11 @@ class CheckpointManager:
             if hasattr(self.model, attr):
                 getattr(self.model, attr).load_state_dict(state, strict=True)
 
-        # --- optimizer state ---
+        # --- optimizer state with validated migration ---
         if (hasattr(self.model, 'optimizer')
                 and self.model.optimizer is not None
                 and checkpoint.get('optimizer_state_dict') is not None):
-            self.model.optimizer.load_state_dict(
-                checkpoint['optimizer_state_dict']
-            )
-            # Move optimizer tensors to the correct device
-            for state in self.model.optimizer.state.values():
-                for k, v in state.items():
-                    if torch.is_tensor(v):
-                        state[k] = v.to(self.model.device)
+            self._restore_or_migrate_optimizer(checkpoint['optimizer_state_dict'], raw_model)
 
         # --- scheduler state ---
         if (scheduler is not None
@@ -216,6 +225,9 @@ class CheckpointManager:
         best_metric = checkpoint.get('best_metric', None)
         global_step = checkpoint.get('global_step',
                                      checkpoint.get('total_steps', 0))
+        attempted_steps = checkpoint.get('optimizer_steps_attempted', global_step)
+        successful_steps = checkpoint.get('optimizer_steps_successful', global_step)
+        early_stopping_state = checkpoint.get('early_stopping_state', None)
 
         rng_state = checkpoint.get('rng_state')
         if rng_state:
@@ -255,8 +267,38 @@ class CheckpointManager:
             'epoch': epoch,
             'best_metric': best_metric,
             'global_step': global_step,
+            'optimizer_steps_attempted': attempted_steps,
+            'optimizer_steps_successful': successful_steps,
+            'early_stopping_state': early_stopping_state,
             'amp_state': checkpoint.get('amp_state_dict', None),
         }
+
+    def _restore_or_migrate_optimizer(self, saved_opt_state, raw_model):
+        """Restore exact groups; support only the known historical one-group layout."""
+        if saved_opt_state is None:
+            return
+        optimizer = self.model.optimizer
+        saved_groups = saved_opt_state.get('param_groups', [])
+        if len(saved_groups) == len(optimizer.param_groups):
+            for saved_group, current_group in zip(saved_groups, optimizer.param_groups):
+                if saved_group.get('name') != current_group.get('name'):
+                    raise ValueError('Optimizer group ordering/names changed on resume')
+        if len(saved_groups) != len(optimizer.param_groups):
+            params = list(raw_model.parameters())
+            opt = self.model.opt
+            if (len(saved_groups) != 1
+                    or len(saved_groups[0].get('params', [])) != len(params)
+                    or not all(p.requires_grad for p in params)
+                    or getattr(opt, 'fine_tune_policy', 'full') != 'full'
+                    or getattr(opt, 'backbone_lr_mult', 1.0) != 1.0):
+                raise ValueError('Unsupported optimizer layout change on resume. '
+                                 'Only historical full-model one-group checkpoints can be restored.')
+            # The historical optimizer used model.parameters() in registration order.
+            # Recreate its group, including its LR/decay, instead of assigning states
+            # by guessed ordering across the new head/backbone/decay groups.
+            optimizer.param_groups = [dict(saved_groups[0], params=params)]
+            optimizer.state.clear()
+        optimizer.load_state_dict(saved_opt_state)
 
     def _validate_protocol(self, checkpoint):
         """Reject a resume whose architecture or data protocol has changed."""
@@ -272,8 +314,21 @@ class CheckpointManager:
         saved = protocol.get('options', {})
         if not saved:
             raise ValueError('Cannot resume: checkpoint protocol is missing saved options.')
+        if saved.get('arch') == 'Wang2020_128':
+            saved = dict(dict(rgb_head_type='128d', rgb_dropout=0.5, fine_tune_policy='full',
+                              bn_policy='train', backbone_lr_mult=1.0, aug_recipe='legacy',
+                              crop_policy='scale_and_crop'), **saved)
         from config.protocol import PREPROCESSING_KEYS
-        required = list(PREPROCESSING_KEYS) + ['arch', 'embed_dim', 'fusion_type']
+        required = list(PREPROCESSING_KEYS) + [
+            'arch', 'embed_dim', 'fusion_type', 'rgb_head_type', 'rgb_dropout',
+            'fine_tune_policy', 'bn_policy', 'backbone_lr_mult', 'decay_bias_norm',
+            'aug_recipe', 'crop_policy', 'blur_prob', 'blur_sig', 'jpg_prob',
+            'jpg_method', 'jpg_qual', 'noise_prob', 'noise_std', 'downscale_prob',
+            'downscale_range', 'optim', 'weight_decay', 'beta1', 'momentum',
+            'lr_policy', 'lr_decay_iters', 'lr_gamma', 'lr_patience',
+            'eligible_sources', 'early_stopping', 'early_stopping_patience',
+            'early_stopping_min_delta', 'early_stopping_min_epochs',
+        ]
         for key in required:
             if key in saved and hasattr(self.model.opt, key) and saved[key] != getattr(self.model.opt, key):
                 raise ValueError(f'Resume protocol mismatch for {key}: '

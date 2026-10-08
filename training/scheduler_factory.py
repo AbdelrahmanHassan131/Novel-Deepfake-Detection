@@ -58,10 +58,9 @@ def build_scheduler(opt, optimizer):
         factor = getattr(opt, 'lr_gamma', 0.1)
         return lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            mode='max',
+            mode='min' if getattr(opt, 'monitor_metric', 'auc') == 'loss' else 'max',
             factor=factor,
             patience=patience,
-            verbose=True,
         )
 
     elif policy == 'cosine':
@@ -71,11 +70,19 @@ def build_scheduler(opt, optimizer):
             T_max=n_epochs,
         )
 
+    elif policy == 'linear':
+        niter = getattr(opt, 'niter', 100)
+        niter_decay = getattr(opt, 'niter_decay', getattr(opt, 'epochs_decay', 0))
+        def lambda_rule(epoch):
+            lr_l = 1.0 - max(0, epoch + 1 - niter) / float(max(1, niter_decay + 1))
+            return max(0.0, lr_l)
+        return lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
+
     elif policy == 'none':
         return None
 
     else:
         raise ValueError(
             f"Unsupported lr_policy '{policy}'. "
-            f"Supported: ['step', 'plateau', 'cosine', 'none']"
+            f"Supported: ['step', 'plateau', 'cosine', 'linear', 'none']"
         )

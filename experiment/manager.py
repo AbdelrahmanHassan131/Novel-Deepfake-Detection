@@ -36,6 +36,20 @@ from datetime import datetime
 from .experiment import Experiment
 
 
+class _class_or_instancemethod:
+    def __init__(self, fn):
+        self.fn = fn
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            def _classmethod_wrapper(*args, **kwargs):
+                return self.fn(objtype, *args, **kwargs)
+            return _classmethod_wrapper
+        else:
+            def _instancemethod_wrapper(*args, **kwargs):
+                return self.fn(obj, *args, **kwargs)
+            return _instancemethod_wrapper
+
+
 class ExperimentManager:
     """
     Factory for :class:`Experiment` instances.
@@ -56,7 +70,36 @@ class ExperimentManager:
     # Public API
     # ------------------------------------------------------------------
 
-    def create(self, experiment_name, opt, run_id=None, allow_existing=False):
+    @_class_or_instancemethod
+    def create(self_or_cls, *args, **kwargs):
+        if isinstance(self_or_cls, type):
+            from pathlib import Path
+            if 'experiment_dir' in kwargs:
+                exp_dir = Path(kwargs['experiment_dir'])
+                allow_existing = kwargs.get('allow_existing', False)
+                resume_checkpoint = kwargs.get('resume_checkpoint', None)
+                if exp_dir.is_dir() and not allow_existing and not resume_checkpoint:
+                    raise FileExistsError(
+                        f"Experiment directory '{exp_dir}' already exists. "
+                        "Running a fresh model in an existing directory would overwrite checkpoints. "
+                        "Specify a distinct --run_id or supply --resume_checkpoint to resume."
+                    )
+                instance = self_or_cls(base_dir=str(exp_dir.parent))
+                instance.run_dir = exp_dir
+                instance.last_checkpoint = Path(resume_checkpoint) if resume_checkpoint else exp_dir / "last.pth"
+                return instance
+            self = self_or_cls()
+        else:
+            self = self_or_cls
+        return self._create_impl(*args, **kwargs)
+
+    @_class_or_instancemethod
+    def create_experiment(self_or_cls, *args, **kwargs):
+        if 'experiment_id' in kwargs and 'run_id' not in kwargs:
+            kwargs['run_id'] = kwargs.pop('experiment_id')
+        return self_or_cls.create(*args, **kwargs)
+
+    def _create_impl(self, experiment_name, opt, run_id=None, allow_existing=False, **kwargs):
         """
         Create a new experiment.
 
@@ -73,6 +116,7 @@ class ExperimentManager:
         """
         experiment_id = (
             run_id
+            or kwargs.get('experiment_id', None)
             or getattr(opt, 'run_id', None)
             or getattr(opt, 'experiment_id', None)
             or self._generate_id()

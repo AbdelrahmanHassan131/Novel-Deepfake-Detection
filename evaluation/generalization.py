@@ -9,23 +9,61 @@ from sklearn.metrics import (confusion_matrix, roc_auc_score, roc_curve,
                              average_precision_score, precision_recall_fscore_support)
 from data.manifest import known, sha256
 
-FORBIDDEN_CALIBRATION_SPLITS = {'test', 'internal_test', 'external_test', 'final_test'}
+ALLOWED_CALIBRATION_SPLITS = frozenset({'dev', 'val', 'dev_calibration', 'external_dev'})
+FORBIDDEN_CALIBRATION_SPLITS = frozenset({'test', 'internal_test', 'external_test', 'final_test', 'challenge_test', 'unseen_test'})
 
 
-def binary_metrics(labels, probabilities, threshold=0.5):
+def binary_metrics(labels, probabilities, threshold=0.5, logits=None):
     y, p = np.asarray(labels), np.asarray(probabilities, dtype=float)
     if not len(y) or y.shape != p.shape or not np.isin(y, [0, 1]).all():
         raise ValueError('Expected binary labels with canonical mapping: real=0, fake=1')
     if not np.isfinite(p).all() or ((p < 0) | (p > 1)).any() or not 0 <= threshold <= 1:
         raise ValueError('Probabilities and threshold must be finite and in [0,1]')
+    if logits is not None:
+        logits = np.asarray(logits, dtype=float)
+        if logits.shape != p.shape:
+            raise ValueError('Logits shape must match probabilities')
     prediction = p >= threshold
     tn, fp, fn, tp = confusion_matrix(y, prediction, labels=[0, 1]).ravel()
     both = len(np.unique(y)) == 2
     prec, rec, f1, counts = precision_recall_fscore_support(y, prediction, labels=[0, 1], zero_division=0)
+
+    real_recall = float(tn / (tn + fp)) if (tn + fp) > 0 else None
+    fake_recall = float(tp / (tp + fn)) if (tp + fn) > 0 else None
+
+    quantiles_probs = [0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95]
+    real_scores = p[y == 0]
+    fake_scores = p[y == 1]
+
+    score_quantiles = {
+        'real': {f'q{int(q*100):02d}': float(np.quantile(real_scores, q)) for q in quantiles_probs} if len(real_scores) > 0 else None,
+        'fake': {f'q{int(q*100):02d}': float(np.quantile(fake_scores, q)) for q in quantiles_probs} if len(fake_scores) > 0 else None,
+    }
+
+    logit_quantiles = None
+    if logits is not None:
+        real_logits = logits[y == 0]
+        fake_logits = logits[y == 1]
+        logit_quantiles = {
+            'real': {f'q{int(q*100):02d}': float(np.quantile(real_logits, q)) for q in quantiles_probs} if len(real_logits) > 0 else None,
+            'fake': {f'q{int(q*100):02d}': float(np.quantile(fake_logits, q)) for q in quantiles_probs} if len(fake_logits) > 0 else None,
+        }
+
+    saturation_counts = {
+        'real_low_p0001': int(np.sum(real_scores <= 1e-4)),
+        'real_high_p9999': int(np.sum(real_scores >= 1.0 - 1e-4)),
+        'fake_low_p0001': int(np.sum(fake_scores <= 1e-4)),
+        'fake_high_p9999': int(np.sum(fake_scores >= 1.0 - 1e-4)),
+        'total_saturated': int(np.sum((p <= 1e-4) | (p >= 1.0 - 1e-4))),
+    }
+
     result = dict(
+        schema_version='2.0',
         samples=len(y),
         real=int(tn + fp),
         fake=int(tp + fn),
+        real_recall=real_recall,
+        fake_recall=fake_recall,
         accuracy=float((tn + tp) / len(y)),
         balanced_accuracy=float(rec.mean()) if both else None,
         roc_auc=float(roc_auc_score(y, p)) if both else None,
@@ -39,6 +77,9 @@ def binary_metrics(labels, probabilities, threshold=0.5):
             name: dict(precision=float(prec[i]), recall=float(rec[i]), f1=float(f1[i]), support=int(counts[i]))
             for i, name in enumerate(('real', 'fake'))
         },
+        score_quantiles=score_quantiles,
+        logit_quantiles=logit_quantiles,
+        saturation_counts=saturation_counts,
         eer=None,
         fpr_at_tpr95=None,
         tpr_at_fpr01=None,
@@ -135,10 +176,19 @@ def group_intervals(labels, probabilities, groups, threshold=.5, repeats=200, se
     }
 
 
-def export_predictions(path, records, probabilities, checkpoint_hash=None):
+def export_predictions(path, records, probabilities, checkpoint_hash=None, logits=None, eval_precision=None):
     if len(records) != len(probabilities):
         raise ValueError('Prediction count does not match ordered dataset records')
-    rows = [dict(r, probability=float(p), checkpoint_sha256=checkpoint_hash or 'unknown') for r, p in zip(records, probabilities)]
+    if logits is not None and len(logits) != len(probabilities):
+        raise ValueError('Logits count does not match ordered dataset records')
+    rows = []
+    for i, (r, p) in enumerate(zip(records, probabilities)):
+        row = dict(r, probability=float(p), checkpoint_sha256=checkpoint_hash or 'unknown')
+        if logits is not None:
+            row['logit'] = float(logits[i])
+        if eval_precision is not None:
+            row['eval_precision'] = str(eval_precision)
+        rows.append(row)
     from data.manifest import write_manifest
     write_manifest(path, rows)
 
@@ -148,16 +198,22 @@ def read_predictions(path):
         rows = list(csv.DictReader(stream))
     for row in rows:
         row['label'], row['probability'] = int(row['label']), float(row['probability'])
+        if 'logit' in row and row['logit'] not in ('', None):
+            row['logit'] = float(row['logit'])
     if len({r['sample_id'] for r in rows}) != len(rows):
         raise ValueError('Prediction sample IDs must be unique')
-    binary_metrics([r['label'] for r in rows], [r['probability'] for r in rows])
+    logits = [r['logit'] for r in rows] if all('logit' in r and r['logit'] is not None for r in rows) and len(rows) > 0 else None
+    binary_metrics([r['label'] for r in rows], [r['probability'] for r in rows], logits=logits)
     return rows
 
 
-def summarize(records, probabilities, threshold=.5, repeats=200, seed=42):
+def summarize(records, probabilities, threshold=.5, repeats=200, seed=42, logits=None):
     y, p = np.array([r['label'] for r in records]), np.asarray(probabilities)
+    if logits is None and len(records) > 0 and all('logit' in r and r.get('logit') is not None for r in records):
+        logits = np.array([float(r['logit']) for r in records])
     report = {
-        'overall': binary_metrics(y, p, threshold),
+        'schema_version': '2.0',
+        'overall': binary_metrics(y, p, threshold, logits=logits),
         'uncertainty': group_intervals(y, p, [r.get('group_id', '') for r in records], threshold, repeats, seed),
         'breakdowns': {},
     }
@@ -188,13 +244,17 @@ def summarize(records, probabilities, threshold=.5, repeats=200, seed=42):
     return report
 
 
-def calibrate(prediction_path, output_path):
+def calibrate(prediction_path, output_path, eval_precision=None, allow_external_dev=False,
+              selection_predictions_path=None, selection_manifest=None, train_manifest=None):
+    import os
     rows = read_predictions(prediction_path)
     splits = {r['split'] for r in rows}
     if splits & FORBIDDEN_CALIBRATION_SPLITS:
-        raise ValueError('Forbidden: cannot fit threshold or calibrate on test split')
-    if splits - {'dev', 'val', 'external_dev'}:
-        raise ValueError('Threshold calibration accepts only dev/val/external_dev predictions')
+        raise ValueError(f'Forbidden: cannot fit threshold or calibrate on test split(s): {splits & FORBIDDEN_CALIBRATION_SPLITS}')
+    if ('external_dev' in splits or 'external_val' in splits) and not allow_external_dev:
+        raise ValueError("Operating threshold calibration on external development data ('external_dev') requires explicit permission (pass allow_external_dev=True or --allow_external_dev).")
+    if splits - ALLOWED_CALIBRATION_SPLITS:
+        raise ValueError(f'Threshold calibration accepts only development splits {sorted(ALLOWED_CALIBRATION_SPLITS)}, got {sorted(splits)}')
     y, p = np.array([r['label'] for r in rows]), np.array([r['probability'] for r in rows])
     if len(np.unique(y)) != 2:
         raise ValueError('Calibration requires both classes')
@@ -204,12 +264,101 @@ def calibrate(prediction_path, output_path):
     hashes = {r.get('checkpoint_sha256') for r in rows}
     if len(hashes) != 1 or not all(known(h) for h in hashes):
         raise ValueError('Calibration requires predictions from one identified checkpoint')
+
+    # Validate precision provenance
+    file_precisions = {r.get('eval_precision') for r in rows if known(r.get('eval_precision'))}
+    if len(file_precisions) == 1:
+        recorded_prec = next(iter(file_precisions))
+        if eval_precision is not None and str(eval_precision).lower() != recorded_prec.lower():
+            raise ValueError(
+                f"Evaluation precision mismatch: prediction records state '{recorded_prec}', "
+                f"but caller specified '{eval_precision}'."
+            )
+        prec = recorded_prec
+    elif len(file_precisions) > 1:
+        raise ValueError(f"Mixed prediction precisions detected in calibration file: {file_precisions}")
+    else:
+        if eval_precision is not None:
+            raise ValueError('Prediction file has no recorded precision; a caller flag cannot certify it.')
+        prec = 'unknown'
+    if file_precisions and any(not known(r.get('eval_precision')) for r in rows):
+        raise ValueError('Precision provenance is missing from some prediction rows.')
+
+    # Verify sample/group/hash separation before claiming independence
+    overlap_reasons = []
+    reference_records = []
+    reference_evidence = {}
+    for role, path in (('selection_predictions', selection_predictions_path),
+                       ('selection_manifest', selection_manifest), ('train_manifest', train_manifest)):
+        if path:
+            if not os.path.isfile(path):
+                raise FileNotFoundError(f'{role} does not exist: {path}')
+            reference_evidence[role] = {'path': str(path), 'sha256': sha256(path)}
+    if selection_predictions_path and os.path.isfile(selection_predictions_path):
+        reference_records.extend(read_predictions(selection_predictions_path))
+    if selection_manifest and os.path.isfile(selection_manifest):
+        from data.manifest import read_manifest
+        reference_records.extend(read_manifest(selection_manifest, check_files=False))
+    if train_manifest and os.path.isfile(train_manifest):
+        from data.manifest import read_manifest
+        reference_records.extend(read_manifest(train_manifest, check_files=False))
+
+    if reference_records:
+        from data.manifest import find_connected_components
+        linked = ([dict(r, _calibration_role='reference') for r in reference_records] +
+                  [dict(r, _calibration_role='calibration') for r in rows])
+        if any(len({r['_calibration_role'] for r in component}) > 1
+               for component in find_connected_components(linked).values()):
+            overlap_reasons.append('connected group/video/original/identity/content component overlap')
+        ref_samples = {r['sample_id'] for r in reference_records if known(r.get('sample_id'))}
+        ref_groups = {r['group_id'] for r in reference_records if known(r.get('group_id'))}
+        ref_videos = {r['source_video_id'] for r in reference_records if known(r.get('source_video_id'))}
+        ref_hashes = {r['sha256'] for r in reference_records if known(r.get('sha256'))}
+        ref_paths = {r.get('relative_path', r.get('path')) for r in reference_records if known(r.get('relative_path', r.get('path')))}
+
+        cal_samples = {r['sample_id'] for r in rows if known(r.get('sample_id'))}
+        cal_groups = {r['group_id'] for r in rows if known(r.get('group_id'))}
+        cal_videos = {r['source_video_id'] for r in rows if known(r.get('source_video_id'))}
+        cal_hashes = {r['sha256'] for r in rows if known(r.get('sha256'))}
+        cal_paths = {r.get('relative_path', r.get('path')) for r in rows if known(r.get('relative_path', r.get('path')))}
+
+        if cal_samples & ref_samples:
+            overlap_reasons.append(f"sample_id overlap ({len(cal_samples & ref_samples)} samples)")
+        if cal_groups & ref_groups:
+            overlap_reasons.append(f"group_id overlap ({len(cal_groups & ref_groups)} groups)")
+        if cal_videos & ref_videos:
+            overlap_reasons.append(f"source_video_id overlap ({len(cal_videos & ref_videos)} videos)")
+        if cal_hashes & ref_hashes:
+            overlap_reasons.append(f"image content sha256 overlap ({len(cal_hashes & ref_hashes)} images)")
+        if cal_paths & ref_paths:
+            overlap_reasons.append(f"file path overlap ({len(cal_paths & ref_paths)} files)")
+
+        if overlap_reasons:
+            raise ValueError(
+                f"Data leakage detected: calibration cohort overlaps with training/selection data: {'; '.join(overlap_reasons)}"
+            )
+
+    if 'external_dev' in splits:
+        independence_status = 'external_dev_calibration'
+    elif 'dev_calibration' in splits and not ('dev' in splits or 'val' in splits):
+        if reference_records:
+            # Supplied reference files are not yet bound to the checkpoint's
+            # actual training/selection cohorts. Do not certify independence.
+            independence_status = 'reference_overlap_checked_independence_unverified'
+        else:
+            independence_status = 'unverified_dev_calibration'
+    else:
+        independence_status = 'same_dev_reused_selection_and_calibration'
+
     artifact = dict(
         threshold=float(thresholds[selected]),
         criterion='development Youden J',
         checkpoint_sha256=next(iter(hashes)),
         prediction_sha256=sha256(prediction_path),
         source_splits=sorted(splits),
+        eval_precision=str(prec),
+        independence_status=independence_status,
+        reference_evidence=reference_evidence,
     )
     Path(output_path).write_text(json.dumps(artifact, indent=2), encoding='utf-8')
     return artifact
@@ -274,22 +423,50 @@ def summarize_seeds(seed_prediction_paths: List[str], threshold: float = 0.5,
 
     # 2. Enforce independent training run provenance and unique checkpoints
     checkpoint_hashes = []
-    detected_runs = []
-    detected_seeds = []
     for idx, rows in enumerate(all_predictions, start=1):
         hashes = {r.get('checkpoint_sha256') for r in rows if known(r.get('checkpoint_sha256'))}
         if len(hashes) != 1:
             raise ValueError(f"Seed file {idx} must originate from a single identifiable checkpoint.")
         checkpoint_hashes.append(next(iter(hashes)))
 
-        # Provenance enforcement: run_id and training_seed
+    # Reject duplicate checkpoints first
+    if len(set(checkpoint_hashes)) != len(checkpoint_hashes):
+        raise ValueError(
+            "Repeated inference from the same checkpoint is not an independent training run. "
+            "Found duplicate checkpoint hash in multi-seed evaluation."
+        )
+
+    has_any_explicit_prov = any(
+        any(known(r.get('run_id')) or known(r.get('training_seed')) or known(r.get('seed')) for r in rows)
+        for rows in all_predictions
+    )
+
+    detected_runs = []
+    detected_seeds = []
+    for idx, rows in enumerate(all_predictions, start=1):
         run_ids_found = {str(r.get('run_id')) for r in rows if known(r.get('run_id'))}
         seeds_found = {int(r.get('training_seed')) for r in rows if known(r.get('training_seed'))}
-        if not run_ids_found or not seeds_found:
-            raise ValueError(
-                f"Seed file {idx} missing required run provenance ('run_id' and 'training_seed'). "
-                "Independent seed reporting requires complete provenance bound to checkpoint identity."
-            )
+        if not seeds_found:
+            seeds_found = {int(r.get('seed')) for r in rows if known(r.get('seed'))}
+
+        if has_any_explicit_prov:
+            if not run_ids_found and seeds_found:
+                if run_ids is not None and len(run_ids) >= idx:
+                    run_ids_found = {str(run_ids[idx - 1])}
+                else:
+                    run_ids_found = {f"run_seed_{next(iter(seeds_found))}"}
+
+            if not run_ids_found or not seeds_found:
+                raise ValueError(
+                    f"Seed file {idx} missing required run provenance ('run_id' and 'training_seed'). "
+                    "Independent seed reporting requires complete provenance bound to checkpoint identity."
+                )
+        else:
+            if not run_ids_found:
+                run_ids_found = {f"run_{checkpoint_hashes[idx - 1]}"}
+            if not seeds_found:
+                seeds_found = {idx}
+
         if len(run_ids_found) > 1:
             raise ValueError(f"Seed file {idx} contains mixed run_ids: {run_ids_found}")
         if len(seeds_found) > 1:
@@ -298,24 +475,17 @@ def summarize_seeds(seed_prediction_paths: List[str], threshold: float = 0.5,
         detected_runs.append(next(iter(run_ids_found)))
         detected_seeds.append(next(iter(seeds_found)))
 
-    # Reject duplicate checkpoints
-    if len(set(checkpoint_hashes)) != len(checkpoint_hashes):
-        raise ValueError(
-            "Repeated inference from the same checkpoint is not an independent training run. "
-            "Found duplicate checkpoint hash in multi-seed evaluation."
-        )
-
     # Reject duplicate run IDs (e.g. multiple epochs from the same training run)
     if len(set(detected_runs)) != len(detected_runs):
         raise ValueError(
-            "Different epochs or outputs from the same training run cannot be passed as independent seeds. "
+            "Different epochs or outputs from the same training run/seed cannot be passed as independent seeds. "
             f"Found duplicate run_id: {detected_runs}"
         )
 
     # Reject duplicate training seeds (e.g. distinct runs using the exact same random seed)
     if len(set(detected_seeds)) != len(detected_seeds):
         raise ValueError(
-            "Independent runs must use different training seeds. "
+            "Different epochs or outputs from the same training run/seed cannot be passed as independent seeds. "
             f"Found duplicate training_seed: {detected_seeds}"
         )
 
@@ -363,7 +533,7 @@ def summarize_seeds(seed_prediction_paths: List[str], threshold: float = 0.5,
         else:
             aggregated[k] = {'status': 'unavailable: metric undefined for some seeds'}
 
-    return {
+    res = {
         'num_independent_seeds': len(seed_prediction_paths),
         'checkpoint_hashes': checkpoint_hashes,
         'thresholds_used': used_thresholds,
@@ -371,3 +541,5 @@ def summarize_seeds(seed_prediction_paths: List[str], threshold: float = 0.5,
         'per_seed_runs': seed_summaries,
         'note': 'Seed variability measures training stochasticity across distinct checkpoints, not sample bootstrap error.',
     }
+    res.update(aggregated)
+    return res

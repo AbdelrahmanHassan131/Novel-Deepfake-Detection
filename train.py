@@ -53,6 +53,18 @@ def parse_args():
                         help="Use pretrained weights for backbone networks")
     parser.add_argument('--backbone_weights', type=str, default=None,
                         help="Path to local backbone weights for offline initialization without downloads")
+    parser.add_argument('--rgb_head_type', choices=['128d', 'linear'], default='128d',
+                        help="RGB classifier head architecture: '128d' (legacy 128D MLP) or 'linear' (direct linear probe)")
+    parser.add_argument('--rgb_dropout', type=float, default=0.5,
+                        help="Dropout rate for the RGB classifier head (defaults to 0.5 for Wang2020 legacy compatibility)")
+    parser.add_argument('--fine_tune_policy', choices=['full', 'head_only', 'layer4_and_head'], default='full',
+                        help="Fine-tuning parameter freezing policy ('full', 'head_only', or 'layer4_and_head')")
+    parser.add_argument('--backbone_lr_mult', type=float, default=1.0,
+                        help="Learning rate scaling multiplier for backbone layers relative to head")
+    parser.add_argument('--bn_policy', choices=['train', 'frozen'], default='train',
+                        help="BatchNorm policy: 'train' (updates running stats) or 'frozen' (freezes running stats in eval mode)")
+    parser.add_argument('--decay_bias_norm', action=argparse.BooleanOptionalAction, default=False,
+                        help="Whether to apply weight decay to 1D bias and normalization layers")
     parser.add_argument('--num_classes', type=int, default=MODEL_DEFAULTS['num_classes'],
                         help="Number of output classes")
     parser.add_argument('--init_type', type=str, default=MODEL_DEFAULTS['init_type'],
@@ -71,6 +83,8 @@ def parse_args():
                         help="Dataset mode")
     parser.add_argument('--batch_size', type=int, default=DATA_DEFAULTS['batch_size'],
                         help="Input batch size")
+    parser.add_argument('--val_batch_size', type=int, default=None,
+                        help="Batch size for validation DataLoader (defaults to --batch_size if not specified)")
     parser.add_argument('--image_size', type=int, default=DATA_DEFAULTS['image_size'],
                         help="Scale images to this size")
     parser.add_argument('--crop_size', type=int, default=DATA_DEFAULTS['crop_size'],
@@ -87,6 +101,8 @@ def parse_args():
                         help="Use class balanced sampler")
     parser.add_argument('--compute_wavelets', action='store_true', default=DATA_DEFAULTS['compute_wavelets'],
                         help="Compute wavelets online if required by dataset")
+    parser.add_argument('--crop_policy', choices=['scale_and_crop', 'random_resized_crop', 'patch_crop'], default='scale_and_crop',
+                        help="Cropping strategy: scale_and_crop (legacy default), random_resized_crop, or patch_crop")
 
     # Augmentation parameters
     parser.add_argument('--blur_prob', type=float, default=AUGMENTATION_DEFAULTS['blur_prob'],
@@ -98,7 +114,11 @@ def parse_args():
     parser.add_argument('--jpg_method', type=str, default='cv2',
                         help="Comma-separated JPEG compression methods (e.g., 'cv2,pil')")
     parser.add_argument('--jpg_qual', type=str, default='75',
-                        help="Comma-separated JPEG quality values (e.g., '30,75')")
+                        help="Comma-separated JPEG quality values (e.g., '30,75' or '50,60,70,80,90,95')")
+    parser.add_argument('--rz_interp', type=str, default='bilinear',
+                        help="Resize interpolation method (bilinear, bicubic, lanczos, nearest)")
+    parser.add_argument('--aug_recipe', choices=['legacy', 'rgb_v1', 'custom'], default='legacy',
+                        help="Versioned augmentation recipe: 'legacy' (unaugmented baseline), 'rgb_v1' (moderate blur 0.5 + jpeg 0.5 preset), or 'custom'")
 
     # Wavelet parameters
     parser.add_argument('--wavelet_backend', type=str, default=WAVELET_DEFAULTS['backend'], choices=['cpu', 'gpu', 'precomputed'],
@@ -121,7 +141,7 @@ def parse_args():
                         help="Number of epochs to linearly decay learning rate to zero")
     parser.add_argument('--lr', type=float, default=TRAINING_DEFAULTS['learning_rate'],
                         help="Initial learning rate")
-    parser.add_argument('--optim', dest='optimizer', type=str, default=TRAINING_DEFAULTS['optimizer'], choices=['adam', 'sgd'],
+    parser.add_argument('--optim', dest='optimizer', type=str, default=TRAINING_DEFAULTS['optimizer'], choices=['adam', 'sgd', 'adamw'],
                         help="Optimizer type")
     parser.add_argument('--beta1', type=float, default=TRAINING_DEFAULTS['beta1'],
                         help="Momentum term beta1 for Adam")
@@ -139,9 +159,27 @@ def parse_args():
                         help="Which epoch to load when continue_train is set (e.g., 'latest' or '10')")
     parser.add_argument('--use_amp', action='store_true', default=TRAINING_DEFAULTS['use_amp'],
                         help="Enable Automatic Mixed Precision (AMP)")
+    parser.add_argument('--amp_dtype', choices=['fp16', 'bf16'], default='fp16',
+                        help="AMP precision dtype: fp16 (recommended for T4) or bf16 (supported Ampere/L4 only)")
+    parser.add_argument('--val_precision', choices=['fp32', 'amp', 'fp16', 'bf16'], default='fp32',
+                        help="Validation precision: fp32 (reference), amp, fp16, or bf16")
     parser.add_argument('--monitor_metric', type=str, default=TRAINING_DEFAULTS.get('monitor_metric', 'auc'),
-                        choices=['auc', 'balanced_accuracy', 'accuracy'],
-                        help="Validation metric monitored for saving best.pth (auc, balanced_accuracy, or accuracy)")
+                        choices=['auc', 'balanced_accuracy', 'accuracy', 'source_macro_auc', 'worst_source_recall_05'],
+                        help="Validation metric monitored for saving best.pth (auc, balanced_accuracy, accuracy, source_macro_auc, or worst_source_recall_05)")
+    parser.add_argument('--early_stopping', action=argparse.BooleanOptionalAction, default=False,
+                        help="Enable early stopping based on monitored validation metric")
+    parser.add_argument('--early_stopping_patience', type=int, default=5,
+                        help="Number of validation checks without improvement before stopping")
+    parser.add_argument('--early_stopping_min_delta', type=float, default=0.0,
+                        help="Minimum change in monitored metric to qualify as an improvement")
+    parser.add_argument('--early_stopping_min_epochs', type=int, default=0,
+                        help="Minimum number of epochs before early stopping can trigger")
+    parser.add_argument('--eligible_sources', type=str, default=None,
+                        help="Comma-separated list of eligible dataset sources for source-macro AUC calculation")
+    parser.add_argument('--allow_aggregate_sources', action='store_true', default=False,
+                        help="Allow aggregate/unknown source metadata (e.g. diffgan) for engineering diagnostic runs")
+    parser.add_argument('--allow_source_overlap', action='store_true', default=False,
+                        help="Allow training and development sources to overlap (disables strict held-out check)")
     parser.add_argument('--grad_accum_steps', type=int, default=1,
                         help="Number of gradient accumulation steps before optimizer step (simulates larger batch size on single/dual GPU)")
 
@@ -150,6 +188,16 @@ def parse_args():
                         help="Comma-separated list of GPU IDs to use (e.g., '0' or '0,1'). Use '-1' for CPU.")
     parser.add_argument('--num_workers', '--num_threads', dest='num_workers', type=int, default=0,
                         help="Number of data loading threads (default 0 for Windows stability)")
+    parser.add_argument('--val_num_workers', type=int, default=None,
+                        help="Number of workers for validation DataLoader (defaults to --num_workers if not specified)")
+    parser.add_argument('--pin_memory', action=argparse.BooleanOptionalAction, default=True,
+                        help="Pin DataLoader memory to accelerate GPU transfer")
+    parser.add_argument('--prefetch_factor', type=int, default=2,
+                        help="Number of batches loaded in advance by each worker (when num_workers > 0)")
+    parser.add_argument('--persistent_workers', action=argparse.BooleanOptionalAction, default=True,
+                        help="Keep worker processes alive across DataLoader iterations")
+    parser.add_argument('--channels_last', action=argparse.BooleanOptionalAction, default=False,
+                        help="Use channels_last (NHWC) memory format for faster ResNet computation on Tensor Cores")
     parser.add_argument('--seed', type=int, default=None,
                         help="Random seed for reproducibility")
     parser.add_argument('--deterministic', action='store_true', default=False,
@@ -207,10 +255,15 @@ def parse_args():
     parser.add_argument('--downscale_range', type=float, nargs=2, default=[0.5, 1.0])
     # Parse args
     args = parser.parse_args()
+    # Preserve explicit zero/default-valued overrides when resolving a preset.
+    args._explicit_options = [token[2:].split('=', 1)[0] for token in sys.argv[1:]
+                              if token.startswith('--')]
 
     # Post-process list fields
     if isinstance(args.classes, str):
         args.classes = [c.strip() for c in args.classes.split(',') if c.strip()]
+    if isinstance(args.eligible_sources, str):
+        args.eligible_sources = [s.strip() for s in args.eligible_sources.split(',') if s.strip()]
     if isinstance(args.gpu_ids, str):
         if args.gpu_ids.strip() == '-1' or not args.gpu_ids.strip():
             args.gpu_ids = []
@@ -242,6 +295,11 @@ def main():
     # 1. Parse command line arguments
     print(f"[rank={os.environ.get('RANK', '0')}] Parsing options and loading model registry...", flush=True)
     opt = parse_args()
+    from data.transforms.augmentations import resolve_augmentation_recipe
+    opt = resolve_augmentation_recipe(opt)
+    from training.runtime.profiler import PhaseProfiler
+    startup_profiler = PhaseProfiler()
+    startup_profiler.start_phase('configuration_and_manifest_preflight')
     if is_main:
         print(f"Architecture : {opt.arch}")
         print(f"Dataset Root : {opt.dataroot}")
@@ -300,8 +358,18 @@ def main():
             raise ValueError('Dataset audit failed: ' + '; '.join(report['errors'][:20]))
         if {r['label'] for r in rows} != {0, 1} or {r['label'] for r in dev_rows} != {0, 1}:
             raise ValueError('Training and development each require real and fake samples.')
+        from training.validator import verify_source_readiness
+        verify_source_readiness(
+            train_rows=rows,
+            dev_rows=dev_rows,
+            eligible_sources=getattr(opt_clean, 'eligible_sources', None),
+            monitor_metric=getattr(opt_clean, 'monitor_metric', 'auc'),
+            allow_aggregate_sources=getattr(opt_clean, 'allow_aggregate_sources', False),
+            allow_source_overlap=getattr(opt_clean, 'allow_source_overlap', False),
+        )
         print(f"[rank={os.environ.get('RANK', '0')}] Dataset audit passed: "
               f"{len(rows):,} train / {len(dev_rows):,} development rows.", flush=True)
+    startup_profiler.end_phase('configuration_and_manifest_preflight')
     # Seed BEFORE constructing datasets and model weights, not just the training loop.
     if opt_clean.seed is not None:
         seed_everything(opt_clean.seed, deterministic=opt_clean.deterministic)
@@ -309,6 +377,10 @@ def main():
     # Instantiate runtime early so process group is ready and we know is_main
     from training.runtime import DistributedRuntime
     runtime = DistributedRuntime(opt_clean)
+    startup_profiler.rank = runtime.rank
+    startup_profiler.world_size = runtime.world_size
+    startup_profiler.device = runtime.device
+    startup_profiler.use_cuda = runtime.device.type == 'cuda'
 
     # 3. Setup Experiment Manager.  A resumed run must use the original
     # checkpoint directory; creating a timestamped experiment first would make
@@ -341,6 +413,12 @@ def main():
     opt_clean.name = ""  # Let CheckpointManager use the directory directly without appending extra subfolders
 
     # 4. Build DataLoaders
+    # Attach cached rows after saving the options file, and remove them before
+    # spawning workers. Only dataset.records should carry the image inventory.
+    if opt_clean.manifest:
+        opt_clean._manifest_records = rows
+        opt_clean._validation_records = dev_rows
+    startup_profiler.start_phase('loader_construction')
     if runtime.is_main:
         print("[3/5] Building dataloaders...")
     if opt_clean.arch in ['MHA_128', 'Fusion_128', 'Fusion_WWXC', 'MHA_WWXC']:
@@ -362,6 +440,8 @@ def main():
         val_opt.class_bal = False
         val_opt.isTrain = False
         val_opt.serial_batches = True
+        if hasattr(opt_clean, '_validation_records'):
+            val_opt._manifest_records = opt_clean._validation_records
         if val_opt.arch in ['MHA_128', 'Fusion_128', 'Fusion_WWXC', 'MHA_WWXC']:
             val_loader = create_mha_dataloader(val_opt)
         else:
@@ -370,11 +450,17 @@ def main():
             print(f"  -> Validation dataset size: {len(val_loader.dataset)} samples")
 
     # 5. Build Model & Trainer
+    for namespace in (opt_clean, val_opt if val_loader is not None else opt_clean):
+        for key in ('_manifest_records', '_validation_records'):
+            vars(namespace).pop(key, None)
+    startup_profiler.end_phase('loader_construction')
+    startup_profiler.start_phase('pretrained_and_model_construction')
     if runtime.is_main:
         print(f"[4/5] Constructing model ({opt_clean.arch})...")
         if opt_clean.pretrained and not resume_path:
             print('Pretrained backbone requested: loading cached/local weights or downloading if absent.', flush=True)
     model = build_model(opt_clean)
+    startup_profiler.end_phase('pretrained_and_model_construction')
     if runtime.is_main and hasattr(model, 'head_class_name'):
         print(f"  -> Fusion head class   : {model.head_class_name}")
         print(f"  -> Head param count    : {getattr(model, 'head_param_count', 0):,}")
@@ -382,6 +468,7 @@ def main():
     if runtime.is_main:
         print("[5/5] Initializing Trainer...")
     trainer = Trainer(model, train_loader, opt_clean, val_loader=val_loader, runtime=runtime, experiment_logger=experiment_logger)
+    trainer.profiler = startup_profiler
     if resume_path:
         trainer.resume_training(resume_path)
 
@@ -390,7 +477,8 @@ def main():
         print("STARTING TRAINING LOOP")
         print("=" * 70)
     try:
-        trainer.fit(num_epochs=opt_clean.niter)
+        total_epochs = opt_clean.niter + getattr(opt_clean, 'niter_decay', 0)
+        trainer.fit(num_epochs=total_epochs)
         if runtime.is_main:
             print("\n[SUCCESS] Training completed successfully!")
             manifest_path = os.path.join(experiment.root_dir, 'run_manifest.json')

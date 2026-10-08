@@ -13,7 +13,11 @@ import numpy as np
 from PIL import Image
 
 import re
-from data.manifest import read_manifest, write_manifest, audit_rows, GROUP_FIELDS, UNKNOWN, PROTECTED_SPLITS, known, sha256, extract_entity_tokens
+from data.manifest import (
+    read_manifest, write_manifest, audit_rows, GROUP_FIELDS, UNKNOWN,
+    PROTECTED_SPLITS, known, sha256, extract_entity_tokens,
+    generate_source_coverage_report, select_representative_dev_cohort,
+)
 from data.adapters import apply_adapter, ADAPTERS
 from data.hash_cache import HashCache, SQLiteHashCache
 
@@ -42,8 +46,9 @@ def connected_components(rows: List[Dict[str, Any]], require_groups: bool = True
         for key in GROUP_FIELDS + ('sha256',):
             val = row.get(key)
             tokens = extract_entity_tokens(key, val)
+            ns = 'video' if key in ('source_video_id', 'original_id') else key
             for token_val in tokens:
-                token = (key, token_val)
+                token = (ns, token_val)
                 if token in seen:
                     parent[find(i)] = find(seen[token])
                 else:
@@ -60,8 +65,9 @@ def connected_components(rows: List[Dict[str, Any]], require_groups: bool = True
         for i in indices:
             for key in GROUP_FIELDS:
                 val = rows[i].get(key)
+                ns = 'video' if key in ('source_video_id', 'original_id') else key
                 for t in extract_entity_tokens(key, val):
-                    entity_tokens.add(f"{key}:{t}")
+                    entity_tokens.add(f"{ns}:{t}")
         if entity_tokens:
             canonical_anchor = min(entity_tokens)
         else:
@@ -348,7 +354,7 @@ def build_pilot_100k(
                     if gen in rem_gen_quotas:
                         rem_gen_quotas[gen] -= cnt
 
-    if dev_ratio > 0 and len(dev_indices) == 0:
+    if dev_ratio > 0 and len(dev_indices) == 0 and not allow_shortfall:
         raise ValueError(
             "Dev split has 0 samples. Insufficient independent validation coverage; "
             "adjust dev_ratio or dataset pool."
@@ -489,8 +495,9 @@ def near_duplicates(rows, distance=4):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', nargs='?', default='pilot', choices=['inventory', 'adapt', 'split', 'pilot', 'audit'],
-                        help="Action to execute: inventory, adapt, split, pilot, or audit (default: pilot)")
+    parser.add_argument('action', nargs='?', default='pilot',
+                        choices=['inventory', 'adapt', 'split', 'pilot', 'audit', 'source_coverage', 'representative_dev'],
+                        help="Action to execute: inventory, adapt, split, pilot, audit, source_coverage, or representative_dev (default: pilot)")
     parser.add_argument('--root', '--source_dir', dest='root', help='Dataset root directory or source folder')
     parser.add_argument('--manifest', help='Input manifest CSV for adapt/split/pilot/audit')
     parser.add_argument('--output', '--output_manifest', dest='output', required=True, help='Output path')
@@ -522,8 +529,8 @@ def main():
                         help='JSON string or path to JSON file mapping dataset_source names to root directory paths')
     args = parser.parse_args()
     if args.train_size is not None:
-        if args.action != 'pilot':
-            parser.error('--train_size is supported only for the pilot selection action')
+        if args.action not in ('pilot', 'representative_dev'):
+            parser.error('--train_size is supported only for the pilot and representative_dev actions')
         if args.target_real is not None or args.target_fake is not None:
             parser.error('Choose --train_size OR --target_real/--target_fake, not both')
         size_text = args.train_size.strip().strip("'\"").lower().replace('_', '')
@@ -648,6 +655,47 @@ def main():
             apply_adapter(r, args.adapter)
         write_manifest(args.output, rows)
         print(f"Applied adapter '{args.adapter}' to {len(rows)} samples. Written to {args.output}")
+        return
+
+    if args.action == 'source_coverage':
+        report = generate_source_coverage_report(rows)
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.output).write_text(json.dumps(report, indent=2), encoding='utf-8')
+        print(f"Source coverage report saved to {args.output}")
+        summary_display = {
+            'total_samples': report['total_samples'],
+            'unique_sources': report['unique_sources'],
+            'unique_groups': report['unique_groups'],
+            'synthetic_placeholder_groups': report['synthetic_placeholder_groups'],
+            'single_class_sources': [s['source'] for s in report['single_class_sources']],
+            'partition_conflicts_count': report['partition_conflicts_count'],
+            'source_held_out_ready': report['source_held_out_ready'],
+            'missing_metadata_report': report['missing_metadata_report'],
+        }
+        print(json.dumps(summary_display, indent=2))
+        return
+
+    if args.action == 'representative_dev':
+        dev_rows = [r for r in rows if r.get('split') in ('dev', 'val')]
+        if not dev_rows:
+            raise ValueError("No rows found with split in ('dev', 'val') to select representative dev cohort.")
+        target_size = int(args.train_size) if (args.train_size and args.train_size != 'all') else 15000
+        quotas = {}
+        if getattr(args, 'quotas_file', None):
+            quotas = json.loads(Path(args.quotas_file).read_text(encoding='utf-8'))
+        sel_rows, summary = select_representative_dev_cohort(
+            dev_rows,
+            target_size=target_size,
+            seed=args.seed,
+            target_real=args.target_real,
+            target_fake=args.target_fake,
+            source_quotas=quotas.get('sources'),
+        )
+        write_manifest(args.output, sel_rows)
+        summary_path = Path(args.output).with_suffix('.summary.json')
+        summary_path.write_text(json.dumps(summary, indent=2), encoding='utf-8')
+        print(f"Selected {len(sel_rows):,} representative dev images (saved to {args.output}).")
+        print(f"Summary written to {summary_path}")
         return
 
     if args.action == 'split':

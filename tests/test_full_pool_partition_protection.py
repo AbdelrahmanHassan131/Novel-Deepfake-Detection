@@ -57,7 +57,8 @@ class TestFullPoolPartitionProtection(unittest.TestCase):
             dev_ratio=0.1,
             test_ratio=0.1,
             seed=42,
-            require_groups=True
+            require_groups=True,
+            allow_shortfall=True
         )
 
         # None of the v1 or v2 frames should be in 'train'
@@ -142,7 +143,8 @@ class TestFullPoolPartitionProtection(unittest.TestCase):
             frame_cap=5,
             dev_ratio=0.0,
             test_ratio=0.0,
-            seed=42
+            seed=42,
+            allow_shortfall=True
         )
 
         dev_out = [r for r in out_rows if r['split'] == 'dev']
@@ -173,7 +175,8 @@ class TestFullPoolPartitionProtection(unittest.TestCase):
             target_fake=2,
             dev_ratio=0.3,
             test_ratio=0.2,
-            seed=42
+            seed=42,
+            allow_shortfall=True
         )
         initial_dev_samples = {r['sample_id'] for r in out1 if r['split'] == 'dev'}
 
@@ -200,7 +203,8 @@ class TestFullPoolPartitionProtection(unittest.TestCase):
             target_fake=2,
             dev_ratio=0.3,
             test_ratio=0.2,
-            seed=42
+            seed=42,
+            allow_shortfall=True
         )
         # All initial dev samples must still be in dev!
         grown_dev_samples = {r['sample_id'] for r in out2 if r['split'] == 'dev'}

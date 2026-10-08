@@ -35,6 +35,9 @@ DATA_DEFAULTS = {
     'compute_wavelets': False,
     'train_split': 'train',
     'val_split': 'val',
+    'val_batch_size': None,
+    'val_num_workers': None,
+    'crop_policy': 'scale_and_crop',
 }
 
 # ------------------------------------------------------------------
@@ -48,6 +51,7 @@ AUGMENTATION_DEFAULTS = {
     'jpg_qual': [75],
     'rz_interp': ['bilinear'],
     'data_aug': False,
+    'aug_recipe': 'legacy',
 }
 
 # ------------------------------------------------------------------
@@ -82,6 +86,12 @@ MODEL_DEFAULTS = {
     'xception_model_path': None,
     'convnext_model_path': None,
     'backbone_weights': None,
+    'rgb_head_type': '128d',
+    'rgb_dropout': 0.5,
+    'fine_tune_policy': 'full',
+    'backbone_lr_mult': 1.0,
+    'bn_policy': 'train',
+    'decay_bias_norm': False,
 }
 
 # ------------------------------------------------------------------
@@ -100,7 +110,16 @@ TRAINING_DEFAULTS = {
     'lr_gamma': 0.1,
     'lr_patience': 5,
     'earlystop_epoch': 5,
+    'early_stopping': False,
+    'early_stopping_patience': 5,
+    'early_stopping_min_delta': 0.0,
+    'early_stopping_min_epochs': 0,
+    'eligible_sources': None,
+    'allow_aggregate_sources': False,
+    'allow_source_overlap': False,
     'use_amp': False,
+    'amp_dtype': 'fp16',
+    'val_precision': 'fp32',
     'is_train': True,
     'continue_train': False,
     'new_optim': False,
@@ -156,4 +175,7 @@ RUNTIME_DEFAULTS = {
     'seed': None,
     'deterministic': False,
     'pin_memory': True,
+    'prefetch_factor': 2,
+    'persistent_workers': True,
+    'channels_last': False,
 }

@@ -129,6 +129,9 @@ class DataConfig(_FrozenMixin):
         self.compute_wavelets = defaults['compute_wavelets']
         self.train_split = defaults['train_split']
         self.val_split = defaults['val_split']
+        self.val_batch_size = defaults['val_batch_size']
+        self.val_num_workers = defaults['val_num_workers']
+        self.crop_policy = defaults.get('crop_policy', 'scale_and_crop')
         for key, value in DATA_PROTOCOL.items():
             setattr(self, key, kwargs.get(key, value))
 
@@ -164,6 +167,7 @@ class AugmentationConfig(_FrozenMixin):
         self.jpg_qual = defaults['jpg_qual']
         self.rz_interp = defaults['rz_interp']
         self.data_aug = defaults['data_aug']
+        self.aug_recipe = defaults.get('aug_recipe', 'legacy')
         for key, value in AUGMENTATION_PROTOCOL.items():
             setattr(self, key, kwargs.get(key, value))
 
@@ -249,6 +253,12 @@ class ModelConfig(_FrozenMixin):
         self.xception_model_path = defaults['xception_model_path']
         self.convnext_model_path = defaults['convnext_model_path']
         self.backbone_weights = defaults.get('backbone_weights', None)
+        self.rgb_head_type = defaults.get('rgb_head_type', '128d')
+        self.rgb_dropout = defaults.get('rgb_dropout', 0.5)
+        self.fine_tune_policy = defaults.get('fine_tune_policy', 'full')
+        self.backbone_lr_mult = defaults.get('backbone_lr_mult', 1.0)
+        self.bn_policy = defaults.get('bn_policy', 'train')
+        self.decay_bias_norm = defaults.get('decay_bias_norm', False)
 
     def to_dict(self):
         """Return this section as a dictionary."""
@@ -298,7 +308,16 @@ class TrainingConfig(_FrozenMixin):
         self.lr_gamma = defaults['lr_gamma']
         self.lr_patience = defaults['lr_patience']
         self.earlystop_epoch = defaults['earlystop_epoch']
+        self.early_stopping = defaults.get('early_stopping', False)
+        self.early_stopping_patience = defaults.get('early_stopping_patience', 5)
+        self.early_stopping_min_delta = defaults.get('early_stopping_min_delta', 0.0)
+        self.early_stopping_min_epochs = defaults.get('early_stopping_min_epochs', 0)
+        self.eligible_sources = defaults.get('eligible_sources', None)
+        self.allow_aggregate_sources = defaults.get('allow_aggregate_sources', False)
+        self.allow_source_overlap = defaults.get('allow_source_overlap', False)
         self.use_amp = defaults['use_amp']
+        self.amp_dtype = defaults.get('amp_dtype', 'fp16')
+        self.val_precision = defaults.get('val_precision', 'fp32')
         self.is_train = defaults['is_train']
         self.continue_train = defaults['continue_train']
         self.new_optim = defaults['new_optim']
@@ -426,6 +445,9 @@ class RuntimeConfig(_FrozenMixin):
         self.seed = defaults['seed']
         self.deterministic = defaults['deterministic']
         self.pin_memory = defaults['pin_memory']
+        self.prefetch_factor = defaults['prefetch_factor']
+        self.persistent_workers = defaults['persistent_workers']
+        self.channels_last = defaults['channels_last']
 
     def to_dict(self):
         """Return this section as a dictionary."""
@@ -597,3 +619,9 @@ class Config(_FrozenMixin):
             for k, v in section_dict.items():
                 print(f'  {k}: {v!r}')
         print('=' * 60)
+
+
+def load_config(*args, **kwargs):
+    """Backward-compatible proxy to config.loader.load_config."""
+    from config.loader import load_config as _lc
+    return _lc(*args, **kwargs)

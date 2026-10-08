@@ -104,6 +104,10 @@ def parse_args():
                         help="Directory to save evaluation reports, JSON numbers, and plots")
     parser.add_argument('--batch_size', type=int, default=32,
                         help="Batch size for DataLoader")
+    parser.add_argument('--num_workers', type=int, default=0,
+                        help='Evaluation workers per process; overrides saved training settings')
+    parser.add_argument('--eval_precision', choices=['fp32'], default='fp32',
+                        help='Standalone inference currently supports FP32 only')
     parser.add_argument('--device', type=str, default=None,
                         help="Target device (e.g., 'cuda:0' or 'cpu')")
     parser.add_argument('--no_plots', action='store_true', default=False,
@@ -200,6 +204,12 @@ def collect_models(args):
 def main():
     args = parse_args()
 
+    if not args.val_root and args.manifest:
+        manifest_path = os.path.abspath(args.manifest)
+        if os.path.isfile(manifest_path):
+            args.val_root = os.path.dirname(manifest_path)
+            print(f"[evaluate.py] Derived --val_root from manifest directory: {args.val_root}")
+
     if not args.val_root and not args.tsne_val_root:
         print("[ERROR] Please provide at least --val_root or --tsne_val_root!")
         sys.exit(1)
@@ -228,6 +238,8 @@ def main():
 
     # Collect overrides for base model paths
     overrides = dict(manifest=args.manifest, manifest_split=args.split, legacy_config=args.legacy_config, threshold_file=args.threshold_file, bootstrap=args.bootstrap)
+    overrides.update(num_workers=args.num_workers, val_num_workers=args.num_workers,
+                     num_threads=args.num_workers, eval_precision=args.eval_precision)
     if args.rgb_model_path:
         overrides['rgb_model_path'] = args.rgb_model_path
     if args.wavelet_model_path:

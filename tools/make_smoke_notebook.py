@@ -36,7 +36,7 @@ def make_plan():
         'resume': fusion + ['--epochs', '2', '--continue_train', '--resume_checkpoint', '{fusion_last}'],
     }
     return {
-        'plan_type': 'declarative_smoke_test_plan', 'consumer': 'colab_smoke_pipeline.ipynb',
+        'plan_type': 'declarative_study_plan', 'consumer': 'colab_smoke_pipeline.ipynb',
         'status': 'RUNTIME NOT RUN', 'hardware_target': 'single GPU',
         'dataset': {'input': 'separate preassigned smoke CSV; never full pool', 'max_total': 300,
                     'split_limits': {'train': 100, 'dev': 100, 'internal_test': 100},
