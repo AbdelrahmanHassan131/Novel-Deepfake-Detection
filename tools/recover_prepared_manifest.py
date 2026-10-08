@@ -80,7 +80,13 @@ def recover(manifest, audit_report, output_dir, immutable_dataset=False, allow_s
         raise ValueError('Audit must record hashes_verified=true and match the exact input CSV digest. Do not regenerate the input inventory.')
     # A failed overlap audit still contains valid completed content-hash evidence.
     for error in audit.get('errors', []):
-        if not re.match(r'^(sha256|path|sample_id|group_id|source_video_id|identity_id|original_id) overlaps ', error):
+        overlap_error = re.match(r'^(sha256|path|sample_id|group_id|source_video_id|identity_id|original_id) overlaps ', error)
+        label_conflict = re.match(r'^Conflicting labels for (sha256|path): ', error)
+        if label_conflict and not quarantine_label_conflicts:
+            raise ValueError('Completed audit found contradictory content labels. '
+                             'Use --quarantine_label_conflicts to exclude ambiguous components; '
+                             'labels will not be guessed or changed.')
+        if not overlap_error and not label_conflict:
             raise ValueError(f'Unsupported original audit failure requires review: {error}')
     identity = dict(version=VERSION, source_manifest_sha256=manifest_hash, source_audit_sha256=audit_hash,
                     immutable_dataset=True, allow_shortfall=allow_shortfall,

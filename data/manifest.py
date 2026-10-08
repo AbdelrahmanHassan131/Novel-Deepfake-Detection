@@ -203,6 +203,8 @@ def audit_rows(rows, require_groups=True, hash_files=False, hash_cache=None, pro
     for (split, source), labels in sorted(source_labels.items()):
         if len(labels) == 1:
             warnings.append(f'{split}/{source} contains only label {next(iter(labels))}; inspect source shortcuts')
+    if any(r.get('grouping_basis') == 'image_level_unverified' for r in rows):
+        warnings.append('Image-level groups only: video/identity independence is unverified; engineering pilot only.')
     for split in {r['split'] for r in rows}:
         if {int(r['label']) for r in rows if r['split'] == split} != {0, 1}:
             warnings.append(f'{split} has one class; ROC AUC is undefined')
@@ -349,7 +351,8 @@ def generate_source_coverage_report(rows):
         gid = row.get('group_id')
         if known(gid):
             unique_groups.add(gid)
-            if str(gid).startswith('independent:') or str(gid).startswith('path:'):
+            if (str(gid).startswith('independent:') or str(gid).startswith('path:')
+                    or row.get('grouping_basis') == 'image_level_unverified'):
                 path_hash_groups.add(gid)
 
         # Partition overlap detection across splits

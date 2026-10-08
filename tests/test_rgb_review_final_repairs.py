@@ -97,3 +97,15 @@ def test_resume_rejects_changed_finetuning_even_when_shapes_match(tmp_path):
                                    options={'fine_tune_policy': 'head_only'}))
     with pytest.raises(ValueError, match='fine_tune_policy'):
         CheckpointManager(str(tmp_path), wrapper)._validate_protocol(checkpoint)
+
+
+def test_unverified_image_groups_require_explicit_engineering_mode():
+    from training.validator import verify_source_readiness
+    train = [dict(label=i, dataset_source='train_source', grouping_basis='image_level_unverified')
+             for i in (0, 1)]
+    dev = [dict(label=i, dataset_source='dev_source', grouping_basis='image_level_unverified')
+           for i in (0, 1)]
+    with pytest.raises(ValueError, match='video/identity independence'):
+        verify_source_readiness(train, dev, monitor_metric='auc')
+    verify_source_readiness(train, dev, monitor_metric='auc',
+                            allow_aggregate_sources=True, allow_source_overlap=True)

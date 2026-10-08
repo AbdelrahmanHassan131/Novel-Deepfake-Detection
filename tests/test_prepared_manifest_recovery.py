@@ -126,6 +126,30 @@ class PreparedRecovery(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'changed files'):
             recover(self.source, self.audit, self.output, True, True)
 
+    def test_completed_audit_label_errors_require_quarantine(self):
+        ambiguous_hash = hashlib.sha256(b'contradictory').hexdigest()
+        for label in ('0', '1'):
+            self.rows.append(dict(self.rows[2], sample_id='conflict_' + label, label=label,
+                                  path=str(self.root / ('conflict_' + label + '.png')),
+                                  group_id='conflict_' + label, sha256=ambiguous_hash))
+        self.save_evidence()
+        audit = json.loads(self.audit.read_text())
+        audit['errors'] = ['Conflicting labels for sha256: ' + ambiguous_hash]
+        self.audit.write_text(json.dumps(audit))
+        with self.assertRaisesRegex(ValueError, 'quarantine_label_conflicts'):
+            recover(self.source, self.audit, self.output, True, True)
+        report = recover(self.source, self.audit, self.output, True, True, True)
+        self.assertEqual(report['removed_evaluation_samples'], 2)
+        self.assertEqual(report['actual_training_samples'], 2)
+
+    def test_other_audit_failures_still_block_recovery(self):
+        self.save_evidence()
+        audit = json.loads(self.audit.read_text())
+        audit['errors'] = ['Content hash mismatch: train_0']
+        self.audit.write_text(json.dumps(audit))
+        with self.assertRaisesRegex(ValueError, 'Unsupported original audit failure'):
+            recover(self.source, self.audit, self.output, True, True, True)
+
 
 if __name__ == '__main__':
     unittest.main()

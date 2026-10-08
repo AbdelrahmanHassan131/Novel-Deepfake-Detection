@@ -523,11 +523,15 @@ def main():
     parser.add_argument('--quotas_file', help='JSON file containing source/generator quotas')
     parser.add_argument('--independent_images', action='store_true', default=False,
                         help='Mark images as independent groups/videos (only valid for verified independent still photographs)')
+    parser.add_argument('--image_level_groups', action='store_true', default=False,
+                        help='Engineering pilot: use per-file groups while explicitly leaving video/identity independence unverified')
     parser.add_argument('--remap_path_prefix', type=str, nargs='*', default=[],
                         help='Old and new path prefixes separated by = (e.g. C:/old=/new/path)')
     parser.add_argument('--source_roots', type=str,
                         help='JSON string or path to JSON file mapping dataset_source names to root directory paths')
     args = parser.parse_args()
+    if args.image_level_groups and args.independent_images:
+        parser.error('Choose image-level unverified groups OR verified independent still images, not both')
     if args.train_size is not None:
         if args.action not in ('pilot', 'representative_dev'):
             parser.error('--train_size is supported only for the pilot and representative_dev actions')
@@ -588,6 +592,9 @@ def main():
             if args.independent_images:
                 vid_id = 'none'
                 grp_id = f"independent:{identity_digest}"
+            elif args.image_level_groups:
+                vid_id = 'unknown'
+                grp_id = f"path:{identity_digest}"
             else:
                 vid_id = 'unknown'
                 grp_id = 'unknown'
@@ -607,6 +614,8 @@ def main():
                 identity_id='unknown',
                 original_id='unknown',
                 generator='authentic' if lbl == 0 else 'manipulated',
+                grouping_basis=('image_level_unverified' if args.image_level_groups else
+                                'independent_still_assertion' if args.independent_images else 'unknown'),
                 sha256=file_hash,
             ))
             if len(rows) % 50000 == 0:

@@ -61,6 +61,11 @@ def verify_source_readiness(train_rows, dev_rows, eligible_sources=None, monitor
     """
     train_sources = {r.get('dataset_source') or 'unknown' for r in train_rows}
     dev_sources = {r.get('dataset_source') or 'unknown' for r in dev_rows}
+    if (any(r.get('grouping_basis') == 'image_level_unverified' for r in train_rows + dev_rows)
+            and not (allow_aggregate_sources and allow_source_overlap)):
+        raise ValueError('Image-level groups do not verify video/identity independence. '
+                         'Use verified grouping metadata, or explicitly enable both '
+                         '--allow_aggregate_sources and --allow_source_overlap for an engineering pilot.')
 
     aggregate_or_unknown = {'diffgan', 'aggregate', 'diffgan_aggregate', 'unknown', ''}
     has_agg_or_unknown = bool(
