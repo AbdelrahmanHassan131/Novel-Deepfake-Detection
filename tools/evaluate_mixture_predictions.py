@@ -27,8 +27,13 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
+import sys
 import numpy as np
 import sklearn.metrics
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from data.manifest import verify_manifest_gate
 
