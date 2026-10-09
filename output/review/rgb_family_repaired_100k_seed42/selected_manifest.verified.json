@@ -1,0 +1,27 @@
+{
+  "verified": true,
+  "hashes_verified": true,
+  "manifest_sha256": "5fe9241273221b8eedccd4892b9607e221307618ee5990ec6e01fb96cb403da7",
+  "classes": [
+    0,
+    1
+  ],
+  "samples": 115000,
+  "splits": [
+    "train",
+    "dev"
+  ],
+  "preparation_identity": {
+    "parent_manifest_sha256": "6a968a75432490941467201fa7e1e777dd9dbfe9415a26e5bd821b842833d75b",
+    "parent_gate_sha256": "a8369b657c8d92595a9792a54ba05a10b677683410e158c96eeaa247c6aa4020",
+    "seed": 42,
+    "cap": 8,
+    "dev_fraction": 0.15,
+    "train_size": 100000,
+    "dev_size": 15000
+  },
+  "hash_verification_mode": "inherited_unchanged_content_from_recovered_parent_new_family_split",
+  "near_duplicates_verified": false,
+  "source_video_identity_verified": false,
+  "repair_report_sha256": "8272e8c9d9e70cde1e5736ed91bc3eb578dd145bf02c81205525cbb7e25942d6"
+}

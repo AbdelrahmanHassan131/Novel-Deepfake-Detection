@@ -1,0 +1,102 @@
+{
+  "protocol_version": 1,
+  "experiment_id": "controlled_rgb_data_mixture_pilot",
+  "hypothesis": "The R2 training mixture underrepresents numeric fake (3.9% of train) and video-pattern real (6.1% of train) face crops; equal representation of the four observable strata (numeric real, numeric fake, video real, video fake) in a 20K sample may improve balanced accuracy and stratum recall without altering architecture or augmentation.",
+  "hypothesis_nature": "Empirical engineering hypothesis regarding class and stratum distribution; not a certified source-held-out experiment or guaranteed generalization improvement.",
+  "model_specification": {
+    "architecture": "Wang2020_128",
+    "backbone": "resnet50",
+    "backbone_weights": "ImageNet_Default",
+    "pretrained": true,
+    "head_type": "128d",
+    "embed_dim": 128,
+    "dropout": 0.5,
+    "fine_tune_policy": "layer4_and_head",
+    "backbone_lr_mult": 0.1,
+    "bn_policy": "frozen"
+  },
+  "training_parameters": {
+    "seed": 42,
+    "optimizer": "adam",
+    "lr": 0.0001,
+    "beta1": 0.9,
+    "weight_decay": 0.0,
+    "lr_policy": "cosine",
+    "niter": 5,
+    "niter_decay": 0,
+    "early_stopping": false,
+    "fixed_epochs": 5,
+    "batch_size": 32,
+    "grad_accum_steps": 2,
+    "effective_batch_size": 64,
+    "use_amp": true,
+    "amp_dtype": "fp16",
+    "val_precision": "fp32"
+  },
+  "data_preprocessing": {
+    "cropSize": 224,
+    "loadSize": 256,
+    "rz_interp": ["bilinear"],
+    "crop_policy": "scale_and_crop",
+    "no_crop": false,
+    "no_resize": false,
+    "aug_recipe": "rgb_v1",
+    "data_aug": false,
+    "blur_prob": 0.5,
+    "blur_sig": [0.0, 3.0],
+    "jpg_prob": 0.5,
+    "jpg_method": ["cv2"],
+    "jpg_qual": [50, 60, 70, 80, 90, 95]
+  },
+  "experimental_arms": {
+    "arm_a": {
+      "name": "Arm A (R2-like Mixture)",
+      "training_samples": 20000,
+      "quota_breakdown": {
+        "numeric_real": 7714,
+        "video_real": 2286,
+        "numeric_fake": 551,
+        "video_fake": 9449
+      },
+      "class_balance": {
+        "real": 10000,
+        "fake": 10000
+      }
+    },
+    "arm_b": {
+      "name": "Arm B (Equal Mixture)",
+      "training_samples": 20000,
+      "quota_breakdown": {
+        "numeric_real": 5000,
+        "video_real": 5000,
+        "numeric_fake": 5000,
+        "video_fake": 5000
+      },
+      "class_balance": {
+        "real": 10000,
+        "fake": 10000
+      }
+    }
+  },
+  "shared_development_cohort": {
+    "name": "Shared Dev Partition",
+    "total_samples": 2000,
+    "quota_breakdown": {
+      "numeric_real": 500,
+      "video_real": 500,
+      "numeric_fake": 500,
+      "video_fake": 500
+    },
+    "class_balance": {
+      "real": 1000,
+      "fake": 1000
+    },
+    "constraint": "Identical sample IDs and paths shared exactly across Arm A and Arm B evaluation"
+  },
+  "checkpoint_retention_and_selection": {
+    "selection_metric": "Overall Development ROC AUC",
+    "selection_policy": "Monitor ROC AUC across 5 epochs; select best_dev.pth and preserve final_epoch_5.pth",
+    "strata_reporting": "Report per-stratum recalls, balanced accuracy, and minimum stratum recall alongside overall metrics",
+    "threshold_policy": "Primary evaluation at fixed 0.5 threshold; optional secondary threshold selected exclusively on dev partition and bound to checkpoint"
+  }
+}

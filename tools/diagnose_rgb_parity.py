@@ -363,6 +363,7 @@ def run_checkpoint_diagnostic(args):
     mode_check = check_module_eval_and_bn_modes(model)
     if not all(mode_check[k] for k in ('model_eval_mode_correct', 'bn_eval_mode_correct', 'dropout_eval_mode_correct')):
         discrepancies.append('Model/BN/dropout not in evaluation mode')
+    saved_comparisons = []
     if args.saved_predictions:
         from evaluation.generalization import read_predictions
         saved = {r['sample_id']: r for r in read_predictions(args.saved_predictions)}
@@ -377,13 +378,28 @@ def run_checkpoint_diagnostic(args):
                 discrepancies.append(f"Wrong/missing image content identity: {row['sample_id']}")
             if int(pred['label']) != int(row['label']):
                 discrepancies.append(f"Wrong saved label: {row['sample_id']}")
-            if abs(float(pred['probability']) - probability) > args.tolerance:
+            saved_probability = float(pred['probability'])
+            difference = abs(saved_probability - float(probability))
+            saved_comparisons.append(dict(sample_id=row['sample_id'], label=int(row['label']),
+                saved_probability=saved_probability, local_probability=float(probability),
+                absolute_difference=difference,
+                decision_changed_at_05=(saved_probability >= .5) != (float(probability) >= .5)))
+            if difference > args.tolerance:
                 discrepancies.append(f"Saved probability mismatch: {row['sample_id']}")
     passed = (max(tensor_diffs) <= args.tolerance and score_diff <= args.tolerance
               and logit_diff <= args.tolerance and not discrepancies)
     return dict(diagnostic_type='production_rgb_parity', checkpoint_sha256=checkpoint_hash,
                 samples_inspected=len(rows), max_tensor_diff=max(tensor_diffs),
                 max_probability_diff=score_diff, max_logit_diff=logit_diff, mode_check=mode_check,
+                saved_prediction_comparison=dict(
+                    samples_compared=len(saved_comparisons),
+                    max_probability_diff=max((r['absolute_difference'] for r in saved_comparisons), default=0.0),
+                    decisions_changed_at_05=sum(r['decision_changed_at_05'] for r in saved_comparisons),
+                    details=sorted(saved_comparisons, key=lambda r: r['absolute_difference'], reverse=True)),
+                runtime=dict(torch_version=str(torch.__version__), device=args.device,
+                    cuda_version=torch.version.cuda, cudnn_version=torch.backends.cudnn.version(),
+                    cudnn_allow_tf32=torch.backends.cudnn.allow_tf32,
+                    matmul_allow_tf32=torch.backends.cuda.matmul.allow_tf32),
                 general_discrepancies=discrepancies, status='passed' if passed else 'discrepancy_detected')
 
 
@@ -415,10 +431,14 @@ def main():
         print(f"Samples Tested   : {report['samples_inspected']}")
         print(f"Max Tensor Diff  : {report['max_tensor_diff']:.2e}")
         print(f"Max Score Diff   : {report['max_probability_diff']:.2e}")
+        saved = report['saved_prediction_comparison']
+        if saved['samples_compared']:
+            print(f"Saved Colab Diff : {saved['max_probability_diff']:.6g}")
+            print(f"Decisions Changed: {saved['decisions_changed_at_05']}/{saved['samples_compared']} at 0.5")
     print(f"Report written to: {out_file}")
 
     if report['status'] != 'passed':
-        print("\nWARNING: Discrepancies detected between validation and evaluation paths!", file=sys.stderr)
+        print("\nWARNING: A diagnostic check failed; inspect the report for local-path or saved-prediction differences.", file=sys.stderr)
         sys.exit(2)
     else:
         print("\nSUCCESS: Requested bounded parity checks passed.")

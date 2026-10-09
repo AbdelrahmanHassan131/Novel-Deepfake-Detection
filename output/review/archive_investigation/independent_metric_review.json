@@ -1,0 +1,38 @@
+{
+  "overall": {
+    "samples": 14835,
+    "real": 7448,
+    "fake": 7387,
+    "tn": 7176,
+    "tp": 7246,
+    "fp": 272,
+    "fn": 141,
+    "accuracy": 0.9721604314122009,
+    "balanced_accuracy": 0.9721962712967027,
+    "roc_auc": 0.9961728423245354
+  },
+  "numeric": {
+    "samples": 6155,
+    "real": 5763,
+    "fake": 392,
+    "tn": 5758,
+    "tp": 392,
+    "fp": 5,
+    "fn": 0,
+    "accuracy": 0.9991876523151909,
+    "balanced_accuracy": 0.9995661981606803,
+    "roc_auc": 0.9999969014154334
+  },
+  "video_pattern": {
+    "samples": 8680,
+    "real": 1685,
+    "fake": 6995,
+    "tn": 1418,
+    "tp": 6854,
+    "fp": 267,
+    "fn": 141,
+    "accuracy": 0.9529953917050691,
+    "balanced_accuracy": 0.9106928857619792,
+    "roc_auc": 0.9828972368987599
+  }
+}

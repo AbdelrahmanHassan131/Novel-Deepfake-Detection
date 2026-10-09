@@ -1,0 +1,106 @@
+{
+  "checkpoint_sha256": "e598e1b32871f460756118ba6d4a5f1ad3679a3b9727dff1afa04d4d0de96a28",
+  "samples": 60000,
+  "score_diagnostics": {
+    "probability": {
+      "roc_auc": 0.7241918444444444,
+      "hindsight_max_balanced_accuracy": 0.67125,
+      "unique_scores": 5683
+    },
+    "logit": {
+      "roc_auc": 0.7338968616666667,
+      "hindsight_max_balanced_accuracy": 0.67195,
+      "unique_scores": 59741
+    }
+  },
+  "hindsight_note": "Not an evaluation score or threshold recommendation. No threshold exported; labels used only to bound what score thresholding could achieve.",
+  "filename_family_overlap": 6420,
+  "affected_rows": [
+    {
+      "split": "dev",
+      "label": 0,
+      "count": 1682
+    },
+    {
+      "split": "dev",
+      "label": 1,
+      "count": 6392
+    },
+    {
+      "split": "train",
+      "label": 0,
+      "count": 7310
+    },
+    {
+      "split": "train",
+      "label": 1,
+      "count": 14223
+    }
+  ],
+  "extension_counts": [
+    {
+      "split": "dev",
+      "label": 0,
+      "extension": "jpg",
+      "count": 5763
+    },
+    {
+      "split": "dev",
+      "label": 0,
+      "extension": "png",
+      "count": 1685
+    },
+    {
+      "split": "dev",
+      "label": 1,
+      "extension": "png",
+      "count": 7387
+    },
+    {
+      "split": "train",
+      "label": 0,
+      "extension": "jpg",
+      "count": 38570
+    },
+    {
+      "split": "train",
+      "label": 0,
+      "extension": "png",
+      "count": 11430
+    },
+    {
+      "split": "train",
+      "label": 1,
+      "extension": "png",
+      "count": 50000
+    }
+  ],
+  "development_by_extension": [
+    {
+      "label": 0,
+      "extension": "jpg",
+      "samples": 5763,
+      "recall_at_05": 0.9991323963213604,
+      "median_probability": 8.453789632767439e-06
+    },
+    {
+      "label": 0,
+      "extension": "png",
+      "samples": 1685,
+      "recall_at_05": 0.8415430267062315,
+      "median_probability": 0.048112399876117706
+    },
+    {
+      "label": 1,
+      "extension": "png",
+      "samples": 7387,
+      "recall_at_05": 0.9809124136997428,
+      "median_probability": 0.9953203797340393
+    }
+  ],
+  "limitations": [
+    "Extensions are not verified file encodings.",
+    "Filename families indicate a conservative partition dependency, not independently verified source identities.",
+    "No image/profile/model diagnostics were run; causes of external failure remain partly unverified."
+  ]
+}

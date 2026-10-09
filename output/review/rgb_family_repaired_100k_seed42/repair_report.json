@@ -1,0 +1,78 @@
+{
+  "splits": {
+    "train": {
+      "target": 100000,
+      "real": 50000,
+      "fake": 50000,
+      "actual": 100000,
+      "shortfall": 0
+    },
+    "dev": {
+      "target": 15000,
+      "real": 7500,
+      "fake": 7500,
+      "actual": 15000,
+      "shortfall": 0
+    }
+  },
+  "parent_samples": 794243,
+  "output_samples": 115000,
+  "parent_filename_families_crossing_splits": 6926,
+  "repaired_filename_families_crossing_splits": 0,
+  "component_count": 213127,
+  "maximum_rows_per_component_per_class": 8,
+  "extension_counts": [
+    {
+      "split": "dev",
+      "label": 0,
+      "extension": "jpg",
+      "count": 6950
+    },
+    {
+      "split": "dev",
+      "label": 0,
+      "extension": "png",
+      "count": 550
+    },
+    {
+      "split": "dev",
+      "label": 1,
+      "extension": "png",
+      "count": 7500
+    },
+    {
+      "split": "train",
+      "label": 0,
+      "extension": "jpg",
+      "count": 46186
+    },
+    {
+      "split": "train",
+      "label": 0,
+      "extension": "png",
+      "count": 3814
+    },
+    {
+      "split": "train",
+      "label": 1,
+      "extension": "png",
+      "count": 50000
+    }
+  ],
+  "limitations": [
+    "Filename families are conservative dependencies, not verified source/video/identity metadata.",
+    "Unknown relationships and near-duplicates can remain.",
+    "Format/semantic/source confounding is NOT solved by this split repair.",
+    "New development membership; do not compare its accuracy directly with the old dev cohort.",
+    "Previously inspected external data remains external development, not a final test."
+  ],
+  "preparation_identity": {
+    "parent_manifest_sha256": "6a968a75432490941467201fa7e1e777dd9dbfe9415a26e5bd821b842833d75b",
+    "parent_gate_sha256": "a8369b657c8d92595a9792a54ba05a10b677683410e158c96eeaa247c6aa4020",
+    "seed": 42,
+    "cap": 8,
+    "dev_fraction": 0.15,
+    "train_size": 100000,
+    "dev_size": 15000
+  }
+}

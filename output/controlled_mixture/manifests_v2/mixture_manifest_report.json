@@ -1,0 +1,106 @@
+{
+  "capacities_post_grouping": {
+    "dev": {
+      "numeric_real": 24347,
+      "video_real": 1830,
+      "numeric_fake": 4623,
+      "video_fake": 21706
+    },
+    "train": {
+      "numeric_real": 137645,
+      "video_real": 11270,
+      "numeric_fake": 26488,
+      "video_fake": 123894
+    }
+  },
+  "quotas_requested": {
+    "arm_a_train": {
+      "numeric_real": 7714,
+      "video_real": 2286,
+      "numeric_fake": 551,
+      "video_fake": 9449
+    },
+    "arm_b_train": {
+      "numeric_real": 5000,
+      "video_real": 5000,
+      "numeric_fake": 5000,
+      "video_fake": 5000
+    },
+    "shared_dev": {
+      "numeric_real": 500,
+      "video_real": 500,
+      "numeric_fake": 500,
+      "video_fake": 500
+    }
+  },
+  "quotas_achieved": {
+    "arm_a": {
+      "train": {
+        "numeric_real": 7714,
+        "video_real": 2286,
+        "numeric_fake": 551,
+        "video_fake": 9449
+      },
+      "dev": {
+        "numeric_real": 500,
+        "video_real": 500,
+        "numeric_fake": 500,
+        "video_fake": 500
+      },
+      "total_samples": 22000
+    },
+    "arm_b": {
+      "train": {
+        "numeric_real": 5000,
+        "video_real": 5000,
+        "numeric_fake": 5000,
+        "video_fake": 5000
+      },
+      "dev": {
+        "numeric_real": 500,
+        "video_real": 500,
+        "numeric_fake": 500,
+        "video_fake": 500
+      },
+      "total_samples": 22000
+    },
+    "shared_dev": {
+      "samples": 2000,
+      "strata_counts": {
+        "numeric_real": 500,
+        "video_real": 500,
+        "numeric_fake": 500,
+        "video_fake": 500
+      }
+    }
+  },
+  "group_counts": {
+    "total_connected_components": 213127,
+    "maximum_rows_per_component_per_class": 8,
+    "dev_fraction": 0.15,
+    "seed": 42
+  },
+  "cross_partition_checks": {
+    "arm_a_train_dev_overlap_tokens": 0,
+    "arm_b_train_dev_overlap_tokens": 0,
+    "shared_dev_identity_verified": true
+  },
+  "parent_evidence": {
+    "parent_manifest_sha256": "6a968a75432490941467201fa7e1e777dd9dbfe9415a26e5bd821b842833d75b",
+    "parent_gate_sha256": "a8369b657c8d92595a9792a54ba05a10b677683410e158c96eeaa247c6aa4020",
+    "recovery_report_sha256": "b3e524365266d22936026f0859f12e77a712d8019065ee410eaabc255bcbf856",
+    "hash_verification_mode": "inherited_completed_audit_on_explicitly_unchanged_dataset",
+    "unchanged_image_assumption": true,
+    "limitations": [
+      "Hash inheritance conditioned strictly on unchanged image bytes and paths.",
+      "Numeric filename patterns do not verify independent sources or identities (image_level_unverified).",
+      "Unknown near-duplicates and semantic confounders may remain."
+    ]
+  },
+  "parent_manifest_sha256": "6a968a75432490941467201fa7e1e777dd9dbfe9415a26e5bd821b842833d75b",
+  "manifest_digests": {
+    "arm_a": "21922d71b8dcc77d3d1fa896e8d2ba69a69c6fffe9fd9392fbd524f15dfc8bea",
+    "arm_b": "1b316052b2fcae5d713b344dbd345afad77b42e45869aa31c21964a23f94765d",
+    "shared_dev": "1e16a9dbca55f39a7ac42ca51d3de80b8540da7158e57554ee08478bcff6f528"
+  }
+}

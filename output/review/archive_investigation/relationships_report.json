@@ -1,0 +1,84 @@
+{
+  "generated_at_utc": "2026-10-09T18:40:12.905857+00:00",
+  "elapsed_seconds": 17.85,
+  "archive_partitions_overlap": {
+    "description": "Overlap between the original archived 'train' and 'val' partitions inside Preapred Dataset.zip.",
+    "archive_train_total_files": 805421,
+    "archive_val_total_files": 211434,
+    "archive_train_vid_files": 612232,
+    "archive_val_vid_files": 152932,
+    "archive_train_unique_families": 21100,
+    "archive_val_unique_families": 5274,
+    "crossing_families_count": 0,
+    "crossing_families_train_files_affected": 0,
+    "crossing_families_val_files_affected": 0,
+    "crossing_families_fraction_of_val_families": 0.0,
+    "representative_crossing_examples": [],
+    "numeric_naming": {
+      "archive_train_numeric_files": 193189,
+      "archive_val_numeric_files": 58502,
+      "limitation_note": "Numbered files (<digits>.png) lack video tokens; numeric indices cannot be safely joined across splits without provenance metadata."
+    }
+  },
+  "downstream_partitions_comparison": {
+    "explanation": "Critical distinction: The original archive has train (805k) and val (211k). Downstream preparation took 794k samples from archive train, carving out an internal dev split. The old 100K manifest and repaired cohort operated entirely within this downstream pool, NOT against the archive's val partition.",
+    "clean_parent_pool": {
+      "total_rows": 794243,
+      "split_distribution": {
+        "train": 779408,
+        "dev": 14835
+      },
+      "unique_families_in_parent_train": 21066,
+      "unique_families_in_parent_dev": 6926,
+      "crossing_families_in_parent": 6926
+    },
+    "old_100k_manifest": {
+      "source_path": "prepared_data/rgb_sizes_seed42/sizes/100000/selected_manifest.csv",
+      "counts": {
+        "train": 100000,
+        "dev": 14835
+      },
+      "crossing_filename_families": 6420
+    },
+    "repaired_100k_cohort": {
+      "source_path": "output\\review\\rgb_family_repaired_100k_seed42\\selected_manifest.csv",
+      "counts": {
+        "dev": 15000,
+        "train": 100000
+      },
+      "crossing_filename_families": 0
+    }
+  },
+  "saved_sha256_duplicate_analysis": {
+    "total_rows_with_saved_sha256": 794243,
+    "unique_sha256_hashes": 789132,
+    "exact_duplicate_hash_groups": 1338,
+    "total_files_in_exact_duplicate_groups": 6449,
+    "label_conflict_hashes_count": 0,
+    "archive_coverage": {
+      "archive_train_files_covered": 794243,
+      "archive_train_coverage_fraction": 0.9861,
+      "archive_val_files_covered": 0,
+      "archive_val_coverage_fraction": 0.0,
+      "limitation_note": "Archive val was never hashed in clean_parent; SHA256 analysis is available only for images selected during train pool preparation."
+    }
+  },
+  "relationship_taxonomy_and_protection": {
+    "categories": {
+      "identical_byte_duplicates": "Identical SHA256 hashes. Clean parent quarantined label conflicts; exact duplicates within same class exist.",
+      "conservative_filename_families": "Shared vid_<64hex> prefix. Tracks frames from the same video/sequence.",
+      "verified_original_manipulated_relationships": "Explicit link between real source and fake derivative. Currently UNKNOWN / unrecorded in archive metadata.",
+      "unknown_near_duplicates": "Frames from the same sequence with different video IDs, re-encoded frames, or different crops/resolutions without common tokens."
+    },
+    "what_family_repaired_cohort_protects_against": [
+      "Eliminates recognized vid_<64hex> filename family leakage between train and dev within the 100K training pool (0 crossing families vs 6,926 in parent).",
+      "Guarantees that video frames sharing the same hex token do not appear in both train and dev."
+    ],
+    "what_remains_unresolved": [
+      "Numeric files (193k in train, 58k in val) lack video tokens; frames from the same video or person named with digits could cross partitions undetected.",
+      "The archive's own original val partition was completely omitted during downstream Colab preparation (0 val files included in clean_parent).",
+      "Severe format and class correlation persists: real images are predominantly JPEG, fake images predominantly PNG.",
+      "External diagnostic dataset (F:\\val to be deleted 2) has zero overlap with Preapred Dataset and represents an unseen distribution with unknown generator/domain shifts."
+    ]
+  }
+}

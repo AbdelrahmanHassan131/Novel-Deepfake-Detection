@@ -1,0 +1,1947 @@
+{
+  "checkpoint_info": {
+    "checkpoint_path": "F:\\Discovery AI\\Second Expirement 100K RGB model\\best.pth",
+    "checkpoint_sha256": "e598e1b32871f460756118ba6d4a5f1ad3679a3b9727dff1afa04d4d0de96a28",
+    "architecture": "Wang2020_128",
+    "score_sign": 1.0,
+    "metadata": {
+      "arch": "Wang2020_128",
+      "epoch": 5,
+      "best_metric": 0.9961728423245355,
+      "global_step": 7815,
+      "model_name": "Wang2020_128",
+      "checkpoint_path": "F:\\Discovery AI\\Second Expirement 100K RGB model\\best.pth",
+      "checkpoint_size_mb": 207.1795301437378,
+      "checkpoint_sha256": "e598e1b32871f460756118ba6d4a5f1ad3679a3b9727dff1afa04d4d0de96a28",
+      "protocol": {
+        "format_version": 2,
+        "label_mapping": {
+          "real": 0,
+          "fake": 1
+        },
+        "options": {
+          "dataroot": "/content/dataset/Preapred Dataset/train",
+          "val_root": null,
+          "manifest": "/content/rgb_session_lt7k3ki6/prepared_data/sizes/100000/selected_manifest.csv",
+          "manifest_split": "train",
+          "val_manifest": "/content/rgb_session_lt7k3ki6/prepared_data/sizes/100000/selected_manifest.csv",
+          "val_manifest_split": "dev",
+          "audit_hashes": false,
+          "allow_folder_training": false,
+          "noise_prob": 0.0,
+          "noise_std": [
+            0.0,
+            3.0
+          ],
+          "downscale_prob": 0.0,
+          "downscale_range": [
+            0.5,
+            1.0
+          ],
+          "cropSize": 224,
+          "loadSize": 256,
+          "batch_size": 32,
+          "serial_batches": false,
+          "no_flip": false,
+          "no_crop": false,
+          "no_resize": false,
+          "class_bal": false,
+          "mode": "binary",
+          "classes": [
+            "fake",
+            "real"
+          ],
+          "resize_or_crop": "scale_and_crop",
+          "compute_wavelets": false,
+          "train_split": "train",
+          "val_split": "val",
+          "val_batch_size": 32,
+          "val_num_workers": null,
+          "crop_policy": "scale_and_crop",
+          "blur_prob": 0.5,
+          "blur_sig": [
+            0.0,
+            3.0
+          ],
+          "jpg_prob": 0.5,
+          "jpg_method": [
+            "cv2"
+          ],
+          "jpg_qual": [
+            50,
+            60,
+            70,
+            80,
+            90,
+            95
+          ],
+          "rz_interp": [
+            "bilinear"
+          ],
+          "data_aug": false,
+          "aug_recipe": "rgb_v1",
+          "wavelet_backend": "cpu",
+          "wavelet_type": "haar",
+          "wavelet_level": 3,
+          "wavelet_mode": "reflect",
+          "use_log_packets": true,
+          "wavelet_log_mode": "signed_log1p",
+          "precomputed_dir": null,
+          "arch": "Wang2020_128",
+          "pretrained": true,
+          "num_classes": 1,
+          "init_type": "normal",
+          "init_gain": 0.02,
+          "embed_dim": 128,
+          "num_heads": 4,
+          "dropout": 0.1,
+          "fusion_type": "token_attention",
+          "freeze_base_models": true,
+          "rgb_model_path": null,
+          "wavelet_model_path": null,
+          "xception_model_path": null,
+          "convnext_model_path": null,
+          "backbone_weights": null,
+          "rgb_head_type": "128d",
+          "rgb_dropout": 0.5,
+          "fine_tune_policy": "layer4_and_head",
+          "backbone_lr_mult": 0.1,
+          "bn_policy": "frozen",
+          "decay_bias_norm": false,
+          "niter": 5,
+          "niter_decay": 0,
+          "lr": 0.0001,
+          "optim": "adam",
+          "beta1": 0.9,
+          "weight_decay": 0.0,
+          "momentum": 0.0,
+          "lr_policy": "cosine",
+          "lr_decay_iters": 10,
+          "lr_gamma": 0.1,
+          "lr_patience": 5,
+          "earlystop_epoch": 5,
+          "early_stopping": true,
+          "early_stopping_patience": 2,
+          "early_stopping_min_delta": 0.0,
+          "early_stopping_min_epochs": 2,
+          "eligible_sources": null,
+          "allow_aggregate_sources": true,
+          "allow_source_overlap": true,
+          "use_amp": true,
+          "amp_dtype": "fp16",
+          "val_precision": "fp32",
+          "isTrain": true,
+          "continue_train": false,
+          "new_optim": false,
+          "epoch_count": 1,
+          "last_epoch": -1,
+          "grad_accum_steps": 2,
+          "monitor_metric": "auc",
+          "resume_checkpoint": null,
+          "additional_epochs": null,
+          "dist_backend": null,
+          "dist_url": "env://",
+          "find_unused_parameters": false,
+          "name": "",
+          "run_id": "seed42_fe805782",
+          "checkpoints_dir": "/content/rgb_pilots/rgb_r2_100000_seed42_fe805782/checkpoints",
+          "epoch": "latest",
+          "suffix": "",
+          "log_freq": 50,
+          "loss_freq": 400,
+          "val_epoch_freq": 1,
+          "save_epoch_freq": 0,
+          "save_latest_freq": 2000,
+          "gpu_ids": [
+            0
+          ],
+          "num_threads": 4,
+          "num_workers": 4,
+          "seed": 42,
+          "deterministic": false,
+          "pin_memory": true,
+          "prefetch_factor": 2,
+          "persistent_workers": true,
+          "channels_last": false
+        },
+        "manifests": {
+          "manifest": {
+            "path": "/content/rgb_session_lt7k3ki6/prepared_data/sizes/100000/selected_manifest.csv",
+            "sha256": "b23acd537028bb6fc817eb8e5f08226a9471ff88798e1adaec9da29db12ec0d9"
+          },
+          "val_manifest": {
+            "path": "/content/rgb_session_lt7k3ki6/prepared_data/sizes/100000/selected_manifest.csv",
+            "sha256": "b23acd537028bb6fc817eb8e5f08226a9471ff88798e1adaec9da29db12ec0d9"
+          }
+        },
+        "experts": {},
+        "head_class": "ResNet",
+        "head_params": 23770433,
+        "head_trainable_params": 15227137
+      }
+    }
+  },
+  "manifest_path": "output/review/archive_investigation/bounded_format_diagnostic_manifest.csv",
+  "total_samples": 128,
+  "effective_evaluation_options": {
+    "cropSize": 224,
+    "loadSize": 256,
+    "rz_interp": [
+      "bilinear"
+    ],
+    "no_crop": false,
+    "no_resize": false,
+    "score_sign": 1.0
+  },
+  "runtime_environment": {
+    "python_version": "3.11.3",
+    "pytorch_version": "2.5.1+cu121",
+    "pillow_version": "12.2.0",
+    "platform": "Windows-10-10.0.26220-SP0",
+    "device": "cuda:0",
+    "batch_size": 16,
+    "workers": 0,
+    "batch_behavior": "batched forward evaluation in chunks of 16"
+  },
+  "interventions_spec": {
+    "pillow_version": "12.2.0",
+    "jpeg_subsampling": 0,
+    "qualities": [
+      95,
+      75
+    ],
+    "metadata_policy": "in-memory BytesIO stripped of Exif/JFIF app markers",
+    "intervention_point": "in-memory decoded PIL RGB prior to production transforms"
+  },
+  "png_rgb_equality_control": {
+    "status": "PASS: exact byte-for-byte decoded pixel and tensor equality across all samples",
+    "max_pixel_abs_diff": 0.0,
+    "max_tensor_linf_diff": 0.0
+  },
+  "sample_breakdown": {
+    "total_samples": 128,
+    "cohort_counts": {
+      "external_development": 64,
+      "training_diagnostic": 64
+    },
+    "class_counts": {
+      "real": 64,
+      "fake": 64
+    },
+    "subcollection_counts": {
+      "external_fake": 32,
+      "external_real": 32,
+      "numeric_fake": 16,
+      "numeric_real": 16,
+      "video_fake": 16,
+      "video_real": 16
+    }
+  },
+  "conditions_summary": {
+    "original": {
+      "overall": {
+        "samples": 128,
+        "class_denominators": {
+          "real": 64,
+          "fake": 64
+        },
+        "confusion_at_05": {
+          "tp": 64,
+          "tn": 31,
+          "fp": 33,
+          "fn": 0,
+          "total_errors": 33
+        },
+        "rates": {
+          "real_recall": 0.484375,
+          "fake_recall": 1.0,
+          "balanced_accuracy": 0.7421875
+        },
+        "decision_flips_vs_original": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "score_shifts_vs_original": {
+          "signed_logit_shift_mean": 0.0,
+          "signed_logit_shift_std": 0.0,
+          "abs_logit_shift_mean": 0.0,
+          "abs_logit_shift_max": 0.0,
+          "signed_prob_shift_mean": 0.0,
+          "signed_prob_shift_std": 0.0,
+          "abs_prob_shift_mean": 0.0,
+          "abs_prob_shift_max": 0.0
+        },
+        "tensor_distortion_vs_original": {
+          "mean_l1_diff": 0.0,
+          "max_linf_diff": 0.0,
+          "max_pixel_diff": 0.0
+        }
+      },
+      "by_cohort": {
+        "external_development": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 1,
+            "fp": 31,
+            "fn": 0,
+            "total_errors": 31
+          },
+          "rates": {
+            "real_recall": 0.03125,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.515625
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "training_diagnostic": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 30,
+            "fp": 2,
+            "fn": 0,
+            "total_errors": 2
+          },
+          "rates": {
+            "real_recall": 0.9375,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.96875
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        }
+      },
+      "by_class": {
+        "real": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 64,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 31,
+            "fp": 33,
+            "fn": 0,
+            "total_errors": 33
+          },
+          "rates": {
+            "real_recall": 0.484375,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "fake": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 0,
+            "fake": 64
+          },
+          "confusion_at_05": {
+            "tp": 64,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        }
+      },
+      "by_subcollection": {
+        "external_fake": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 0,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "external_real": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 32,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 1,
+            "fp": 31,
+            "fn": 0,
+            "total_errors": 31
+          },
+          "rates": {
+            "real_recall": 0.03125,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "numeric_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "numeric_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 16,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": 1.0,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "video_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "video_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 14,
+            "fp": 2,
+            "fn": 0,
+            "total_errors": 2
+          },
+          "rates": {
+            "real_recall": 0.875,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        }
+      }
+    },
+    "png_control": {
+      "overall": {
+        "samples": 128,
+        "class_denominators": {
+          "real": 64,
+          "fake": 64
+        },
+        "confusion_at_05": {
+          "tp": 64,
+          "tn": 31,
+          "fp": 33,
+          "fn": 0,
+          "total_errors": 33
+        },
+        "rates": {
+          "real_recall": 0.484375,
+          "fake_recall": 1.0,
+          "balanced_accuracy": 0.7421875
+        },
+        "decision_flips_vs_original": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "score_shifts_vs_original": {
+          "signed_logit_shift_mean": 0.0,
+          "signed_logit_shift_std": 0.0,
+          "abs_logit_shift_mean": 0.0,
+          "abs_logit_shift_max": 0.0,
+          "signed_prob_shift_mean": 0.0,
+          "signed_prob_shift_std": 0.0,
+          "abs_prob_shift_mean": 0.0,
+          "abs_prob_shift_max": 0.0
+        },
+        "tensor_distortion_vs_original": {
+          "mean_l1_diff": 0.0,
+          "max_linf_diff": 0.0,
+          "max_pixel_diff": 0.0
+        }
+      },
+      "by_cohort": {
+        "external_development": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 1,
+            "fp": 31,
+            "fn": 0,
+            "total_errors": 31
+          },
+          "rates": {
+            "real_recall": 0.03125,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.515625
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "training_diagnostic": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 30,
+            "fp": 2,
+            "fn": 0,
+            "total_errors": 2
+          },
+          "rates": {
+            "real_recall": 0.9375,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.96875
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        }
+      },
+      "by_class": {
+        "real": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 64,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 31,
+            "fp": 33,
+            "fn": 0,
+            "total_errors": 33
+          },
+          "rates": {
+            "real_recall": 0.484375,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "fake": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 0,
+            "fake": 64
+          },
+          "confusion_at_05": {
+            "tp": 64,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        }
+      },
+      "by_subcollection": {
+        "external_fake": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 0,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "external_real": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 32,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 1,
+            "fp": 31,
+            "fn": 0,
+            "total_errors": 31
+          },
+          "rates": {
+            "real_recall": 0.03125,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "numeric_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "numeric_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 16,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": 1.0,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "video_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        },
+        "video_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 14,
+            "fp": 2,
+            "fn": 0,
+            "total_errors": 2
+          },
+          "rates": {
+            "real_recall": 0.875,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0,
+            "signed_logit_shift_std": 0.0,
+            "abs_logit_shift_mean": 0.0,
+            "abs_logit_shift_max": 0.0,
+            "signed_prob_shift_mean": 0.0,
+            "signed_prob_shift_std": 0.0,
+            "abs_prob_shift_mean": 0.0,
+            "abs_prob_shift_max": 0.0
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0,
+            "max_linf_diff": 0.0,
+            "max_pixel_diff": 0.0
+          }
+        }
+      }
+    },
+    "jpeg95": {
+      "overall": {
+        "samples": 128,
+        "class_denominators": {
+          "real": 64,
+          "fake": 64
+        },
+        "confusion_at_05": {
+          "tp": 64,
+          "tn": 31,
+          "fp": 33,
+          "fn": 0,
+          "total_errors": 33
+        },
+        "rates": {
+          "real_recall": 0.484375,
+          "fake_recall": 1.0,
+          "balanced_accuracy": 0.7421875
+        },
+        "decision_flips_vs_original": {
+          "count": 0,
+          "rate": 0.0
+        },
+        "score_shifts_vs_original": {
+          "signed_logit_shift_mean": -0.19518586073536426,
+          "signed_logit_shift_std": 0.523261978131735,
+          "abs_logit_shift_mean": 0.422320454264991,
+          "abs_logit_shift_max": 1.9676019698381424,
+          "signed_prob_shift_mean": 0.005397865649961989,
+          "signed_prob_shift_std": 0.0402183733192512,
+          "abs_prob_shift_mean": 0.00963620044463305,
+          "abs_prob_shift_max": 0.3620520755648613
+        },
+        "tensor_distortion_vs_original": {
+          "mean_l1_diff": 0.017608222187845968,
+          "max_linf_diff": 0.41830068826675415,
+          "max_pixel_diff": 24.0
+        }
+      },
+      "by_cohort": {
+        "external_development": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 1,
+            "fp": 31,
+            "fn": 0,
+            "total_errors": 31
+          },
+          "rates": {
+            "real_recall": 0.03125,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.515625
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -0.39064846560359,
+            "signed_logit_shift_std": 0.4577138518746297,
+            "abs_logit_shift_mean": 0.46867090091109276,
+            "abs_logit_shift_max": 1.896470069885254,
+            "signed_prob_shift_mean": -0.0014550777559634298,
+            "signed_prob_shift_std": 0.01273285476480865,
+            "abs_prob_shift_mean": 0.0017538311367388815,
+            "abs_prob_shift_max": 0.10221307538449764
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.022828794419183396,
+            "max_linf_diff": 0.41830068826675415,
+            "max_pixel_diff": 24.0
+          }
+        },
+        "training_diagnostic": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 30,
+            "fp": 2,
+            "fn": 0,
+            "total_errors": 2
+          },
+          "rates": {
+            "real_recall": 0.9375,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.96875
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.000276744132861495,
+            "signed_logit_shift_std": 0.5115593470116814,
+            "abs_logit_shift_mean": 0.3759700076188892,
+            "abs_logit_shift_max": 1.9676019698381424,
+            "signed_prob_shift_mean": 0.012250809055887407,
+            "signed_prob_shift_std": 0.05458006822808093,
+            "abs_prob_shift_mean": 0.01751856975252722,
+            "abs_prob_shift_max": 0.3620520755648613
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.01238764995650854,
+            "max_linf_diff": 0.24400877952575684,
+            "max_pixel_diff": 14.0
+          }
+        }
+      },
+      "by_class": {
+        "real": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 64,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 31,
+            "fp": 33,
+            "fn": 0,
+            "total_errors": 33
+          },
+          "rates": {
+            "real_recall": 0.484375,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -0.04400492669083178,
+            "signed_logit_shift_std": 0.5155584414117644,
+            "abs_logit_shift_mean": 0.3666494262870401,
+            "abs_logit_shift_max": 1.9676019698381424,
+            "signed_prob_shift_mean": 0.0098491462109557,
+            "signed_prob_shift_std": 0.05548816629654703,
+            "abs_prob_shift_mean": 0.016821554753649798,
+            "abs_prob_shift_max": 0.3620520755648613
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.015709538725786842,
+            "max_linf_diff": 0.27886709570884705,
+            "max_pixel_diff": 16.0
+          }
+        },
+        "fake": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 0,
+            "fake": 64
+          },
+          "confusion_at_05": {
+            "tp": 64,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -0.34636679477989674,
+            "signed_logit_shift_std": 0.4858953996166152,
+            "abs_logit_shift_mean": 0.47799148224294186,
+            "abs_logit_shift_max": 1.896470069885254,
+            "signed_prob_shift_mean": 0.000946585088968277,
+            "signed_prob_shift_std": 0.01079215959271803,
+            "abs_prob_shift_mean": 0.0024508461356163025,
+            "abs_prob_shift_max": 0.0820389986038208
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.019506905649905093,
+            "max_linf_diff": 0.41830068826675415,
+            "max_pixel_diff": 24.0
+          }
+        }
+      },
+      "by_subcollection": {
+        "external_fake": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 0,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -0.5165558159351349,
+            "signed_logit_shift_std": 0.43548933201623785,
+            "abs_logit_shift_mean": 0.5604312717914581,
+            "abs_logit_shift_max": 1.896470069885254,
+            "signed_prob_shift_mean": 5.2303075790405273e-05,
+            "signed_prob_shift_std": 0.00029617483664026495,
+            "abs_prob_shift_mean": 5.415827035903931e-05,
+            "abs_prob_shift_max": 0.0017012357711791992
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.02395002474077046,
+            "max_linf_diff": 0.41830068826675415,
+            "max_pixel_diff": 24.0
+          }
+        },
+        "external_real": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 32,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 1,
+            "fp": 31,
+            "fn": 0,
+            "total_errors": 31
+          },
+          "rates": {
+            "real_recall": 0.03125,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -0.26474111527204514,
+            "signed_logit_shift_std": 0.44457582071099094,
+            "abs_logit_shift_mean": 0.3769105300307274,
+            "abs_logit_shift_max": 1.8044769763946533,
+            "signed_prob_shift_mean": -0.002962458587717265,
+            "signed_prob_shift_std": 0.017877893260831498,
+            "abs_prob_shift_mean": 0.0034535040031187236,
+            "abs_prob_shift_max": 0.10221307538449764
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.021707564097596332,
+            "max_linf_diff": 0.27886709570884705,
+            "max_pixel_diff": 16.0
+          }
+        },
+        "numeric_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -0.43407225608825684,
+            "signed_logit_shift_std": 0.3739671405647739,
+            "abs_logit_shift_mean": 0.43407225608825684,
+            "abs_logit_shift_max": 1.381734848022461,
+            "signed_prob_shift_mean": -3.2685697078704834e-05,
+            "signed_prob_shift_std": 8.549714658054543e-05,
+            "abs_prob_shift_mean": 3.2685697078704834e-05,
+            "abs_prob_shift_max": 0.0003399848937988281
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.018438634055200964,
+            "max_linf_diff": 0.24400877952575684,
+            "max_pixel_diff": 14.0
+          }
+        },
+        "numeric_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 16,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": 1.0,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.0734730064868927,
+            "signed_logit_shift_std": 0.2717968055633877,
+            "abs_logit_shift_mean": 0.23342213034629822,
+            "abs_logit_shift_max": 0.6132535934448242,
+            "signed_prob_shift_mean": 0.004610532860576222,
+            "signed_prob_shift_std": 0.01706910585317108,
+            "abs_prob_shift_mean": 0.004940462505723553,
+            "abs_prob_shift_max": 0.0704241544008255
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.0072651145164854825,
+            "max_linf_diff": 0.15686273574829102,
+            "max_pixel_diff": 12.0
+          }
+        },
+        "video_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.08171670883893967,
+            "signed_logit_shift_std": 0.4199377082316171,
+            "abs_logit_shift_mean": 0.35703112930059433,
+            "abs_logit_shift_max": 0.6635842323303223,
+            "signed_prob_shift_mean": 0.003714419901371002,
+            "signed_prob_shift_std": 0.021341994386880798,
+            "abs_prob_shift_mean": 0.009662382304668427,
+            "abs_prob_shift_max": 0.0820389986038208
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.01168893906287849,
+            "max_linf_diff": 0.15686273574829102,
+            "max_pixel_diff": 11.0
+          }
+        },
+        "video_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 14,
+            "fp": 2,
+            "fn": 0,
+            "total_errors": 2
+          },
+          "rates": {
+            "real_recall": 0.875,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.27998951729387045,
+            "signed_logit_shift_std": 0.6146631658007161,
+            "abs_logit_shift_mean": 0.47935451474040747,
+            "abs_logit_shift_max": 1.9676019698381424,
+            "signed_prob_shift_mean": 0.04071096915868111,
+            "signed_prob_shift_std": 0.10038418334463162,
+            "abs_prob_shift_mean": 0.05543874850263819,
+            "abs_prob_shift_max": 0.3620520755648613
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.012157912191469222,
+            "max_linf_diff": 0.1394336223602295,
+            "max_pixel_diff": 13.0
+          }
+        }
+      }
+    },
+    "jpeg75": {
+      "overall": {
+        "samples": 128,
+        "class_denominators": {
+          "real": 64,
+          "fake": 64
+        },
+        "confusion_at_05": {
+          "tp": 64,
+          "tn": 30,
+          "fp": 34,
+          "fn": 0,
+          "total_errors": 34
+        },
+        "rates": {
+          "real_recall": 0.46875,
+          "fake_recall": 1.0,
+          "balanced_accuracy": 0.734375
+        },
+        "decision_flips_vs_original": {
+          "count": 3,
+          "rate": 0.0234375
+        },
+        "score_shifts_vs_original": {
+          "signed_logit_shift_mean": -2.416908562881872,
+          "signed_logit_shift_std": 2.7381379957553387,
+          "abs_logit_shift_mean": 2.9758975852746516,
+          "abs_logit_shift_max": 7.560687065124512,
+          "signed_prob_shift_mean": 0.004340776547454184,
+          "signed_prob_shift_std": 0.11117375003560445,
+          "abs_prob_shift_mean": 0.029488687738563002,
+          "abs_prob_shift_max": 0.7796291038393974
+        },
+        "tensor_distortion_vs_original": {
+          "mean_l1_diff": 0.034421646218106616,
+          "max_linf_diff": 1.0283225774765015,
+          "max_pixel_diff": 59.0
+        }
+      },
+      "by_cohort": {
+        "external_development": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 2,
+            "fp": 30,
+            "fn": 0,
+            "total_errors": 30
+          },
+          "rates": {
+            "real_recall": 0.0625,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.53125
+          },
+          "decision_flips_vs_original": {
+            "count": 1,
+            "rate": 0.015625
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -4.525732872076333,
+            "signed_logit_shift_std": 1.451220856185628,
+            "abs_logit_shift_mean": 4.525732872076333,
+            "abs_logit_shift_max": 7.560687065124512,
+            "signed_prob_shift_mean": -0.017394452511325653,
+            "signed_prob_shift_std": 0.08823300118943123,
+            "abs_prob_shift_mean": 0.017394452511325653,
+            "abs_prob_shift_max": 0.6643131077289581
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.04692123783752322,
+            "max_linf_diff": 1.0283225774765015,
+            "max_pixel_diff": 59.0
+          }
+        },
+        "training_diagnostic": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 32,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 28,
+            "fp": 4,
+            "fn": 0,
+            "total_errors": 4
+          },
+          "rates": {
+            "real_recall": 0.875,
+            "fake_recall": 1.0,
+            "balanced_accuracy": 0.9375
+          },
+          "decision_flips_vs_original": {
+            "count": 2,
+            "rate": 0.03125
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -0.30808425368741155,
+            "signed_logit_shift_std": 1.9986188881502622,
+            "abs_logit_shift_mean": 1.4260622984729707,
+            "abs_logit_shift_max": 5.185853958129883,
+            "signed_prob_shift_mean": 0.02607600560623402,
+            "signed_prob_shift_std": 0.1264488138757683,
+            "abs_prob_shift_mean": 0.04158292296580035,
+            "abs_prob_shift_max": 0.7796291038393974
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.02192205459869001,
+            "max_linf_diff": 0.5751634240150452,
+            "max_pixel_diff": 40.0
+          }
+        }
+      },
+      "by_class": {
+        "real": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 64,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 30,
+            "fp": 34,
+            "fn": 0,
+            "total_errors": 34
+          },
+          "rates": {
+            "real_recall": 0.46875,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 3,
+            "rate": 0.046875
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -1.8628839305602014,
+            "signed_logit_shift_std": 3.014079286264807,
+            "abs_logit_shift_mean": 2.7541625411249697,
+            "abs_logit_shift_max": 7.560687065124512,
+            "signed_prob_shift_mean": 0.008487199112102162,
+            "signed_prob_shift_std": 0.15452180035693777,
+            "abs_prob_shift_mean": 0.050921651273539426,
+            "abs_prob_shift_max": 0.7796291038393974
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.03234608286584262,
+            "max_linf_diff": 0.7145968675613403,
+            "max_pixel_diff": 41.0
+          }
+        },
+        "fake": {
+          "samples": 64,
+          "class_denominators": {
+            "real": 0,
+            "fake": 64
+          },
+          "confusion_at_05": {
+            "tp": 64,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -2.9709331952035427,
+            "signed_logit_shift_std": 2.3013558693233938,
+            "abs_logit_shift_mean": 3.1976326294243336,
+            "abs_logit_shift_max": 6.498995780944824,
+            "signed_prob_shift_mean": 0.00019435398280620575,
+            "signed_prob_shift_std": 0.02842240257683275,
+            "abs_prob_shift_mean": 0.008055724203586578,
+            "abs_prob_shift_max": 0.16659128665924072
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.036497209570370615,
+            "max_linf_diff": 1.0283225774765015,
+            "max_pixel_diff": 59.0
+          }
+        }
+      },
+      "by_subcollection": {
+        "external_fake": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 0,
+            "fake": 32
+          },
+          "confusion_at_05": {
+            "tp": 32,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -4.5313659235835075,
+            "signed_logit_shift_std": 1.2292614353202322,
+            "abs_logit_shift_mean": 4.5313659235835075,
+            "abs_logit_shift_max": 6.498995780944824,
+            "signed_prob_shift_mean": -0.0023209378123283386,
+            "signed_prob_shift_std": 0.012498414787372335,
+            "abs_prob_shift_mean": 0.0023209378123283386,
+            "abs_prob_shift_max": 0.07190179824829102
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.046158889192156494,
+            "max_linf_diff": 1.0283225774765015,
+            "max_pixel_diff": 59.0
+          }
+        },
+        "external_real": {
+          "samples": 32,
+          "class_denominators": {
+            "real": 32,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 2,
+            "fp": 30,
+            "fn": 0,
+            "total_errors": 30
+          },
+          "rates": {
+            "real_recall": 0.0625,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 1,
+            "rate": 0.03125
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -4.520099820569158,
+            "signed_logit_shift_std": 1.6434527093750435,
+            "abs_logit_shift_mean": 4.520099820569158,
+            "abs_logit_shift_max": 7.560687065124512,
+            "signed_prob_shift_mean": -0.03246796721032297,
+            "signed_prob_shift_std": 0.12230900594326387,
+            "abs_prob_shift_mean": 0.03246796721032297,
+            "abs_prob_shift_max": 0.6643131077289581
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.04768358648288995,
+            "max_linf_diff": 0.7145968675613403,
+            "max_pixel_diff": 41.0
+          }
+        },
+        "numeric_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": -3.0142094790935516,
+            "signed_logit_shift_std": 1.5719246412763477,
+            "abs_logit_shift_mean": 3.0142094790935516,
+            "abs_logit_shift_max": 5.185853958129883,
+            "signed_prob_shift_mean": -0.0008424371480941772,
+            "signed_prob_shift_std": 0.0018972215108884365,
+            "abs_prob_shift_mean": 0.0008424371480941772,
+            "abs_prob_shift_max": 0.006691098213195801
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.03296030790079385,
+            "max_linf_diff": 0.5751634240150452,
+            "max_pixel_diff": 40.0
+          }
+        },
+        "numeric_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 16,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": 1.0,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.6158715635538101,
+            "signed_logit_shift_std": 0.37033327530673676,
+            "abs_logit_shift_mean": 0.6522302776575089,
+            "abs_logit_shift_max": 1.1470746994018555,
+            "signed_prob_shift_mean": 0.0023352024145659733,
+            "signed_prob_shift_std": 0.005092913724428246,
+            "abs_prob_shift_mean": 0.0023352684067909912,
+            "abs_prob_shift_max": 0.016044050455093384
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.01233287010109052,
+            "max_linf_diff": 0.27886712551116943,
+            "max_pixel_diff": 20.0
+          }
+        },
+        "video_fake": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 0,
+            "fake": 16
+          },
+          "confusion_at_05": {
+            "tp": 16,
+            "tn": 0,
+            "fp": 0,
+            "fn": 0,
+            "total_errors": 0
+          },
+          "rates": {
+            "real_recall": null,
+            "fake_recall": 1.0,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 0,
+            "rate": 0.0
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.19320854544639587,
+            "signed_logit_shift_std": 0.899040892965833,
+            "abs_logit_shift_mean": 0.7135891914367676,
+            "abs_logit_shift_max": 1.8311176300048828,
+            "signed_prob_shift_mean": 0.0062617287039756775,
+            "signed_prob_shift_std": 0.053523549224774515,
+            "abs_prob_shift_mean": 0.02673858404159546,
+            "abs_prob_shift_max": 0.16659128665924072
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.02071075199637562,
+            "max_linf_diff": 0.39386945962905884,
+            "max_pixel_diff": 32.0
+          }
+        },
+        "video_real": {
+          "samples": 16,
+          "class_denominators": {
+            "real": 16,
+            "fake": 0
+          },
+          "confusion_at_05": {
+            "tp": 0,
+            "tn": 12,
+            "fp": 4,
+            "fn": 0,
+            "total_errors": 4
+          },
+          "rates": {
+            "real_recall": 0.75,
+            "fake_recall": null,
+            "balanced_accuracy": null
+          },
+          "decision_flips_vs_original": {
+            "count": 2,
+            "rate": 0.125
+          },
+          "score_shifts_vs_original": {
+            "signed_logit_shift_mean": 0.9727923553436995,
+            "signed_logit_shift_std": 1.5788584656606166,
+            "abs_logit_shift_mean": 1.3242202457040548,
+            "abs_logit_shift_max": 4.177916526794434,
+            "signed_prob_shift_mean": 0.09654952845448861,
+            "signed_prob_shift_std": 0.23327141122041872,
+            "abs_prob_shift_mean": 0.13641540226672078,
+            "abs_prob_shift_max": 0.7796291038393974
+          },
+          "tensor_distortion_vs_original": {
+            "mean_l1_diff": 0.02168428839650005,
+            "max_linf_diff": 0.2788672149181366,
+            "max_pixel_diff": 21.0
+          }
+        }
+      }
+    }
+  },
+  "cautionary_guidance": "Evidence Interpretation Guardrail: Any compression intervention showing higher external accuracy (e.g., JPEG95 or JPEG75) must NOT be interpreted as an optimized deployment preprocessing setting, nor as proof that compression is the sole causal factor in generalization failure. Rather, it provides diagnostic evidence regarding model sensitivity to container compression."
+}

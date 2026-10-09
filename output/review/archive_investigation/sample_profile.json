@@ -1,0 +1,362 @@
+{
+  "generated_at_utc": "2026-10-09T18:45:20.089097+00:00",
+  "total_archived_samples": 256,
+  "total_external_samples": 128,
+  "total_extracted_scratch_bytes": 11698835,
+  "scratch_bytes_mib": 11.16,
+  "sampling_quotas": {
+    "archived_train": {
+      "shortages_and_absences": {
+        "fake_jpg": "0 available in entire archive (fake is 100% PNG)",
+        "real_png_numeric": "0 available in entire archive (all real numeric are JPG)",
+        "real_jpg_vid": "0 available in entire archive (all real vid are PNG)"
+      },
+      "selected_quotas": {
+        "fake_png_vid_distinct_families": 64,
+        "fake_png_numeric": 64,
+        "real_png_vid_distinct_families": 64,
+        "real_jpg_numeric": 64,
+        "total_archived_samples": 256
+      }
+    },
+    "external_dev": {
+      "real": 64,
+      "fake": 64
+    }
+  },
+  "sha256_hash_verification": {
+    "tested_samples": 256,
+    "matched_clean_parent_hash": 251,
+    "missing_in_clean_parent": 5,
+    "hash_mismatch": 0,
+    "scope_caveat": "Sample-level validation confirms exact byte fidelity with saved clean_parent metadata for matching paths. Not a full-dataset CRC."
+  },
+  "profiles": {
+    "archived_train_overall": {
+      "count": 256,
+      "file_size_bytes": {
+        "min": 3381,
+        "max": 154181,
+        "mean": 45698.6
+      },
+      "dimensions": {
+        "min_width": 40,
+        "max_width": 372,
+        "min_height": 40,
+        "max_height": 372,
+        "most_common_resolutions": [
+          [
+            [
+              256,
+              256
+            ],
+            64
+          ],
+          [
+            [
+              178,
+              218
+            ],
+            64
+          ],
+          [
+            [
+              225,
+              225
+            ],
+            3
+          ],
+          [
+            [
+              160,
+              160
+            ],
+            2
+          ],
+          [
+            [
+              183,
+              183
+            ],
+            2
+          ]
+        ]
+      },
+      "aspect_ratios": {
+        "min": 0.8165,
+        "max": 1.0909,
+        "mean": 0.9661
+      },
+      "decoded_formats": {
+        "PNG": 192,
+        "JPEG": 64
+      },
+      "extensions": {
+        "png": 192,
+        "jpg": 64
+      },
+      "modes": {
+        "RGB": 254,
+        "RGBA": 2
+      },
+      "has_jpeg_markers_count": 64
+    },
+    "archived_train_real": {
+      "count": 128,
+      "file_size_bytes": {
+        "min": 3381,
+        "max": 154181,
+        "mean": 24622.3
+      },
+      "dimensions": {
+        "min_width": 40,
+        "max_width": 372,
+        "min_height": 40,
+        "max_height": 372,
+        "most_common_resolutions": [
+          [
+            [
+              178,
+              218
+            ],
+            64
+          ],
+          [
+            [
+              225,
+              225
+            ],
+            2
+          ],
+          [
+            [
+              163,
+              163
+            ],
+            2
+          ],
+          [
+            [
+              229,
+              229
+            ],
+            2
+          ],
+          [
+            [
+              157,
+              154
+            ],
+            1
+          ]
+        ]
+      },
+      "aspect_ratios": {
+        "min": 0.8165,
+        "max": 1.0909,
+        "mean": 0.917
+      },
+      "decoded_formats": {
+        "PNG": 64,
+        "JPEG": 64
+      },
+      "extensions": {
+        "png": 64,
+        "jpg": 64
+      },
+      "modes": {
+        "RGB": 128
+      },
+      "has_jpeg_markers_count": 64
+    },
+    "archived_train_fake": {
+      "count": 128,
+      "file_size_bytes": {
+        "min": 8204,
+        "max": 120501,
+        "mean": 66774.9
+      },
+      "dimensions": {
+        "min_width": 110,
+        "max_width": 285,
+        "min_height": 110,
+        "max_height": 285,
+        "most_common_resolutions": [
+          [
+            [
+              256,
+              256
+            ],
+            64
+          ],
+          [
+            [
+              183,
+              183
+            ],
+            2
+          ],
+          [
+            [
+              171,
+              164
+            ],
+            2
+          ],
+          [
+            [
+              170,
+              160
+            ],
+            1
+          ],
+          [
+            [
+              255,
+              255
+            ],
+            1
+          ]
+        ]
+      },
+      "aspect_ratios": {
+        "min": 1.0,
+        "max": 1.0811,
+        "mean": 1.0153
+      },
+      "decoded_formats": {
+        "PNG": 128
+      },
+      "extensions": {
+        "png": 128
+      },
+      "modes": {
+        "RGB": 126,
+        "RGBA": 2
+      },
+      "has_jpeg_markers_count": 0
+    },
+    "external_dev_overall": {
+      "count": 128,
+      "file_size_bytes": {
+        "min": 72105,
+        "max": 140515,
+        "mean": 106744.5
+      },
+      "dimensions": {
+        "min_width": 256,
+        "max_width": 256,
+        "min_height": 256,
+        "max_height": 256,
+        "most_common_resolutions": [
+          [
+            [
+              256,
+              256
+            ],
+            128
+          ]
+        ]
+      },
+      "aspect_ratios": {
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+      },
+      "decoded_formats": {
+        "PNG": 128
+      },
+      "extensions": {
+        "png": 128
+      },
+      "modes": {
+        "RGB": 128
+      },
+      "has_jpeg_markers_count": 0
+    },
+    "external_dev_real": {
+      "count": 64,
+      "file_size_bytes": {
+        "min": 81468,
+        "max": 140515,
+        "mean": 113048.8
+      },
+      "dimensions": {
+        "min_width": 256,
+        "max_width": 256,
+        "min_height": 256,
+        "max_height": 256,
+        "most_common_resolutions": [
+          [
+            [
+              256,
+              256
+            ],
+            64
+          ]
+        ]
+      },
+      "aspect_ratios": {
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+      },
+      "decoded_formats": {
+        "PNG": 64
+      },
+      "extensions": {
+        "png": 64
+      },
+      "modes": {
+        "RGB": 64
+      },
+      "has_jpeg_markers_count": 0
+    },
+    "external_dev_fake": {
+      "count": 64,
+      "file_size_bytes": {
+        "min": 72105,
+        "max": 126065,
+        "mean": 100440.1
+      },
+      "dimensions": {
+        "min_width": 256,
+        "max_width": 256,
+        "min_height": 256,
+        "max_height": 256,
+        "most_common_resolutions": [
+          [
+            [
+              256,
+              256
+            ],
+            64
+          ]
+        ]
+      },
+      "aspect_ratios": {
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+      },
+      "decoded_formats": {
+        "PNG": 64
+      },
+      "extensions": {
+        "png": 64
+      },
+      "modes": {
+        "RGB": 64
+      },
+      "has_jpeg_markers_count": 0
+    }
+  },
+  "rgb_preprocessing_transforms_documented": {
+    "pipeline": "RGBDataset (data/datasets/rgb_dataset.py) -> custom_resize -> data_augment -> crop_func -> flip_func -> ToTensor -> Normalize",
+    "resize_logic": "custom_resize scales the smaller dimension to opt.loadSize (default 256) maintaining aspect ratio using bilinear interpolation by default.",
+    "crop_logic": "CenterCrop(crop_size=224 or 128) during eval; RandomCrop during train.",
+    "data_augment": "JPEG compression artifacts and blur applied dynamically according to augmentation recipe.",
+    "resolution_normalization": "All models evaluate on square crops (e.g., 224x224 or 128x128), but input aspect ratios and initial scales vary significantly."
+  },
+  "sample_versus_population_warning": "Reported sample distributions reflect deterministic stratified sample cohorts, not unbiased population estimates. PNG encoding does not imply absence of prior lossy compression; JPEG augmentation means format correlations alone cannot prove the detector learned a pure compression shortcut."
+}

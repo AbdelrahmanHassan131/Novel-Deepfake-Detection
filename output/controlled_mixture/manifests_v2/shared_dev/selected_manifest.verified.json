@@ -1,0 +1,29 @@
+{
+  "verified": true,
+  "hashes_verified": true,
+  "manifest_sha256": "1e16a9dbca55f39a7ac42ca51d3de80b8540da7158e57554ee08478bcff6f528",
+  "manifest_path": "G:\\Master's Of Science Computer Engineering\\thesis deepfake detection\\Thesis Revisions SP\\First revesion\\Novel Deepfake Detection\\output\\controlled_mixture\\manifests_v2\\shared_dev\\selected_manifest.csv",
+  "samples": 2000,
+  "classes": [
+    0,
+    1
+  ],
+  "splits": [
+    "dev"
+  ],
+  "hash_verification_mode": "inherited_completed_audit_on_explicitly_unchanged_dataset",
+  "inherited_parent_evidence": {
+    "parent_manifest_sha256": "6a968a75432490941467201fa7e1e777dd9dbfe9415a26e5bd821b842833d75b",
+    "parent_gate_sha256": "a8369b657c8d92595a9792a54ba05a10b677683410e158c96eeaa247c6aa4020",
+    "recovery_report_sha256": "b3e524365266d22936026f0859f12e77a712d8019065ee410eaabc255bcbf856",
+    "unchanged_image_assumption": true,
+    "provenance_limitation": "Hash inheritance strictly conditioned on unchanged image bytes and paths. Original identities and sources remain image_level_unverified; unknown near-duplicates may remain."
+  },
+  "preparation_identity": {
+    "experiment": "controlled_rgb_data_mixture_pilot",
+    "sub_manifest": "shared_dev",
+    "seed": 42,
+    "cap": 8,
+    "dev_fraction": 0.15
+  }
+}

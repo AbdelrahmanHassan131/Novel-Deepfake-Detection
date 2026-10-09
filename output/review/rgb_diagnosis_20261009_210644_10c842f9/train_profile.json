@@ -1,0 +1,108 @@
+{
+  "manifest": "G:\\Master's Of Science Computer Engineering\\thesis deepfake detection\\Thesis Revisions SP\\First revesion\\Novel Deepfake Detection\\output\\review\\rgb_r2_diagnostic_inputs\\train_profile_256.csv",
+  "sample_bound_requested": 256,
+  "images_profiled": 256,
+  "seed": 42,
+  "overall": {
+    "total_inspected": 256,
+    "decode_successes": 256,
+    "decode_failures": 0,
+    "failure_rate_pct": 0.0,
+    "formats": {
+      "PNG": 192,
+      "JPEG": 64
+    },
+    "format_percentages": {
+      "PNG": 75.0,
+      "JPEG": 25.0
+    },
+    "color_modes": {
+      "RGB": 256
+    },
+    "mean_resolution": [
+      173,
+      180
+    ],
+    "mean_aspect_ratio": 0.972,
+    "mean_file_size_kb": 32.7,
+    "median_file_size_kb": 33.4
+  },
+  "by_class": {
+    "real (0)": {
+      "total_inspected": 128,
+      "decode_successes": 128,
+      "decode_failures": 0,
+      "failure_rate_pct": 0.0,
+      "formats": {
+        "PNG": 64,
+        "JPEG": 64
+      },
+      "format_percentages": {
+        "PNG": 50.0,
+        "JPEG": 50.0
+      },
+      "color_modes": {
+        "RGB": 128
+      },
+      "mean_resolution": [
+        181,
+        200
+      ],
+      "mean_aspect_ratio": 0.917,
+      "mean_file_size_kb": 27.5,
+      "median_file_size_kb": 9.0
+    },
+    "fake (1)": {
+      "total_inspected": 128,
+      "decode_successes": 128,
+      "decode_failures": 0,
+      "failure_rate_pct": 0.0,
+      "formats": {
+        "PNG": 128
+      },
+      "format_percentages": {
+        "PNG": 100.0
+      },
+      "color_modes": {
+        "RGB": 128
+      },
+      "mean_resolution": [
+        165,
+        161
+      ],
+      "mean_aspect_ratio": 1.028,
+      "mean_file_size_kb": 37.9,
+      "median_file_size_kb": 35.4
+    }
+  },
+  "by_source": {
+    "diffgan": {
+      "total_inspected": 256,
+      "decode_successes": 256,
+      "decode_failures": 0,
+      "failure_rate_pct": 0.0,
+      "formats": {
+        "PNG": 192,
+        "JPEG": 64
+      },
+      "format_percentages": {
+        "PNG": 75.0,
+        "JPEG": 25.0
+      },
+      "color_modes": {
+        "RGB": 256
+      },
+      "mean_resolution": [
+        173,
+        180
+      ],
+      "mean_aspect_ratio": 0.972,
+      "mean_file_size_kb": 32.7,
+      "median_file_size_kb": 33.4
+    }
+  },
+  "hypotheses_and_findings": [
+    "Hypothesis [Format Packaging Shortcut]: Format 'PNG' accounts for 100.0% of fake samples vs 50.0% of real samples. A detector trained without compression augmentation may learn container/compression signatures instead of facial manipulation artifacts."
+  ],
+  "disclaimer": "Findings are hypotheses regarding image packaging discrepancies, format imbalance, and resolution differences. They do not constitute automated proof of label errors and must not infer demographic or identity characteristics from appearance."
+}

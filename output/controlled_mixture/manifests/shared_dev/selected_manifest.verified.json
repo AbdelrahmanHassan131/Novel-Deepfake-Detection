@@ -1,0 +1,23 @@
+{
+  "verified": true,
+  "hashes_verified": true,
+  "manifest_sha256": "1e16a9dbca55f39a7ac42ca51d3de80b8540da7158e57554ee08478bcff6f528",
+  "manifest_path": "G:\\Master's Of Science Computer Engineering\\thesis deepfake detection\\Thesis Revisions SP\\First revesion\\Novel Deepfake Detection\\output\\controlled_mixture\\manifests\\shared_dev\\selected_manifest.csv",
+  "samples": 2000,
+  "classes": [
+    0,
+    1
+  ],
+  "splits": [
+    "dev"
+  ],
+  "hash_verification_mode": "inherited_unchanged_content_from_clean_parent",
+  "parent_manifest_sha256": "6a968a75432490941467201fa7e1e777dd9dbfe9415a26e5bd821b842833d75b",
+  "preparation_identity": {
+    "experiment": "controlled_rgb_data_mixture_pilot",
+    "sub_manifest": "shared_dev",
+    "seed": 42,
+    "cap": 8,
+    "dev_fraction": 0.15
+  }
+}

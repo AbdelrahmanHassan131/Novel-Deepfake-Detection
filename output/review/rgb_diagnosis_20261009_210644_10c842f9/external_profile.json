@@ -1,0 +1,100 @@
+{
+  "manifest": "G:\\Master's Of Science Computer Engineering\\thesis deepfake detection\\Thesis Revisions SP\\First revesion\\Novel Deepfake Detection\\output\\review\\rgb_r2_diagnostic_inputs\\external_profile_256.csv",
+  "sample_bound_requested": 256,
+  "images_profiled": 256,
+  "seed": 42,
+  "overall": {
+    "total_inspected": 256,
+    "decode_successes": 256,
+    "decode_failures": 0,
+    "failure_rate_pct": 0.0,
+    "formats": {
+      "PNG": 256
+    },
+    "format_percentages": {
+      "PNG": 100.0
+    },
+    "color_modes": {
+      "RGB": 256
+    },
+    "mean_resolution": [
+      256,
+      256
+    ],
+    "mean_aspect_ratio": 1.0,
+    "mean_file_size_kb": 104.2,
+    "median_file_size_kb": 103.6
+  },
+  "by_class": {
+    "real (0)": {
+      "total_inspected": 128,
+      "decode_successes": 128,
+      "decode_failures": 0,
+      "failure_rate_pct": 0.0,
+      "formats": {
+        "PNG": 128
+      },
+      "format_percentages": {
+        "PNG": 100.0
+      },
+      "color_modes": {
+        "RGB": 128
+      },
+      "mean_resolution": [
+        256,
+        256
+      ],
+      "mean_aspect_ratio": 1.0,
+      "mean_file_size_kb": 111.7,
+      "median_file_size_kb": 111.9
+    },
+    "fake (1)": {
+      "total_inspected": 128,
+      "decode_successes": 128,
+      "decode_failures": 0,
+      "failure_rate_pct": 0.0,
+      "formats": {
+        "PNG": 128
+      },
+      "format_percentages": {
+        "PNG": 100.0
+      },
+      "color_modes": {
+        "RGB": 128
+      },
+      "mean_resolution": [
+        256,
+        256
+      ],
+      "mean_aspect_ratio": 1.0,
+      "mean_file_size_kb": 96.7,
+      "median_file_size_kb": 96.1
+    }
+  },
+  "by_source": {
+    "unknown": {
+      "total_inspected": 256,
+      "decode_successes": 256,
+      "decode_failures": 0,
+      "failure_rate_pct": 0.0,
+      "formats": {
+        "PNG": 256
+      },
+      "format_percentages": {
+        "PNG": 100.0
+      },
+      "color_modes": {
+        "RGB": 256
+      },
+      "mean_resolution": [
+        256,
+        256
+      ],
+      "mean_aspect_ratio": 1.0,
+      "mean_file_size_kb": 104.2,
+      "median_file_size_kb": 103.6
+    }
+  },
+  "hypotheses_and_findings": [],
+  "disclaimer": "Findings are hypotheses regarding image packaging discrepancies, format imbalance, and resolution differences. They do not constitute automated proof of label errors and must not infer demographic or identity characteristics from appearance."
+}

@@ -1,0 +1,30 @@
+{
+  "diagnostic_type": "production_rgb_parity",
+  "checkpoint_sha256": "e598e1b32871f460756118ba6d4a5f1ad3679a3b9727dff1afa04d4d0de96a28",
+  "samples_inspected": 64,
+  "max_tensor_diff": 0.0,
+  "max_probability_diff": 0.0,
+  "max_logit_diff": 0.0,
+  "mode_check": {
+    "model_training_mode": false,
+    "model_eval_mode_correct": true,
+    "bn_modules_inspected": 53,
+    "bn_training_violations": [],
+    "bn_eval_mode_correct": true,
+    "dropout_modules_inspected": 1,
+    "dropout_training_violations": [],
+    "dropout_eval_mode_correct": true
+  },
+  "general_discrepancies": [
+    "Saved probability mismatch: f5443715cc0a22c4",
+    "Saved probability mismatch: 11fc13aec7770547",
+    "Saved probability mismatch: 0a9cf82817e9ce68",
+    "Saved probability mismatch: 81d28da458a3f06f",
+    "Saved probability mismatch: fa6d7537f7aabc48",
+    "Saved probability mismatch: 1de0cdb02d79f015",
+    "Saved probability mismatch: b8377bc8d30c04d3",
+    "Saved probability mismatch: c637976a2212c91b",
+    "Saved probability mismatch: 524d896d9b7da12f"
+  ],
+  "status": "discrepancy_detected"
+}

@@ -18,6 +18,7 @@ Improvements:
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Optional
+import re
 import numpy as np
 import torch
 
@@ -59,6 +60,26 @@ def verify_source_readiness(train_rows, dev_rows, eligible_sources=None, monitor
     4. If monitor_metric='source_macro_auc' without explicit eligible_sources, dev data contains
        at least 2 distinct sources with balanced classes.
     """
+    # Content hashes do not connect different frames from the same apparent
+    # filename family. Treat this explicit naming pattern conservatively; do
+    # not present it as verified original-video or person metadata.
+    family_pattern = re.compile(r'^(vid_[0-9a-f]{64})_face_\d+_\d+\.[a-z0-9]+$', re.I)
+    def filename_families(records):
+        result = set()
+        for row in records:
+            name = str(row.get('path', '')).replace('\\', '/').rsplit('/', 1)[-1]
+            match = family_pattern.fullmatch(name)
+            if match:
+                result.add(match[1].lower())
+        return result
+    shared_families = filename_families(train_rows) & filename_families(dev_rows)
+    if shared_families:
+        raise ValueError(
+            f'{len(shared_families):,} apparent filename frame families span train and dev. '
+            'Image-level hash verification does not establish video independence. '
+            'Rebuild a NEW grouped cohort with tools/repair_rgb_family_split.py; '
+            'source-overlap engineering flags cannot bypass this partition check.'
+        )
     train_sources = {r.get('dataset_source') or 'unknown' for r in train_rows}
     dev_sources = {r.get('dataset_source') or 'unknown' for r in dev_rows}
     if (any(r.get('grouping_basis') == 'image_level_unverified' for r in train_rows + dev_rows)

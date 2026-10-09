@@ -1,0 +1,68 @@
+{
+  "generated_at_utc": "2026-10-09T18:37:40.591958+00:00",
+  "archive_zip": "E:\\PreparedDataset\\Preapred Dataset.zip",
+  "listing_command": "\"C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\7z.exe\" l \"E:\\PreparedDataset\\Preapred Dataset.zip\"",
+  "cached_listing_tsv_gz": "E:\\archive_investigation_scratch_task\\archive_listing.tsv.gz",
+  "elapsed_seconds": 19.41,
+  "verification_scope": "Header and Central Directory stream listing (Zip64). Payload CRC/integrity test not run across 32.5 GiB.",
+  "totals": {
+    "total_entries": 1016862,
+    "total_files": 1016855,
+    "total_directories": 7,
+    "total_uncompressed_bytes": 36335917409,
+    "total_uncompressed_gib": 33.84,
+    "total_compressed_bytes": 34610413812,
+    "total_compressed_gib": 32.233,
+    "duplicate_exact_paths": 0
+  },
+  "partitions": {
+    "train": {
+      "files": 805421,
+      "uncompressed_bytes": 28221030918,
+      "uncompressed_gib": 26.283,
+      "compressed_bytes": 26842344970,
+      "compressed_gib": 24.999,
+      "classes": {
+        "fake": 594233,
+        "real": 211188
+      },
+      "extensions": {
+        "png": 643343,
+        "jpg": 162078
+      },
+      "patterns": {
+        "numeric": 193189,
+        "vid_face_hex": 612232
+      },
+      "top_prefixes": {
+        "Preapred Dataset/train/fake": 594233,
+        "Preapred Dataset/train/real": 211188
+      }
+    },
+    "val": {
+      "files": 211434,
+      "uncompressed_bytes": 8114886491,
+      "uncompressed_gib": 7.558,
+      "compressed_bytes": 7768068842,
+      "compressed_gib": 7.235,
+      "classes": {
+        "fake": 158669,
+        "real": 52765
+      },
+      "extensions": {
+        "png": 170914,
+        "jpg": 40520
+      },
+      "patterns": {
+        "numeric": 58502,
+        "vid_face_hex": 152932
+      },
+      "top_prefixes": {
+        "Preapred Dataset/val/fake": 158669,
+        "Preapred Dataset/val/real": 52765
+      }
+    }
+  },
+  "provenance_candidates_count": 0,
+  "provenance_candidates": []
+}

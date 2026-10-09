@@ -1,0 +1,561 @@
+{
+  "diagnostic_type": "production_rgb_parity",
+  "checkpoint_sha256": "e598e1b32871f460756118ba6d4a5f1ad3679a3b9727dff1afa04d4d0de96a28",
+  "samples_inspected": 64,
+  "max_tensor_diff": 0.0,
+  "max_probability_diff": 0.0,
+  "max_logit_diff": 0.0,
+  "mode_check": {
+    "model_training_mode": false,
+    "model_eval_mode_correct": true,
+    "bn_modules_inspected": 53,
+    "bn_training_violations": [],
+    "bn_eval_mode_correct": true,
+    "dropout_modules_inspected": 1,
+    "dropout_training_violations": [],
+    "dropout_eval_mode_correct": true
+  },
+  "saved_prediction_comparison": {
+    "samples_compared": 64,
+    "max_probability_diff": 0.002191603183746338,
+    "decisions_changed_at_05": 0,
+    "details": [
+      {
+        "sample_id": "81d28da458a3f06f",
+        "label": 0,
+        "saved_probability": 0.4150320887565613,
+        "local_probability": 0.41284048557281494,
+        "absolute_difference": 0.002191603183746338,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "fa6d7537f7aabc48",
+        "label": 0,
+        "saved_probability": 0.8807283639907837,
+        "local_probability": 0.8795345425605774,
+        "absolute_difference": 0.0011938214302062988,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "1f4f82de84adfe15",
+        "label": 0,
+        "saved_probability": 0.893420934677124,
+        "local_probability": 0.8923371434211731,
+        "absolute_difference": 0.0010837912559509277,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "167971b0cafb85bb",
+        "label": 1,
+        "saved_probability": 0.8426210880279541,
+        "local_probability": 0.8415553569793701,
+        "absolute_difference": 0.0010657310485839844,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "11fc13aec7770547",
+        "label": 0,
+        "saved_probability": 0.06713708490133286,
+        "local_probability": 0.06661997735500336,
+        "absolute_difference": 0.0005171075463294983,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "f5443715cc0a22c4",
+        "label": 0,
+        "saved_probability": 0.1762763410806656,
+        "local_probability": 0.17577768862247467,
+        "absolute_difference": 0.000498652458190918,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "c637976a2212c91b",
+        "label": 1,
+        "saved_probability": 0.9685244560241699,
+        "local_probability": 0.9682759046554565,
+        "absolute_difference": 0.0002485513687133789,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "0a9cf82817e9ce68",
+        "label": 0,
+        "saved_probability": 0.07716737687587738,
+        "local_probability": 0.07737407088279724,
+        "absolute_difference": 0.00020669400691986084,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "41e0896ed4bc7163",
+        "label": 0,
+        "saved_probability": 0.043504055589437485,
+        "local_probability": 0.04334830492734909,
+        "absolute_difference": 0.00015575066208839417,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "1de0cdb02d79f015",
+        "label": 0,
+        "saved_probability": 0.06782174110412598,
+        "local_probability": 0.06795861572027206,
+        "absolute_difference": 0.00013687461614608765,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "b8377bc8d30c04d3",
+        "label": 1,
+        "saved_probability": 0.9653911590576172,
+        "local_probability": 0.9652746319770813,
+        "absolute_difference": 0.00011652708053588867,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "5f580f7ff35ac238",
+        "label": 1,
+        "saved_probability": 0.9786726236343384,
+        "local_probability": 0.9785611629486084,
+        "absolute_difference": 0.00011146068572998047,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "524d896d9b7da12f",
+        "label": 1,
+        "saved_probability": 0.9715328216552734,
+        "local_probability": 0.9716382622718811,
+        "absolute_difference": 0.00010544061660766602,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "295620c6b820b96e",
+        "label": 1,
+        "saved_probability": 0.9689289331436157,
+        "local_probability": 0.9688392877578735,
+        "absolute_difference": 8.96453857421875e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "7e450ce2a34521e2",
+        "label": 1,
+        "saved_probability": 0.9412525296211243,
+        "local_probability": 0.9411834478378296,
+        "absolute_difference": 6.908178329467773e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "f69e722bceeae1e7",
+        "label": 0,
+        "saved_probability": 0.0222881231456995,
+        "local_probability": 0.02234639786183834,
+        "absolute_difference": 5.827471613883972e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "4b619480cd717140",
+        "label": 0,
+        "saved_probability": 0.008017774671316147,
+        "local_probability": 0.008058304898440838,
+        "absolute_difference": 4.053022712469101e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "0865db29c5e0eaac",
+        "label": 1,
+        "saved_probability": 0.9895044565200806,
+        "local_probability": 0.9894801378250122,
+        "absolute_difference": 2.4318695068359375e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "c4fbe50d3411ca94",
+        "label": 0,
+        "saved_probability": 0.004977046046406031,
+        "local_probability": 0.004954422824084759,
+        "absolute_difference": 2.2623222321271896e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "0eb53ca150b8bef7",
+        "label": 1,
+        "saved_probability": 0.9979508519172668,
+        "local_probability": 0.9979298114776611,
+        "absolute_difference": 2.104043960571289e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "f6712d08ab43773b",
+        "label": 0,
+        "saved_probability": 0.0018114934209734201,
+        "local_probability": 0.0017912494949996471,
+        "absolute_difference": 2.0243925973773003e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "0492d1b5b2e80a6a",
+        "label": 1,
+        "saved_probability": 0.9972534775733948,
+        "local_probability": 0.9972339272499084,
+        "absolute_difference": 1.9550323486328125e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "2e1d72abdc5cbc26",
+        "label": 1,
+        "saved_probability": 0.9842904210090637,
+        "local_probability": 0.9843088984489441,
+        "absolute_difference": 1.8477439880371094e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "daa2921c6223bb56",
+        "label": 1,
+        "saved_probability": 0.9977915287017822,
+        "local_probability": 0.9977772831916809,
+        "absolute_difference": 1.424551010131836e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "91d5256c0763b6b0",
+        "label": 1,
+        "saved_probability": 0.7047235369682312,
+        "local_probability": 0.7047343850135803,
+        "absolute_difference": 1.0848045349121094e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "22cf8b2af372a4f8",
+        "label": 1,
+        "saved_probability": 0.9980906844139099,
+        "local_probability": 0.9980803728103638,
+        "absolute_difference": 1.0311603546142578e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "ff409da11a91b34b",
+        "label": 1,
+        "saved_probability": 0.9700339436531067,
+        "local_probability": 0.9700239300727844,
+        "absolute_difference": 1.0013580322265625e-05,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "96edfb544548ffc3",
+        "label": 1,
+        "saved_probability": 0.9962905645370483,
+        "local_probability": 0.9962994456291199,
+        "absolute_difference": 8.881092071533203e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "efc517aeb9baae86",
+        "label": 0,
+        "saved_probability": 0.0004242706054355949,
+        "local_probability": 0.00041662927833385766,
+        "absolute_difference": 7.64132710173726e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "474d7b38b18dc170",
+        "label": 1,
+        "saved_probability": 0.9982934594154358,
+        "local_probability": 0.9983009696006775,
+        "absolute_difference": 7.510185241699219e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "5169727e8de58e54",
+        "label": 1,
+        "saved_probability": 0.9927974343299866,
+        "local_probability": 0.9928045868873596,
+        "absolute_difference": 7.152557373046875e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "0f4e45e4d32a6e34",
+        "label": 0,
+        "saved_probability": 0.0008353660232387483,
+        "local_probability": 0.0008302044589072466,
+        "absolute_difference": 5.161564331501722e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "677825836d79a930",
+        "label": 0,
+        "saved_probability": 0.002927011577412486,
+        "local_probability": 0.0029221309814602137,
+        "absolute_difference": 4.880595952272415e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "5d75b2b1f5d05219",
+        "label": 1,
+        "saved_probability": 0.9823223948478699,
+        "local_probability": 0.9823266863822937,
+        "absolute_difference": 4.291534423828125e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "a377e65df5009555",
+        "label": 1,
+        "saved_probability": 0.9995452761650085,
+        "local_probability": 0.9995414018630981,
+        "absolute_difference": 3.874301910400391e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "550b0dc40f357b62",
+        "label": 1,
+        "saved_probability": 0.99750816822052,
+        "local_probability": 0.9975050091743469,
+        "absolute_difference": 3.159046173095703e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "e94261f4a2dc2586",
+        "label": 1,
+        "saved_probability": 0.9996603727340698,
+        "local_probability": 0.9996628761291504,
+        "absolute_difference": 2.5033950805664062e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "b0638d763520c8ae",
+        "label": 0,
+        "saved_probability": 0.001397396787069738,
+        "local_probability": 0.001399810891598463,
+        "absolute_difference": 2.4141045287251472e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "b0061198459206af",
+        "label": 0,
+        "saved_probability": 0.005647676531225443,
+        "local_probability": 0.00564960204064846,
+        "absolute_difference": 1.925509423017502e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "e210bb6877a99f9f",
+        "label": 1,
+        "saved_probability": 0.9991464614868164,
+        "local_probability": 0.9991445541381836,
+        "absolute_difference": 1.9073486328125e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "f72bd45c152da66b",
+        "label": 1,
+        "saved_probability": 0.9988139867782593,
+        "local_probability": 0.9988155364990234,
+        "absolute_difference": 1.5497207641601562e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "3d9ff168283bfa41",
+        "label": 1,
+        "saved_probability": 0.998418927192688,
+        "local_probability": 0.9984203577041626,
+        "absolute_difference": 1.430511474609375e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "3416d94e700a1237",
+        "label": 1,
+        "saved_probability": 0.9997668862342834,
+        "local_probability": 0.9997679591178894,
+        "absolute_difference": 1.0728836059570312e-06,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "64066cd421612b6e",
+        "label": 0,
+        "saved_probability": 0.00010985320113832131,
+        "local_probability": 0.00010887916141655296,
+        "absolute_difference": 9.740397217683494e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "b87db5650366caf2",
+        "label": 0,
+        "saved_probability": 9.127439989242703e-05,
+        "local_probability": 9.071801468962803e-05,
+        "absolute_difference": 5.563852027989924e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "3977d68049906591",
+        "label": 0,
+        "saved_probability": 0.8078475594520569,
+        "local_probability": 0.8078479170799255,
+        "absolute_difference": 3.5762786865234375e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "16502833b120c7cc",
+        "label": 1,
+        "saved_probability": 0.9999200105667114,
+        "local_probability": 0.9999203681945801,
+        "absolute_difference": 3.5762786865234375e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "daa59e8200adef3a",
+        "label": 1,
+        "saved_probability": 0.9999278783798218,
+        "local_probability": 0.9999282360076904,
+        "absolute_difference": 3.5762786865234375e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "4a995a36036b8cce",
+        "label": 0,
+        "saved_probability": 3.935147833544761e-05,
+        "local_probability": 3.90317763958592e-05,
+        "absolute_difference": 3.1970193958841264e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "be629e4e605c4434",
+        "label": 0,
+        "saved_probability": 1.1725710464816075e-05,
+        "local_probability": 1.151778269559145e-05,
+        "absolute_difference": 2.0792776922462508e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "03509d8107f8fcd0",
+        "label": 1,
+        "saved_probability": 0.9999068975448608,
+        "local_probability": 0.9999070167541504,
+        "absolute_difference": 1.1920928955078125e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "f987ffe8d0aae984",
+        "label": 1,
+        "saved_probability": 0.9999914169311523,
+        "local_probability": 0.9999915361404419,
+        "absolute_difference": 1.1920928955078125e-07,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "43c60918db1878ce",
+        "label": 0,
+        "saved_probability": 1.6123825844260864e-05,
+        "local_probability": 1.6072197468020022e-05,
+        "absolute_difference": 5.1628376240842044e-08,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "6ac3890af80a5123",
+        "label": 0,
+        "saved_probability": 2.430887434456963e-06,
+        "local_probability": 2.39658470491122e-06,
+        "absolute_difference": 3.4302729545743205e-08,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "754a722c0723d7ab",
+        "label": 0,
+        "saved_probability": 3.2471468784933677e-06,
+        "local_probability": 3.2215609735430917e-06,
+        "absolute_difference": 2.5585904950276017e-08,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "b286a24ea601fc1c",
+        "label": 0,
+        "saved_probability": 2.0634302018152084e-06,
+        "local_probability": 2.0509055502770934e-06,
+        "absolute_difference": 1.2524651538114995e-08,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "b75a42b94df5df23",
+        "label": 0,
+        "saved_probability": 8.555402359888831e-07,
+        "local_probability": 8.487188551953295e-07,
+        "absolute_difference": 6.821380793553544e-09,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "e1822f541f01cc31",
+        "label": 0,
+        "saved_probability": 3.536016447469592e-05,
+        "local_probability": 3.5363500501262024e-05,
+        "absolute_difference": 3.3360265661031008e-09,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "4aff73d89dfc1382",
+        "label": 0,
+        "saved_probability": 2.477909788467514e-07,
+        "local_probability": 2.4679175680830667e-07,
+        "absolute_difference": 9.992220384447137e-10,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "383e6097a069ed2f",
+        "label": 0,
+        "saved_probability": 3.1460737659472215e-07,
+        "local_probability": 3.137642181627598e-07,
+        "absolute_difference": 8.431584319623653e-10,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "6a8c6895ffa52070",
+        "label": 0,
+        "saved_probability": 5.2666969452275225e-08,
+        "local_probability": 5.2288214646978304e-08,
+        "absolute_difference": 3.787548052969214e-10,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "22336a866c566c04",
+        "label": 0,
+        "saved_probability": 1.1604818439536757e-07,
+        "local_probability": 1.1579689385143865e-07,
+        "absolute_difference": 2.5129054392891703e-10,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "adf3836680c0a8b9",
+        "label": 1,
+        "saved_probability": 0.9999898672103882,
+        "local_probability": 0.9999898672103882,
+        "absolute_difference": 0.0,
+        "decision_changed_at_05": false
+      },
+      {
+        "sample_id": "7cbd55c896cea5a5",
+        "label": 1,
+        "saved_probability": 0.9999991655349731,
+        "local_probability": 0.9999991655349731,
+        "absolute_difference": 0.0,
+        "decision_changed_at_05": false
+      }
+    ]
+  },
+  "runtime": {
+    "torch_version": "2.5.1+cu121",
+    "device": "cpu",
+    "cuda_version": "12.1",
+    "cudnn_version": 90100,
+    "cudnn_allow_tf32": true,
+    "matmul_allow_tf32": false
+  },
+  "general_discrepancies": [
+    "Saved probability mismatch: 1f4f82de84adfe15",
+    "Saved probability mismatch: f5443715cc0a22c4",
+    "Saved probability mismatch: 11fc13aec7770547",
+    "Saved probability mismatch: 0a9cf82817e9ce68",
+    "Saved probability mismatch: 41e0896ed4bc7163",
+    "Saved probability mismatch: 81d28da458a3f06f",
+    "Saved probability mismatch: fa6d7537f7aabc48",
+    "Saved probability mismatch: 1de0cdb02d79f015",
+    "Saved probability mismatch: b8377bc8d30c04d3",
+    "Saved probability mismatch: c637976a2212c91b",
+    "Saved probability mismatch: 167971b0cafb85bb",
+    "Saved probability mismatch: 5f580f7ff35ac238",
+    "Saved probability mismatch: 524d896d9b7da12f"
+  ],
+  "status": "discrepancy_detected"
+}

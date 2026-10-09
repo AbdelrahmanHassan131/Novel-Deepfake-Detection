@@ -1,0 +1,164 @@
+{
+  "created_at_utc": "2026-10-09T18:33:38.335578+00:00",
+  "archive_directory": "E:\\PreparedDataset",
+  "total_volumes": 17,
+  "total_compressed_bytes": 34919970208,
+  "total_compressed_gib": 32.522,
+  "parts": [
+    {
+      "name": "Preapred Dataset.z01",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z01",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T13:08:13.067570+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z02",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z02",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T13:35:11.909055+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z03",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z03",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T14:23:55.464757+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z04",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z04",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T15:12:31.977241+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z05",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z05",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T15:57:51.182825+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z06",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z06",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T16:39:23.962512+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z07",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z07",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T17:22:20.651445+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z08",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z08",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T18:21:08.198889+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z09",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z09",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T19:23:11.819835+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z10",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z10",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T20:18:06.966789+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z11",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z11",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T21:05:01.341912+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z12",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z12",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T22:54:50.208179+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z13",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z13",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-10T23:25:42.603216+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z14",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z14",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-11T00:01:54.231734+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z15",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z15",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-11T00:43:07.821389+00:00"
+    },
+    {
+      "name": "Preapred Dataset.z16",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.z16",
+      "size_bytes": 2147483648,
+      "mtime_utc": "2026-07-11T01:22:57.860679+00:00"
+    },
+    {
+      "name": "Preapred Dataset.zip",
+      "path": "E:\\PreparedDataset\\Preapred Dataset.zip",
+      "size_bytes": 560231840,
+      "mtime_utc": "2026-07-11T01:28:40.027194+00:00"
+    }
+  ],
+  "disk_space": {
+    "C": {
+      "root": "C:\\",
+      "total_bytes": 511257677824,
+      "used_bytes": 492303151104,
+      "free_bytes": 18954526720,
+      "free_gib": 17.653
+    },
+    "D": {
+      "root": "D:\\",
+      "total_bytes": 524283904,
+      "used_bytes": 17211392,
+      "free_bytes": 507072512,
+      "free_gib": 0.472
+    },
+    "E": {
+      "root": "E:\\",
+      "total_bytes": 523763707904,
+      "used_bytes": 473423028224,
+      "free_bytes": 50340679680,
+      "free_gib": 46.883
+    },
+    "F": {
+      "root": "F:\\",
+      "total_bytes": 230686715904,
+      "used_bytes": 193447600128,
+      "free_bytes": 37239115776,
+      "free_gib": 34.682
+    },
+    "G": {
+      "root": "G:\\",
+      "total_bytes": 245227319296,
+      "used_bytes": 244996644864,
+      "free_bytes": 230674432,
+      "free_gib": 0.215
+    }
+  },
+  "reader": {
+    "path": "C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\7z.exe",
+    "version": "7-Zip 22.01 (x64)",
+    "status": "verified_compatible",
+    "discovery_notes": "Found installed under NVIDIA App installation directory. Successfully opens and parses the Zip64 multivolume archive header."
+  },
+  "scratch_path": "E:\\archive_investigation_scratch_task",
+  "scratch_drive_free_bytes": 50340679680,
+  "budget_ceiling_bytes": 536870912,
+  "budget_ceiling_mib": 512,
+  "limits_and_constraints": [
+    "Drive G: has only ~230 MiB free, so all intermediate data and image samples are strictly directed to scratch on Drive E:.",
+    "Output ceiling enforced at 512 MiB total extracted bytes.",
+    "No full extraction, archive conversion, or archive modification allowed.",
+    "No training or inference workloads permitted."
+  ]
+}

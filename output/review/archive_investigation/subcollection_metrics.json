@@ -1,0 +1,285 @@
+{
+  "checkpoint_sha256": "e598e1b32871f460756118ba6d4a5f1ad3679a3b9727dff1afa04d4d0de96a28",
+  "overall_development": {
+    "name": "Overall Development (14,835 samples)",
+    "total_samples": 14835,
+    "class_denominators": {
+      "real_actual": 7448,
+      "fake_actual": 7387
+    },
+    "decision_counts_at_05": {
+      "true_positive": 7246,
+      "true_negative": 7176,
+      "false_positive": 272,
+      "false_negative": 141,
+      "total_errors": 413
+    },
+    "rates": {
+      "real_recall": 0.9634801288936627,
+      "fake_recall": 0.9809124136997428,
+      "balanced_accuracy": 0.9721962712967027,
+      "roc_auc": 0.9961728423245355
+    },
+    "probability_quantiles": {
+      "min": 3.770327453023192e-11,
+      "p25": 3.13473410642473e-05,
+      "median": 0.5939562320709229,
+      "p75": 0.9952681362628937,
+      "p90": 0.9996638536453247,
+      "p99": 0.9999992847442627,
+      "max": 1.0
+    }
+  },
+  "pattern_subcollections": {
+    "numeric_all": {
+      "name": "All Numeric (Real JPG + Fake PNG)",
+      "total_samples": 6155,
+      "class_denominators": {
+        "real_actual": 5763,
+        "fake_actual": 392
+      },
+      "decision_counts_at_05": {
+        "true_positive": 392,
+        "true_negative": 5758,
+        "false_positive": 5,
+        "false_negative": 0,
+        "total_errors": 5
+      },
+      "rates": {
+        "real_recall": 0.9991323963213604,
+        "fake_recall": 1.0,
+        "balanced_accuracy": 0.9995661981606803,
+        "roc_auc": 0.9999969014154335
+      },
+      "probability_quantiles": {
+        "min": 3.770327453023192e-11,
+        "p25": 8.807378719666303e-07,
+        "median": 1.1206889212189708e-05,
+        "p75": 0.00016569905710639432,
+        "p90": 0.005290273483842641,
+        "p99": 0.9999998807907104,
+        "max": 1.0
+      }
+    },
+    "video_all": {
+      "name": "All Video Pattern (Real PNG + Fake PNG)",
+      "total_samples": 8680,
+      "class_denominators": {
+        "real_actual": 1685,
+        "fake_actual": 6995
+      },
+      "decision_counts_at_05": {
+        "true_positive": 6854,
+        "true_negative": 1418,
+        "false_positive": 267,
+        "false_negative": 141,
+        "total_errors": 408
+      },
+      "rates": {
+        "real_recall": 0.8415430267062315,
+        "fake_recall": 0.9798427448177269,
+        "balanced_accuracy": 0.9106928857619792,
+        "roc_auc": 0.9828972368987599
+      },
+      "probability_quantiles": {
+        "min": 4.298624844523147e-06,
+        "p25": 0.8622423112392426,
+        "median": 0.9879447817802429,
+        "p75": 0.9985545873641968,
+        "p90": 0.9997833847999573,
+        "p99": 0.9999921321868896,
+        "max": 0.9999998807907104
+      }
+    }
+  },
+  "container_format_subcollections": {
+    "jpg_all": {
+      "name": "All JPEG (Real only)",
+      "total_samples": 5763,
+      "class_denominators": {
+        "real_actual": 5763,
+        "fake_actual": 0
+      },
+      "decision_counts_at_05": {
+        "true_positive": 0,
+        "true_negative": 5758,
+        "false_positive": 5,
+        "false_negative": 0,
+        "total_errors": 5
+      },
+      "rates": {
+        "real_recall": 0.9991323963213604,
+        "fake_recall": null,
+        "balanced_accuracy": null,
+        "roc_auc": "undefined_single_class"
+      },
+      "probability_quantiles": {
+        "min": 3.770327453023192e-11,
+        "p25": 7.266626766977424e-07,
+        "median": 8.453789632767439e-06,
+        "p75": 9.121868424699642e-05,
+        "p90": 0.0008301628171466304,
+        "p99": 0.04930404648184784,
+        "max": 0.9652400612831116
+      }
+    },
+    "png_all": {
+      "name": "All PNG (Real PNG + Fake PNG)",
+      "total_samples": 9072,
+      "class_denominators": {
+        "real_actual": 1685,
+        "fake_actual": 7387
+      },
+      "decision_counts_at_05": {
+        "true_positive": 7246,
+        "true_negative": 1418,
+        "false_positive": 267,
+        "false_negative": 141,
+        "total_errors": 408
+      },
+      "rates": {
+        "real_recall": 0.8415430267062315,
+        "fake_recall": 0.9809124136997428,
+        "balanced_accuracy": 0.9112277202029871,
+        "roc_auc": 0.9837856945737138
+      },
+      "probability_quantiles": {
+        "min": 4.298624844523147e-06,
+        "p25": 0.8806752413511276,
+        "median": 0.9899729490280151,
+        "p75": 0.9989440739154816,
+        "p90": 0.9998955130577087,
+        "p99": 0.9999998807907104,
+        "max": 1.0
+      }
+    }
+  },
+  "granular_strata": {
+    "numeric_real_jpg": {
+      "name": "Numeric Real (100% JPG)",
+      "total_samples": 5763,
+      "class_denominators": {
+        "real_actual": 5763,
+        "fake_actual": 0
+      },
+      "decision_counts_at_05": {
+        "true_positive": 0,
+        "true_negative": 5758,
+        "false_positive": 5,
+        "false_negative": 0,
+        "total_errors": 5
+      },
+      "rates": {
+        "real_recall": 0.9991323963213604,
+        "fake_recall": null,
+        "balanced_accuracy": null,
+        "roc_auc": "undefined_single_class"
+      },
+      "probability_quantiles": {
+        "min": 3.770327453023192e-11,
+        "p25": 7.266626766977424e-07,
+        "median": 8.453789632767439e-06,
+        "p75": 9.121868424699642e-05,
+        "p90": 0.0008301628171466304,
+        "p99": 0.04930404648184784,
+        "max": 0.9652400612831116
+      }
+    },
+    "video_real_png": {
+      "name": "Video Real (100% PNG)",
+      "total_samples": 1685,
+      "class_denominators": {
+        "real_actual": 1685,
+        "fake_actual": 0
+      },
+      "decision_counts_at_05": {
+        "true_positive": 0,
+        "true_negative": 1418,
+        "false_positive": 267,
+        "false_negative": 0,
+        "total_errors": 267
+      },
+      "rates": {
+        "real_recall": 0.8415430267062315,
+        "fake_recall": null,
+        "balanced_accuracy": null,
+        "roc_auc": "undefined_single_class"
+      },
+      "probability_quantiles": {
+        "min": 4.298624844523147e-06,
+        "p25": 0.009525378234684467,
+        "median": 0.048112399876117706,
+        "p75": 0.27837494015693665,
+        "p90": 0.7287174940109254,
+        "p99": 0.9698010253906251,
+        "max": 0.9989368319511414
+      }
+    },
+    "numeric_fake_png": {
+      "name": "Numeric Fake (100% PNG)",
+      "total_samples": 392,
+      "class_denominators": {
+        "real_actual": 0,
+        "fake_actual": 392
+      },
+      "decision_counts_at_05": {
+        "true_positive": 392,
+        "true_negative": 0,
+        "false_positive": 0,
+        "false_negative": 0,
+        "total_errors": 0
+      },
+      "rates": {
+        "real_recall": null,
+        "fake_recall": 1.0,
+        "balanced_accuracy": null,
+        "roc_auc": "undefined_single_class"
+      },
+      "probability_quantiles": {
+        "min": 0.8852403163909912,
+        "p25": 0.999973475933075,
+        "median": 0.9999975562095642,
+        "p75": 0.9999997913837433,
+        "p90": 1.0,
+        "p99": 1.0,
+        "max": 1.0
+      }
+    },
+    "video_fake_png": {
+      "name": "Video Fake (100% PNG)",
+      "total_samples": 6995,
+      "class_denominators": {
+        "real_actual": 0,
+        "fake_actual": 6995
+      },
+      "decision_counts_at_05": {
+        "true_positive": 6854,
+        "true_negative": 0,
+        "false_positive": 0,
+        "false_negative": 141,
+        "total_errors": 141
+      },
+      "rates": {
+        "real_recall": null,
+        "fake_recall": 0.9798427448177269,
+        "balanced_accuracy": null,
+        "roc_auc": "undefined_single_class"
+      },
+      "probability_quantiles": {
+        "min": 6.725283310515806e-05,
+        "p25": 0.9719014167785645,
+        "median": 0.9943470358848572,
+        "p75": 0.9991522431373596,
+        "p90": 0.9998550176620483,
+        "p99": 0.9999936890602111,
+        "max": 0.9999998807907104
+      }
+    }
+  },
+  "key_diagnostic_interpretation": [
+    "1. Stratified Recall Asymmetry: Real recall differs sharply across observed strata (99.91% on numeric JPEG real with 5 FPs / 5,763 vs 84.15% on video PNG real with 267 FPs / 1,685). Video-pattern PNG real accounts for 98.2% of all development false positives (267 / 272).",
+    "2. Confounding Across Strata: The numeric stratum exhibits 99.96% balanced accuracy and 0.999997 ROC AUC. However, this stratum differs from the video stratum simultaneously in source identity, resolution, framing, crop policy, and container format (100% JPEG real vs 100% PNG fake). The observational correlation supports investigating confounding but does not establish compression as the sole causal driver.",
+    "3. Fake Recall Across Strata: Fake recall is 100.0% on numeric PNG fake (392/392) and 97.98% on video PNG fake (6,854/6,995, with 141 false negatives).",
+    "4. Aggregate Performance Masking: The aggregate development balanced accuracy (97.22%) and ROC AUC (0.996173) summarize the pooled evaluation cohort, but mask the large difference in real recall between numeric JPEG crops and video-tracked PNG crops."
+  ]
+}
