@@ -2,13 +2,27 @@
 
 This document provides a complete, copy-pasteable, cell-by-cell workflow for running the controlled RGB data-mixture pilot (Arm A vs. Arm B) on a single Colab GPU (T4, V100, A100, or L4).
 
-Upload the latest `output/controlled_mixture/pilot_colab_package.zip` to **My Drive/pilot_colab_package.zip** before starting. This package includes the selected manifests and current code; use it instead of the old saved repository folder. Run Cells 1–6 once, then Cell 7 with `ARM="arm_a"`, Cell 8 to save it, Cell 7 with `ARM="arm_b"`, Cell 8 again, and finally Cell 9. No manifest regeneration or full-dataset hashing is needed for unchanged images.
+**Updated 2026-10-10: fresh Git clone workflow; no code ZIP upload required.** The pilot manifests are tracked in the repository. Cell 3 clones `GeneralizationDeepFakeDetection` into local Colab storage and checks that the required manifests arrived. Start with a fresh runtime or an empty/nonexistent `LOCAL_REPO`; keep your dataset, Drive preparation files and completed model outputs. Do not delete those when replacing the old code checkout.
+
+Run Cells 1–6 once, then Cell 7 with `ARM="arm_a"`, Cell 8 to save it, Cell 7 with `ARM="arm_b"`, Cell 8 again, and finally Cell 9. No manifest regeneration or full-dataset hashing is needed for unchanged images. If the dataset is already at `/content/dataset/Preapred Dataset/train`, Cell 4 reuses it; otherwise put all split dataset archive volumes together in the configured Drive folder. Cloning code does not download the image archive.
+
+## Should we train on 1M images for two epochs instead?
+
+**Recommendation: run the two small controlled arms first.** More diverse, correctly labeled images can help; simply adding more images from the current biased collection is not established as a fix. Two epochs are not inherently too few or sufficient: update count, unique content, learning schedule and domain coverage all matter. We cannot assign a reliable probability of reaching 85% from dataset size alone.
+
+The archive has 1,016,855 images in total, but only **805,421 are in its train directory**; the other 211,434 belong to archive val. The saved cleanup left 779,408 training rows in its older split. Under the new connected-family partition and eight-per-group/class cap, the candidate training pool contains **299,297 images**, before arm quotas. These are different preparation stages, not interchangeable training sizes. Never merge val/dev into training merely to reach 1M.
+
+One million images times two epochs means about two million image presentations. Both proposed 20K arms times five epochs together mean 200,000 presentations: roughly ten times fewer. This is an exposure comparison, not a runtime estimate. The smaller experiment tests whether the mixture change helps before committing that compute. The current guide intentionally trains 20K per arm for five epochs; it does not silently label this as full-data training.
+
+After training, compare both checkpoints on the same external-development dataset using the same evaluation procedure. Check real recall, fake recall, balanced accuracy at 0.5, AUC and separately reported development-calibrated results. Internal development improvement alone is insufficient. If the new mixture helps externally, evaluate a larger *group-respecting, available* cohort as the next experiment; if it does not, prioritize different source coverage or representations rather than scaling the identical recipe blindly. Equal four-stratum quotas are limited by the smallest available stratum (11,270 video-pattern real candidates here), so 100K equal-stratum unique images cannot be promised under these exact caps without changing the protocol.
+
+Related primary evidence: [B-Free](https://openaccess.thecvf.com/content/CVPR2025/html/Guillaro_A_Bias-Free_Training_Paradigm_for_More_General_AI-generated_Image_Detection_CVPR_2025_paper.html) studies content/format/resolution bias; [Community Forensics](https://openaccess.thecvf.com/content/CVPR2025/html/Park_Community_Forensics_Using_Thousands_of_Generators_to_Train_Fake_Image_CVPR_2025_paper.html) studies generator diversity. Neither predicts the improvement for this particular collection.
 
 ---
 
 ## Protocol & Engineering Summary
 
-- **Hypothesis**: The baseline R2 sampling mixture underrepresented numeric fake (551) and video real (2,286) examples relative to their class counterparts. A balanced 4-stratum mixture (5,000 across each stratum: numeric real, video real, numeric fake, video fake) tests whether equal representation across observable types improves robustness. This is an engineering data-representation pilot.
+- **Hypothesis**: The baseline R2 100K sampling mixture contained 2,753 numeric fake and 11,430 video-pattern real images. Arm A approximates those proportions at 20K (551 numeric fake and 2,286 video real). Arm B has 5,000 across each of the four strata. This tests whether equal representation improves robustness; it is an engineering data-representation pilot.
 - **Model**: `Wang2020_128` (ResNet-50 backbone with 128-d projection head, ImageNet pretrained via `--pretrained`).
 - **Fine-tuning & Regularization**: `layer4_and_head` fine-tuning, `frozen` batch normalization (eval mode), backbone learning rate multiplier 0.1, head dropout 0.5.
 - **Augmentation Recipe**: `rgb_v1` (Gaussian blur prob 0.5, JPEG prob 0.5, qualities 50–95) identical to R2.
@@ -57,9 +71,9 @@ Set all shared paths once in Python so they persist cleanly across all subsequen
 import os
 from pathlib import Path
 
-# Configurable Drive repository and archive locations
-DRIVE_REPO = "/content/drive/MyDrive/Generalization_First_Try_RGB/Novel-Deepfake-Detection"
-DRIVE_PACKAGE_ZIP = "/content/drive/MyDrive/pilot_colab_package.zip"
+# Repository and configurable Drive dataset archive location
+REPO_URL = "https://github.com/AbdelrahmanHassan131/Novel-Deepfake-Detection.git"
+REPO_BRANCH = "GeneralizationDeepFakeDetection"
 DRIVE_ARCHIVE_DIR = "/content/drive/MyDrive/PreparedDataset"
 DRIVE_BACKUP_DIR = "/content/drive/MyDrive/Generalization_First_Try_RGB/controlled_mixture_experiments"
 
@@ -72,8 +86,8 @@ OUTPUT_BASE = "/content/experiments"
 REGISTRY_FILE = "/content/run_registry.json"
 
 # Export into environment for all child processes and bash cells
-os.environ["DRIVE_REPO"] = DRIVE_REPO
-os.environ["DRIVE_PACKAGE_ZIP"] = DRIVE_PACKAGE_ZIP
+os.environ["REPO_URL"] = REPO_URL
+os.environ["REPO_BRANCH"] = REPO_BRANCH
 os.environ["DRIVE_ARCHIVE_DIR"] = DRIVE_ARCHIVE_DIR
 os.environ["DRIVE_BACKUP_DIR"] = DRIVE_BACKUP_DIR
 os.environ["LOCAL_REPO"] = LOCAL_REPO
@@ -91,33 +105,45 @@ print(f"  OUTPUT_BASE  : {OUTPUT_BASE}")
 
 ---
 
-## Step 3: Restore Code and Certified Manifests
+## Step 3: Fresh Clone of the Pushed Branch
 
-Restore the updated codebase and newly certified `manifests_v2` package to local SSD (`/content/Novel_Deepfake_Detection`).
+Clone code and the tracked `manifests_v2` files to local SSD. This does not change your local PC or Drive repository. If the branch or required files are absent remotely, push them first; the cell fails instead of using old code. If you already ran this cell successfully, skip it when switching arms—do not clone again between Arm A and Arm B.
 
 ```bash
 %%bash
-# [Cell 3: Code and Manifest Restoration]
+# [Cell 3: Fresh Git Clone and Dependencies]
 set -euo pipefail
 
 mkdir -p "$OUTPUT_BASE"
 
-# 1. Restore the reviewed package to a fresh destination; never delete old work.
+# 1. Clone to a fresh destination; never delete old work automatically.
 python - <<'PY'
-import os, zipfile
+import os, subprocess, json, hashlib
 from pathlib import Path
-archive = Path(os.environ['DRIVE_PACKAGE_ZIP'])
 target = Path(os.environ['LOCAL_REPO']).resolve()
-assert archive.is_file(), f'Upload the latest pilot_colab_package.zip here: {archive}'
 assert target.parent == Path('/content'), 'LOCAL_REPO must be a direct child of /content'
 assert not target.exists() or not any(target.iterdir()), f'Choose a fresh LOCAL_REPO in Cell 2: {target}'
-with zipfile.ZipFile(archive) as z:
-    for item in z.infolist():
-        dest = (target / item.filename).resolve()
-        assert dest.is_relative_to(target), f'Unsafe package member: {item.filename}'
-    z.extractall(target)
-assert (target / 'output/controlled_mixture/manifests_v2/shared_dev/selected_manifest.csv').is_file()
-print('Restored reviewed code and selected manifests:', target)
+subprocess.run(['git', 'clone', '--depth', '1', '--single-branch', '--branch',
+                os.environ['REPO_BRANCH'], os.environ['REPO_URL'], str(target)], check=True)
+commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=target, text=True).strip()
+base = target / 'output/controlled_mixture/manifests_v2'
+for arm in ('arm_a', 'arm_b', 'shared_dev'):
+    manifest = base / arm / 'selected_manifest.csv'
+    gate_path = manifest.with_suffix('.verified.json')
+    assert manifest.is_file() and gate_path.is_file(), f'Push the manifest and gate for {arm} to the selected branch'
+    gate = json.loads(gate_path.read_text(encoding='utf-8'))
+    raw = manifest.read_bytes()
+    expected = gate['manifest_sha256']
+    valid_digests = {
+        hashlib.sha256(raw).hexdigest(),
+        hashlib.sha256(raw.replace(b'\r\n', b'\n')).hexdigest(),
+        hashlib.sha256(raw.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')).hexdigest(),
+    }
+    assert expected in valid_digests, f'Manifest digest failed: {arm}'
+for name in ('union_members_list.txt', 'union_archive_members.txt', 'mixture_manifest_report.json'):
+    assert (base / name).is_file(), f'Missing tracked preparation file: {name}'
+(Path(os.environ['OUTPUT_BASE']) / 'clone_commit.txt').write_text(commit + '\n', encoding='utf-8')
+print('Cloned branch:', os.environ['REPO_BRANCH'], '\nCommit:', commit, '\nCode and manifests:', target)
 PY
 
 # 2. Install required Python packages (excluding Torch/CUDA reinstall)

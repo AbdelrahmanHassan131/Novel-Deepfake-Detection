@@ -264,16 +264,23 @@ def verify_manifest_gate(manifest_path, gate_path=None, enforce_class_coverage=T
     if not expected_digest:
         raise RuntimeError(f"Preparation gate {g_path} is missing 'manifest_sha256' field.")
 
-    actual_digest = hashlib.sha256(m_path.read_bytes()).hexdigest()
+    raw_bytes = m_path.read_bytes()
+    actual_digest = hashlib.sha256(raw_bytes).hexdigest()
     if actual_digest != expected_digest:
-        raise RuntimeError(
-            f"Manifest digest mismatch between manifest file and audit gate!\n"
-            f"  Manifest:        {m_path}\n"
-            f"  Current SHA256:  {actual_digest}\n"
-            f"  Gate SHA256:     {expected_digest}\n"
-            "The manifest was modified after the audit passed, or a stale gate file is present.\n"
-            "Re-run 'python prepare_dataset.py audit' to re-verify."
-        )
+        # Cross-platform line-ending resilience (Windows CRLF vs Linux LF)
+        lf_digest = hashlib.sha256(raw_bytes.replace(b'\r\n', b'\n')).hexdigest()
+        crlf_digest = hashlib.sha256(raw_bytes.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')).hexdigest()
+        if expected_digest in (lf_digest, crlf_digest):
+            actual_digest = expected_digest
+        else:
+            raise RuntimeError(
+                f"Manifest digest mismatch between manifest file and audit gate!\n"
+                f"  Manifest:        {m_path}\n"
+                f"  Current SHA256:  {actual_digest}\n"
+                f"  Gate SHA256:     {expected_digest}\n"
+                "The manifest was modified after the audit passed, or a stale gate file is present.\n"
+                "Re-run 'python prepare_dataset.py audit' to re-verify."
+            )
 
     if require_hashes and not gate_data.get('hashes_verified', False):
         raise RuntimeError(
