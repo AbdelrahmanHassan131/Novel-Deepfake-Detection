@@ -220,7 +220,8 @@ class CheckpointHook:
 
         trainer_opt = getattr(trainer, 'opt', None)
         run_id = (getattr(trainer_opt, 'run_id', None) or getattr(trainer_opt, 'name', 'default_run')) if trainer_opt is not None else 'default_run'
-        training_seed = getattr(trainer_opt, 'seed', 42) if trainer_opt is not None else 42
+        raw_seed = getattr(trainer_opt, 'seed', None) if trainer_opt is not None else None
+        training_seed = int(raw_seed) if raw_seed is not None else 42
 
         aligned_records = []
         for i in range(num_preds):
@@ -235,7 +236,7 @@ class CheckpointHook:
                         f"dataset record label={expected_label}, model output label={actual_label}."
                     )
             rec['run_id'] = str(run_id)
-            rec['training_seed'] = int(training_seed)
+            rec['training_seed'] = training_seed
             aligned_records.append(rec)
 
         from evaluation.generalization import export_predictions
