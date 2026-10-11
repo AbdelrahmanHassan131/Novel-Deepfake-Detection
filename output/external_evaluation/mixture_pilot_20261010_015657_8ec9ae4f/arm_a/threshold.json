@@ -1,0 +1,12 @@
+{
+  "threshold": 0.827182412147522,
+  "criterion": "development Youden J",
+  "source_splits": [
+    "dev"
+  ],
+  "independence_status": "development_fit_only_not_independent",
+  "note": "Optimized on development partition; diagnostic fit only, not independent performance.",
+  "checkpoint_sha256": "8f97bd7279d4c2b2e64c8735c7e87103d3bfe61c58bd62c4c5c03ef588480c59",
+  "prediction_file": "/content/experiments/arm_a_seed42_20261009_220711_6f1b7b4b/checkpoints/best_dev_predictions.csv",
+  "manifest_path": "/content/Novel_Deepfake_Detection/output/controlled_mixture/manifests_v2/shared_dev/selected_manifest.csv"
+}

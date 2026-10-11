@@ -1,0 +1,638 @@
+{
+  "shared_dev_manifest": {
+    "path": "/content/Novel_Deepfake_Detection/output/controlled_mixture/manifests_v2/shared_dev/selected_manifest.csv",
+    "samples": 2000
+  },
+  "arm_a": {
+    "checkpoint_sha256": "8f97bd7279d4c2b2e64c8735c7e87103d3bfe61c58bd62c4c5c03ef588480c59",
+    "prediction_file": "/content/experiments/arm_a_seed42_20261009_220711_6f1b7b4b/checkpoints/best_dev_predictions.csv",
+    "fixed_0_5": {
+      "threshold": 0.5,
+      "threshold_label": "fixed_0_5",
+      "overall": {
+        "denominator": 2000,
+        "errors": 276,
+        "accuracy": 0.862,
+        "balanced_accuracy": 0.862,
+        "real_recall": 0.751,
+        "fake_recall": 0.973,
+        "roc_auc": 0.965709,
+        "min_stratum_recall": 0.506,
+        "probabilities": {
+          "mean": 0.5898875771676976,
+          "std": 0.41422302946268086,
+          "min": 5.048387379247288e-07,
+          "p25": 0.05514770094305277,
+          "median": 0.7947199642658234,
+          "p75": 0.9764522463083267,
+          "max": 0.9999535083770752
+        },
+        "logits": null
+      },
+      "strata": {
+        "numeric_real": {
+          "denominator": 500,
+          "errors": 2,
+          "recall": 0.996,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.013328302421548983,
+            "std": 0.05247856685499373,
+            "min": 5.048387379247288e-07,
+            "p25": 0.0001278863419429399,
+            "median": 0.0006914904224686325,
+            "p75": 0.0032842415384948254,
+            "max": 0.6354987621307373
+          },
+          "logits": null
+        },
+        "video_real": {
+          "denominator": 500,
+          "errors": 247,
+          "recall": 0.506,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.5019461176162585,
+            "std": 0.2869721633816755,
+            "min": 0.0070704803802073,
+            "p25": 0.24941619858145714,
+            "median": 0.49186450242996216,
+            "p75": 0.7630753219127655,
+            "max": 0.9778465032577515
+          },
+          "logits": null
+        },
+        "numeric_fake": {
+          "denominator": 500,
+          "errors": 7,
+          "recall": 0.986,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.9683989849947393,
+            "std": 0.1007757892062726,
+            "min": 0.017175285145640373,
+            "p25": 0.9759222269058228,
+            "median": 0.9937012195587158,
+            "p75": 0.9981614351272583,
+            "max": 0.9999535083770752
+          },
+          "logits": null
+        },
+        "video_fake": {
+          "denominator": 500,
+          "errors": 20,
+          "recall": 0.96,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.8758769036382437,
+            "std": 0.16076383924743678,
+            "min": 0.07293109595775604,
+            "p25": 0.8551556020975113,
+            "median": 0.9400814771652222,
+            "p75": 0.976722463965416,
+            "max": 0.9993191957473755
+          },
+          "logits": null
+        }
+      },
+      "subcollections": {
+        "numeric_both": {
+          "denominator": 1000,
+          "errors": 9,
+          "accuracy": 0.991,
+          "balanced_accuracy": 0.991,
+          "real_recall": 0.996,
+          "fake_recall": 0.986,
+          "roc_auc": 0.999512,
+          "probabilities": {
+            "mean": 0.4908636437081441,
+            "std": 0.4842467160573786,
+            "min": 5.048387379247288e-07,
+            "p25": 0.0006925809720996767,
+            "median": 0.2741532474756241,
+            "p75": 0.993686318397522,
+            "max": 0.9999535083770752
+          }
+        },
+        "video_both": {
+          "denominator": 1000,
+          "errors": 267,
+          "accuracy": 0.733,
+          "balanced_accuracy": 0.733,
+          "real_recall": 0.506,
+          "fake_recall": 0.96,
+          "roc_auc": 0.8865919999999999,
+          "probabilities": {
+            "mean": 0.6889115106272511,
+            "std": 0.29842097021912234,
+            "min": 0.0070704803802073,
+            "p25": 0.45652635395526886,
+            "median": 0.8087885975837708,
+            "p75": 0.9463420510292053,
+            "max": 0.9993191957473755
+          }
+        }
+      }
+    },
+    "dev_selected": {
+      "threshold": 0.827182412147522,
+      "threshold_label": "dev_selected",
+      "overall": {
+        "denominator": 2000,
+        "errors": 209,
+        "accuracy": 0.8955,
+        "balanced_accuracy": 0.8955,
+        "real_recall": 0.908,
+        "fake_recall": 0.883,
+        "roc_auc": 0.965709,
+        "min_stratum_recall": 0.79,
+        "probabilities": {
+          "mean": 0.5898875771676976,
+          "std": 0.41422302946268086,
+          "min": 5.048387379247288e-07,
+          "p25": 0.05514770094305277,
+          "median": 0.7947199642658234,
+          "p75": 0.9764522463083267,
+          "max": 0.9999535083770752
+        },
+        "logits": null
+      },
+      "strata": {
+        "numeric_real": {
+          "denominator": 500,
+          "errors": 0,
+          "recall": 1.0,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.013328302421548983,
+            "std": 0.05247856685499373,
+            "min": 5.048387379247288e-07,
+            "p25": 0.0001278863419429399,
+            "median": 0.0006914904224686325,
+            "p75": 0.0032842415384948254,
+            "max": 0.6354987621307373
+          },
+          "logits": null
+        },
+        "video_real": {
+          "denominator": 500,
+          "errors": 92,
+          "recall": 0.8160000000000001,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.5019461176162585,
+            "std": 0.2869721633816755,
+            "min": 0.0070704803802073,
+            "p25": 0.24941619858145714,
+            "median": 0.49186450242996216,
+            "p75": 0.7630753219127655,
+            "max": 0.9778465032577515
+          },
+          "logits": null
+        },
+        "numeric_fake": {
+          "denominator": 500,
+          "errors": 12,
+          "recall": 0.976,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.9683989849947393,
+            "std": 0.1007757892062726,
+            "min": 0.017175285145640373,
+            "p25": 0.9759222269058228,
+            "median": 0.9937012195587158,
+            "p75": 0.9981614351272583,
+            "max": 0.9999535083770752
+          },
+          "logits": null
+        },
+        "video_fake": {
+          "denominator": 500,
+          "errors": 105,
+          "recall": 0.79,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.8758769036382437,
+            "std": 0.16076383924743678,
+            "min": 0.07293109595775604,
+            "p25": 0.8551556020975113,
+            "median": 0.9400814771652222,
+            "p75": 0.976722463965416,
+            "max": 0.9993191957473755
+          },
+          "logits": null
+        }
+      },
+      "subcollections": {
+        "numeric_both": {
+          "denominator": 1000,
+          "errors": 12,
+          "accuracy": 0.988,
+          "balanced_accuracy": 0.988,
+          "real_recall": 1.0,
+          "fake_recall": 0.976,
+          "roc_auc": 0.999512,
+          "probabilities": {
+            "mean": 0.4908636437081441,
+            "std": 0.4842467160573786,
+            "min": 5.048387379247288e-07,
+            "p25": 0.0006925809720996767,
+            "median": 0.2741532474756241,
+            "p75": 0.993686318397522,
+            "max": 0.9999535083770752
+          }
+        },
+        "video_both": {
+          "denominator": 1000,
+          "errors": 197,
+          "accuracy": 0.803,
+          "balanced_accuracy": 0.8029999999999999,
+          "real_recall": 0.816,
+          "fake_recall": 0.79,
+          "roc_auc": 0.8865919999999999,
+          "probabilities": {
+            "mean": 0.6889115106272511,
+            "std": 0.29842097021912234,
+            "min": 0.0070704803802073,
+            "p25": 0.45652635395526886,
+            "median": 0.8087885975837708,
+            "p75": 0.9463420510292053,
+            "max": 0.9993191957473755
+          }
+        }
+      }
+    },
+    "dev_calibration_artifact": {
+      "threshold": 0.827182412147522,
+      "criterion": "development Youden J",
+      "source_splits": [
+        "dev"
+      ],
+      "independence_status": "development_fit_only_not_independent",
+      "note": "Optimized on development partition; diagnostic fit only, not independent performance.",
+      "checkpoint_sha256": "8f97bd7279d4c2b2e64c8735c7e87103d3bfe61c58bd62c4c5c03ef588480c59",
+      "prediction_file": "/content/experiments/arm_a_seed42_20261009_220711_6f1b7b4b/checkpoints/best_dev_predictions.csv",
+      "manifest_path": "/content/Novel_Deepfake_Detection/output/controlled_mixture/manifests_v2/shared_dev/selected_manifest.csv"
+    }
+  },
+  "arm_b": {
+    "checkpoint_sha256": "79256d43c65a2fcb95edc68503e696c3f6d37d4c6621a521bac62ae552d6b0ac",
+    "prediction_file": "/content/experiments/arm_b_seed42_20261009_222408_6a914779/checkpoints/best_dev_predictions.csv",
+    "fixed_0_5": {
+      "threshold": 0.5,
+      "threshold_label": "fixed_0_5",
+      "overall": {
+        "denominator": 2000,
+        "errors": 229,
+        "accuracy": 0.8855,
+        "balanced_accuracy": 0.8855,
+        "real_recall": 0.88,
+        "fake_recall": 0.891,
+        "roc_auc": 0.9634619999999999,
+        "min_stratum_recall": 0.784,
+        "probabilities": {
+          "mean": 0.5094853236413953,
+          "std": 0.41984128032088164,
+          "min": 1.1073210544054746e-06,
+          "p25": 0.03407901618629694,
+          "median": 0.5192421972751617,
+          "p75": 0.9938967823982239,
+          "max": 1.0
+        },
+        "logits": null
+      },
+      "strata": {
+        "numeric_real": {
+          "denominator": 500,
+          "errors": 14,
+          "recall": 0.972,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.03869108270413085,
+            "std": 0.13623782927570374,
+            "min": 1.1073210544054746e-06,
+            "p25": 0.00035801388730760664,
+            "median": 0.0017849758150987327,
+            "p75": 0.009652984095737338,
+            "max": 0.9645463228225708
+          },
+          "logits": null
+        },
+        "video_real": {
+          "denominator": 500,
+          "errors": 106,
+          "recall": 0.788,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.28304263423057274,
+            "std": 0.25915019775724446,
+            "min": 0.002243493450805545,
+            "p25": 0.06923497654497623,
+            "median": 0.19491683691740036,
+            "p75": 0.42588989436626434,
+            "max": 0.9954237341880798
+          },
+          "logits": null
+        },
+        "numeric_fake": {
+          "denominator": 500,
+          "errors": 1,
+          "recall": 0.998,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.9983493599295616,
+            "std": 0.032376400774120455,
+            "min": 0.27586761116981506,
+            "p25": 0.9999624788761139,
+            "median": 0.9999952912330627,
+            "p75": 0.9999994039535522,
+            "max": 1.0
+          },
+          "logits": null
+        },
+        "video_fake": {
+          "denominator": 500,
+          "errors": 108,
+          "recall": 0.784,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.7178582177013159,
+            "std": 0.2509346176861248,
+            "min": 0.011412860825657845,
+            "p25": 0.5569291263818741,
+            "median": 0.81178417801857,
+            "p75": 0.9150029271841049,
+            "max": 0.9944261312484741
+          },
+          "logits": null
+        }
+      },
+      "subcollections": {
+        "numeric_both": {
+          "denominator": 1000,
+          "errors": 15,
+          "accuracy": 0.985,
+          "balanced_accuracy": 0.985,
+          "real_recall": 0.972,
+          "fake_recall": 0.998,
+          "roc_auc": 0.9999079999999999,
+          "probabilities": {
+            "mean": 0.5185202213168463,
+            "std": 0.48993927275555443,
+            "min": 1.1073210544054746e-06,
+            "p25": 0.0017850642034318298,
+            "median": 0.9355150461196899,
+            "p75": 0.9999952614307404,
+            "max": 1.0
+          }
+        },
+        "video_both": {
+          "denominator": 1000,
+          "errors": 214,
+          "accuracy": 0.786,
+          "balanced_accuracy": 0.786,
+          "real_recall": 0.788,
+          "fake_recall": 0.784,
+          "roc_auc": 0.872388,
+          "probabilities": {
+            "mean": 0.5004504259659444,
+            "std": 0.3351561599951595,
+            "min": 0.002243493450805545,
+            "p25": 0.17124145478010178,
+            "median": 0.4981619417667389,
+            "p75": 0.8288300931453705,
+            "max": 0.9954237341880798
+          }
+        }
+      }
+    },
+    "dev_selected": {
+      "threshold": 0.4273521304130554,
+      "threshold_label": "dev_selected",
+      "overall": {
+        "denominator": 2000,
+        "errors": 219,
+        "accuracy": 0.8905,
+        "balanced_accuracy": 0.8905000000000001,
+        "real_recall": 0.86,
+        "fake_recall": 0.921,
+        "roc_auc": 0.9634619999999999,
+        "min_stratum_recall": 0.752,
+        "probabilities": {
+          "mean": 0.5094853236413953,
+          "std": 0.41984128032088164,
+          "min": 1.1073210544054746e-06,
+          "p25": 0.03407901618629694,
+          "median": 0.5192421972751617,
+          "p75": 0.9938967823982239,
+          "max": 1.0
+        },
+        "logits": null
+      },
+      "strata": {
+        "numeric_real": {
+          "denominator": 500,
+          "errors": 16,
+          "recall": 0.968,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.03869108270413085,
+            "std": 0.13623782927570374,
+            "min": 1.1073210544054746e-06,
+            "p25": 0.00035801388730760664,
+            "median": 0.0017849758150987327,
+            "p75": 0.009652984095737338,
+            "max": 0.9645463228225708
+          },
+          "logits": null
+        },
+        "video_real": {
+          "denominator": 500,
+          "errors": 124,
+          "recall": 0.752,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.28304263423057274,
+            "std": 0.25915019775724446,
+            "min": 0.002243493450805545,
+            "p25": 0.06923497654497623,
+            "median": 0.19491683691740036,
+            "p75": 0.42588989436626434,
+            "max": 0.9954237341880798
+          },
+          "logits": null
+        },
+        "numeric_fake": {
+          "denominator": 500,
+          "errors": 1,
+          "recall": 0.998,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.9983493599295616,
+            "std": 0.032376400774120455,
+            "min": 0.27586761116981506,
+            "p25": 0.9999624788761139,
+            "median": 0.9999952912330627,
+            "p75": 0.9999994039535522,
+            "max": 1.0
+          },
+          "logits": null
+        },
+        "video_fake": {
+          "denominator": 500,
+          "errors": 78,
+          "recall": 0.844,
+          "roc_auc": "undefined_single_class",
+          "probabilities": {
+            "mean": 0.7178582177013159,
+            "std": 0.2509346176861248,
+            "min": 0.011412860825657845,
+            "p25": 0.5569291263818741,
+            "median": 0.81178417801857,
+            "p75": 0.9150029271841049,
+            "max": 0.9944261312484741
+          },
+          "logits": null
+        }
+      },
+      "subcollections": {
+        "numeric_both": {
+          "denominator": 1000,
+          "errors": 17,
+          "accuracy": 0.983,
+          "balanced_accuracy": 0.983,
+          "real_recall": 0.968,
+          "fake_recall": 0.998,
+          "roc_auc": 0.9999079999999999,
+          "probabilities": {
+            "mean": 0.5185202213168463,
+            "std": 0.48993927275555443,
+            "min": 1.1073210544054746e-06,
+            "p25": 0.0017850642034318298,
+            "median": 0.9355150461196899,
+            "p75": 0.9999952614307404,
+            "max": 1.0
+          }
+        },
+        "video_both": {
+          "denominator": 1000,
+          "errors": 202,
+          "accuracy": 0.798,
+          "balanced_accuracy": 0.798,
+          "real_recall": 0.752,
+          "fake_recall": 0.844,
+          "roc_auc": 0.872388,
+          "probabilities": {
+            "mean": 0.5004504259659444,
+            "std": 0.3351561599951595,
+            "min": 0.002243493450805545,
+            "p25": 0.17124145478010178,
+            "median": 0.4981619417667389,
+            "p75": 0.8288300931453705,
+            "max": 0.9954237341880798
+          }
+        }
+      }
+    },
+    "dev_calibration_artifact": {
+      "threshold": 0.4273521304130554,
+      "criterion": "development Youden J",
+      "source_splits": [
+        "dev"
+      ],
+      "independence_status": "development_fit_only_not_independent",
+      "note": "Optimized on development partition; diagnostic fit only, not independent performance.",
+      "checkpoint_sha256": "79256d43c65a2fcb95edc68503e696c3f6d37d4c6621a521bac62ae552d6b0ac",
+      "prediction_file": "/content/experiments/arm_b_seed42_20261009_222408_6a914779/checkpoints/best_dev_predictions.csv",
+      "manifest_path": "/content/Novel_Deepfake_Detection/output/controlled_mixture/manifests_v2/shared_dev/selected_manifest.csv"
+    }
+  },
+  "paired_comparison": {
+    "fixed_0_5": {
+      "threshold_label": "fixed_0_5",
+      "threshold_a": 0.5,
+      "threshold_b": 0.5,
+      "contingency_matrix": {
+        "both_correct": 1621,
+        "a_correct_b_wrong": 103,
+        "a_wrong_b_correct": 150,
+        "both_wrong": 126,
+        "net_b_minus_a_errors": -47
+      },
+      "per_stratum_shifts": {
+        "video_real": {
+          "a_errors": 247,
+          "b_errors": 106,
+          "a_corr_b_wrong": 3,
+          "a_wrong_b_corr": 144,
+          "net_b_minus_a": -141
+        },
+        "numeric_real": {
+          "a_errors": 2,
+          "b_errors": 14,
+          "a_corr_b_wrong": 12,
+          "a_wrong_b_corr": 0,
+          "net_b_minus_a": 12
+        },
+        "numeric_fake": {
+          "a_errors": 7,
+          "b_errors": 1,
+          "a_corr_b_wrong": 0,
+          "a_wrong_b_corr": 6,
+          "net_b_minus_a": -6
+        },
+        "video_fake": {
+          "a_errors": 20,
+          "b_errors": 108,
+          "a_corr_b_wrong": 88,
+          "a_wrong_b_corr": 0,
+          "net_b_minus_a": 88
+        }
+      },
+      "notes": "Descriptive paired counts only; asymptotic p-values omitted due to video-frame clustering."
+    },
+    "dev_selected": {
+      "threshold_label": "dev_selected",
+      "threshold_a": 0.827182412147522,
+      "threshold_b": 0.4273521304130554,
+      "contingency_matrix": {
+        "both_correct": 1719,
+        "a_correct_b_wrong": 72,
+        "a_wrong_b_correct": 62,
+        "both_wrong": 147,
+        "net_b_minus_a_errors": 10
+      },
+      "per_stratum_shifts": {
+        "video_real": {
+          "a_errors": 92,
+          "b_errors": 124,
+          "a_corr_b_wrong": 47,
+          "a_wrong_b_corr": 15,
+          "net_b_minus_a": 32
+        },
+        "numeric_real": {
+          "a_errors": 0,
+          "b_errors": 16,
+          "a_corr_b_wrong": 16,
+          "a_wrong_b_corr": 0,
+          "net_b_minus_a": 16
+        },
+        "numeric_fake": {
+          "a_errors": 12,
+          "b_errors": 1,
+          "a_corr_b_wrong": 0,
+          "a_wrong_b_corr": 11,
+          "net_b_minus_a": -11
+        },
+        "video_fake": {
+          "a_errors": 105,
+          "b_errors": 78,
+          "a_corr_b_wrong": 9,
+          "a_wrong_b_corr": 36,
+          "net_b_minus_a": -27
+        }
+      },
+      "notes": "Descriptive paired counts only; asymptotic p-values omitted due to video-frame clustering."
+    }
+  }
+}

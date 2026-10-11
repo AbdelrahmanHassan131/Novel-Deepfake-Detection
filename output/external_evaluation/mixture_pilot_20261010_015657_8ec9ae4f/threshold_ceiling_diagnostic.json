@@ -1,0 +1,41 @@
+{
+  "purpose": "Post-hoc diagnostic only. External labels used to calculate empirical threshold ceiling; not a deployable threshold or independent accuracy.",
+  "arms": {
+    "arm_a": {
+      "probability": {
+        "auc": 0.7747731155555555,
+        "maximum_observed_balanced_accuracy": 0.7097166666666667,
+        "real_recall_at_maximum": 0.6594,
+        "fake_recall_at_maximum": 0.7600333333333333,
+        "median_real_score": 0.994127094745636,
+        "median_fake_score": 0.9989524483680725
+      },
+      "logit": {
+        "auc": 0.7747732255555556,
+        "maximum_observed_balanced_accuracy": 0.7097166666666667,
+        "real_recall_at_maximum": 0.6594,
+        "fake_recall_at_maximum": 0.7600333333333333,
+        "median_real_score": 5.131523132324219,
+        "median_fake_score": 6.860298156738281
+      }
+    },
+    "arm_b": {
+      "probability": {
+        "auc": 0.817958181111111,
+        "maximum_observed_balanced_accuracy": 0.7399666666666667,
+        "real_recall_at_maximum": 0.7496,
+        "fake_recall_at_maximum": 0.7303333333333333,
+        "median_real_score": 0.9999935626983643,
+        "median_fake_score": 0.9999998807907104
+      },
+      "logit": {
+        "auc": 0.8222628299999999,
+        "maximum_observed_balanced_accuracy": 0.7402,
+        "real_recall_at_maximum": 0.7625333333333333,
+        "fake_recall_at_maximum": 0.7178666666666667,
+        "median_real_score": 11.94523811340332,
+        "median_fake_score": 15.986394882202148
+      }
+    }
+  }
+}
