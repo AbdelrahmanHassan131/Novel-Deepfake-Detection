@@ -1,0 +1,28 @@
+{
+  "probability_threshold_1_generalization_cm": [
+    [
+      0,
+      1
+    ],
+    [
+      0,
+      1
+    ]
+  ],
+  "probability_threshold_1_classification_cm": [
+    [
+      1,
+      0
+    ],
+    [
+      1,
+      0
+    ]
+  ],
+  "video_logit_failure": "Probability threshold must be finite and in [0,1], got 25",
+  "folder_dev_calibration_failure": "Threshold calibration accepts only development splits ['dev', 'dev_calibration', 'external_dev', 'val'], got ['unknown']",
+  "forbidden_split_and_conflicting_fields_accepted": [
+    25.0,
+    "logit"
+  ]
+}

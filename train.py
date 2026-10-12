@@ -65,6 +65,8 @@ def parse_args():
                         help="BatchNorm policy: 'train' (updates running stats) or 'frozen' (freezes running stats in eval mode)")
     parser.add_argument('--decay_bias_norm', action=argparse.BooleanOptionalAction, default=False,
                         help="Whether to apply weight decay to 1D bias and normalization layers")
+    parser.add_argument('--rgb_label_smoothing', type=float, default=MODEL_DEFAULTS.get('rgb_label_smoothing', 0.0),
+                        help="Training-only label smoothing factor s in [0.0, 0.5) for Wang2020_128 (target shrinkage: y*(1-2s) + s)")
     parser.add_argument('--num_classes', type=int, default=MODEL_DEFAULTS['num_classes'],
                         help="Number of output classes")
     parser.add_argument('--init_type', type=str, default=MODEL_DEFAULTS['init_type'],

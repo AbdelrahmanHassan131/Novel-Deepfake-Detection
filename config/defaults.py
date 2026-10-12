@@ -92,6 +92,7 @@ MODEL_DEFAULTS = {
     'backbone_lr_mult': 1.0,
     'bn_policy': 'train',
     'decay_bias_norm': False,
+    'rgb_label_smoothing': 0.0,
 }
 
 # ------------------------------------------------------------------

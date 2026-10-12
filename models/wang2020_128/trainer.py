@@ -209,12 +209,31 @@ class Wang2020_128Trainer(BaseModel):
     def forward(self):
         self.output = self.model(self.input)
 
+    def _compute_loss(self):
+        """Shared loss computation for get_loss() and optimize_parameters().
+
+        Applies label smoothing target shrinkage y_smooth = y * (1 - 2*s) + s
+        strictly in active training mode. For evaluation or s=0, uses original hard labels.
+        Never mutates self.label in place.
+        """
+        logits = self.output.squeeze(1) if self.output.dim() > 1 else self.output
+        labels = self.label
+        s = float(getattr(self.opt, 'rgb_label_smoothing', 0.0))
+        is_train_mode = bool(self.training and getattr(self.model, 'training', False))
+        if is_train_mode and s > 0.0:
+            target = labels * (1.0 - 2.0 * s) + s
+        else:
+            target = labels
+        if target.shape != logits.shape and target.numel() == logits.numel():
+            target = target.view_as(logits)
+        return self.loss_fn(logits, target)
+
     def get_loss(self):
-        return self.loss_fn(self.output.squeeze(1), self.label)
+        return self._compute_loss()
 
     def optimize_parameters(self):
         self.forward()
-        self.loss = self.loss_fn(self.output.squeeze(1), self.label)
+        self.loss = self._compute_loss()
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()

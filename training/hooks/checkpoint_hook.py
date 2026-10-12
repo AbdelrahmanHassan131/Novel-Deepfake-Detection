@@ -108,6 +108,7 @@ class CheckpointHook:
                     'best_threshold': float(getattr(result, 'best_threshold', 0.5)),
                     'accuracy': float(getattr(result, 'accuracy', 0.0)),
                     'auc': float(result.auc) if getattr(result, 'auc', None) is not None else None,
+                    'ranking_score_space': getattr(result, 'ranking_score_space', 'probability'),
                     'balanced_accuracy': float(result.balanced_accuracy) if getattr(result, 'balanced_accuracy', None) is not None else None,
                     'source_macro_auc': float(result.source_macro_auc) if getattr(result, 'source_macro_auc', None) is not None else None,
                     'worst_source_recall_05': float(result.worst_source_recall_05) if getattr(result, 'worst_source_recall_05', None) is not None else None,
@@ -237,6 +238,15 @@ class CheckpointHook:
                     )
             rec['run_id'] = str(run_id)
             rec['training_seed'] = training_seed
+            # For folder-based validation where split is unknown/empty/None,
+            # this export occurs at the trusted training-validation boundary.
+            # Record split='dev', folder_role='dev', and independence_status='unverified_dev_folder'.
+            # Manifest-based forbidden splits (e.g. 'test', 'external_test') are never mutated.
+            rec_split = rec.get('split')
+            if rec_split in ('unknown', '', None):
+                rec['split'] = 'dev'
+                rec['folder_role'] = 'dev'
+                rec['independence_status'] = 'unverified_dev_folder'
             aligned_records.append(rec)
 
         from evaluation.generalization import export_predictions
@@ -244,8 +254,11 @@ class CheckpointHook:
         primary_file = os.path.join(self.ckpt.save_dir, 'best_dev_predictions.csv')
         alias_file = os.path.join(self.ckpt.save_dir, 'dev_predictions.csv')
         precision = getattr(result, 'eval_precision', 'unknown')
-        export_predictions(primary_file, aligned_records, predictions, checkpoint_hash=best_sha256, eval_precision=precision)
+        logits = getattr(result, 'logits', None)
+        export_predictions(primary_file, aligned_records, predictions, checkpoint_hash=best_sha256,
+                           logits=logits, eval_precision=precision)
         if primary_file != alias_file:
-            export_predictions(alias_file, aligned_records, predictions, checkpoint_hash=best_sha256, eval_precision=precision)
+            export_predictions(alias_file, aligned_records, predictions, checkpoint_hash=best_sha256,
+                               logits=logits, eval_precision=precision)
         print(f"[CheckpointHook] Exported authoritative checkpoint-linked dev predictions to {primary_file}")
 

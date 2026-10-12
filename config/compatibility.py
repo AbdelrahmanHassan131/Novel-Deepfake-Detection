@@ -171,6 +171,7 @@ def config_from_opt(opt):
         backbone_lr_mult=_get(opt, 'backbone_lr_mult', 1.0),
         bn_policy=_get(opt, 'bn_policy', 'train'),
         decay_bias_norm=_get(opt, 'decay_bias_norm', False),
+        rgb_label_smoothing=float(_get(opt, 'rgb_label_smoothing', 0.0)),
     )
 
     # ------------------------------------------------------------------
@@ -359,7 +360,7 @@ def config_to_opt(config):
     opt.convnext_model_path = config.model.convnext_model_path
     opt.backbone_weights = getattr(config.model, 'backbone_weights', None)
     for key in ('rgb_head_type', 'rgb_dropout', 'fine_tune_policy',
-                'backbone_lr_mult', 'bn_policy', 'decay_bias_norm'):
+                'backbone_lr_mult', 'bn_policy', 'decay_bias_norm', 'rgb_label_smoothing'):
         setattr(opt, key, getattr(config.model, key))
 
     # --- Training ---

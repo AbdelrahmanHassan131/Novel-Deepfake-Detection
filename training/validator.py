@@ -36,6 +36,7 @@ class ValidationResult:
     f1: float = 0.0
     num_samples: int = 0
     predictions: Optional[np.ndarray] = field(default=None, repr=False)
+    logits: Optional[np.ndarray] = field(default=None, repr=False)
     labels: Optional[np.ndarray] = field(default=None, repr=False)
     indices: Optional[np.ndarray] = field(default=None, repr=False)
     real_recall: Optional[float] = None
@@ -45,6 +46,8 @@ class ValidationResult:
     worst_source_recall_05: Optional[float] = None
     worst_source_name: Optional[str] = None
     eval_precision: str = 'fp32'
+    ranking_score_space: str = 'probability'
+    auc_probability: Optional[float] = None
 
 
 def verify_source_readiness(train_rows, dev_rows, eligible_sources=None, monitor_metric=None,
@@ -177,33 +180,50 @@ def _safe_auc(labels, preds):
     return float((np.sum(pos_ranks) - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
 
 
-def _compute_validation_metrics(all_preds, all_labels, all_indices, avg_loss, dataset=None, opt=None):
+def _compute_validation_metrics(all_preds, all_labels, all_indices, avg_loss, dataset=None, opt=None, all_logits=None):
     """
     Computes overall and source-level validation metrics.
     Guarantees that single-class sources report defined class recall without
     inventing AUC or balanced accuracy.
+    Uses canonical raw logits for ranking metrics (AUC, best Youden J) when available.
     """
     num_samples = len(all_labels) if all_labels is not None else 0
     unique_labels = np.unique(all_labels) if num_samples > 0 else np.array([])
     both_classes = len(unique_labels) == 2
 
-    best_threshold = 0.5
+    has_logits = (all_logits is not None and len(all_logits) == num_samples)
+    scores_for_ranking = all_logits if has_logits else all_preds
+    ranking_score_space = 'logit' if has_logits else 'probability'
+
+    best_threshold = 0.5 if not has_logits else 0.0
     auc = None
+    auc_probability = None
     balanced_accuracy = None
 
     if both_classes and num_samples > 0:
         try:
             from sklearn.metrics import roc_curve, roc_auc_score
-            fpr, tpr, thresholds = roc_curve(all_labels, all_preds)
-            eligible = np.flatnonzero(np.isfinite(thresholds) & (thresholds <= 1.0) & (thresholds >= 0.0))
+            fpr, tpr, thresholds = roc_curve(all_labels, scores_for_ranking)
+            if ranking_score_space == 'logit':
+                eligible = np.flatnonzero(np.isfinite(thresholds))
+            else:
+                eligible = np.flatnonzero(np.isfinite(thresholds) & (thresholds <= 1.0) & (thresholds >= 0.0))
             if len(eligible) > 0:
                 best_idx = eligible[np.argmax((tpr - fpr)[eligible])]
                 best_threshold = float(thresholds[best_idx])
-            auc = float(roc_auc_score(all_labels, all_preds))
+            auc = float(roc_auc_score(all_labels, scores_for_ranking))
+            if ranking_score_space == 'logit':
+                try:
+                    auc_probability = float(roc_auc_score(all_labels, all_preds))
+                except Exception:
+                    pass
         except Exception:
-            auc = _safe_auc(all_labels, all_preds)
+            auc = _safe_auc(all_labels, scores_for_ranking)
 
-    bin_preds = (all_preds >= 0.5).astype(np.int64) if num_samples > 0 else np.array([], dtype=np.int64)
+    if ranking_score_space == 'logit':
+        bin_preds = (all_logits >= 0.0).astype(np.int64) if num_samples > 0 else np.array([], dtype=np.int64)
+    else:
+        bin_preds = (all_preds >= 0.5).astype(np.int64) if num_samples > 0 else np.array([], dtype=np.int64)
     int_labels = all_labels.astype(np.int64) if num_samples > 0 else np.array([], dtype=np.int64)
     accuracy = float(np.mean(bin_preds == int_labels)) if num_samples > 0 else 0.0
 
@@ -262,6 +282,7 @@ def _compute_validation_metrics(all_preds, all_labels, all_indices, avg_loss, da
         for src, idx_list in source_to_indices.items():
             s_idx = np.array(idx_list, dtype=np.int64)
             s_preds = all_preds[s_idx]
+            s_logits = all_logits[s_idx] if has_logits else None
             s_labels = all_labels[s_idx]
             s_n = len(s_preds)
 
@@ -270,13 +291,17 @@ def _compute_validation_metrics(all_preds, all_labels, all_indices, avg_loss, da
             n_real = int(np.sum(s_real_mask))
             n_fake = int(np.sum(s_fake_mask))
 
-            s_bin_preds = (s_preds >= 0.5).astype(np.int64)
+            if s_logits is not None:
+                s_bin_preds = (s_logits >= 0.0).astype(np.int64)
+            else:
+                s_bin_preds = (s_preds >= 0.5).astype(np.int64)
             s_real_recall = float(np.mean(s_bin_preds[s_real_mask] == 0)) if n_real > 0 else None
             s_fake_recall = float(np.mean(s_bin_preds[s_fake_mask] == 1)) if n_fake > 0 else None
 
             has_both = (n_real > 0 and n_fake > 0)
             if has_both:
-                s_auc = _safe_auc(s_labels, s_preds)
+                ranking_s = s_logits if s_logits is not None else s_preds
+                s_auc = _safe_auc(s_labels, ranking_s)
                 s_ba = float(0.5 * (s_real_recall + s_fake_recall))
                 defined_recall = s_ba
             else:
@@ -328,6 +353,8 @@ def _compute_validation_metrics(all_preds, all_labels, all_indices, avg_loss, da
         'loss': avg_loss,
         'accuracy': accuracy,
         'auc': auc,
+        'auc_probability': auc_probability,
+        'ranking_score_space': ranking_score_space,
         'balanced_accuracy': balanced_accuracy,
         'best_threshold': best_threshold,
         'precision': precision,
@@ -409,6 +436,7 @@ class Validator:
             rank_indices = list(range(dataset_len))
 
         all_preds = []
+        all_logits = []
         all_labels = []
         all_indices = []
         local_loss_sum = 0.0
@@ -435,9 +463,11 @@ class Validator:
                     score_sign = getattr(model, 'score_sign', 1.0)
                     if not isinstance(score_sign, (int, float, torch.Tensor)):
                         score_sign = 1.0
-                    probs = torch.sigmoid((output * score_sign).float())
+                    canonical_logits = (output * score_sign).float()
+                    probs = torch.sigmoid(canonical_logits)
 
                     all_preds.append(probs.detach().cpu().numpy())
+                    all_logits.append(canonical_logits.detach().cpu().numpy())
                     all_labels.append(model.label.float().detach().cpu().numpy())
                     batch_idx = rank_indices[cursor : cursor + batch_size]
                     all_indices.extend(batch_idx)
@@ -452,6 +482,7 @@ class Validator:
                 model.train()
 
         local_preds = np.concatenate(all_preds) if len(all_preds) > 0 else np.array([], dtype=np.float32)
+        local_logits = np.concatenate(all_logits) if len(all_logits) > 0 else np.array([], dtype=np.float32)
         local_labels = np.concatenate(all_labels) if len(all_labels) > 0 else np.array([], dtype=np.float32)
         local_indices = np.array(all_indices, dtype=np.int64) if len(all_indices) > 0 else np.array([], dtype=np.int64)
 
@@ -466,45 +497,54 @@ class Validator:
             lengths = [int(l.item()) for l in gathered_lens]
             max_len = max(lengths) if lengths else 0
 
-            # 2. Gather predictions, labels, and indices via padded tensors
+            # 2. Gather predictions, logits, labels, and indices via padded tensors
             if max_len > 0:
                 p_pad = torch.zeros(max_len, dtype=torch.float32, device=device)
+                z_pad = torch.zeros(max_len, dtype=torch.float32, device=device)
                 l_pad = torch.zeros(max_len, dtype=torch.float32, device=device)
                 i_pad = torch.zeros(max_len, dtype=torch.long, device=device)
 
                 if local_n > 0:
                     p_pad[:local_n] = torch.as_tensor(local_preds, dtype=torch.float32, device=device)
+                    z_pad[:local_n] = torch.as_tensor(local_logits, dtype=torch.float32, device=device)
                     l_pad[:local_n] = torch.as_tensor(local_labels, dtype=torch.float32, device=device)
                     i_pad[:local_n] = torch.as_tensor(local_indices, dtype=torch.long, device=device)
 
                 gathered_p = [torch.zeros(max_len, dtype=torch.float32, device=device) for _ in range(world_size)]
+                gathered_z = [torch.zeros(max_len, dtype=torch.float32, device=device) for _ in range(world_size)]
                 gathered_l = [torch.zeros(max_len, dtype=torch.float32, device=device) for _ in range(world_size)]
                 gathered_i = [torch.zeros(max_len, dtype=torch.long, device=device) for _ in range(world_size)]
 
                 dist.all_gather(gathered_p, p_pad)
+                dist.all_gather(gathered_z, z_pad)
                 dist.all_gather(gathered_l, l_pad)
                 dist.all_gather(gathered_i, i_pad)
 
                 if rank == 0:
                     valid_p = [gathered_p[r][:lengths[r]].cpu().numpy() for r in range(world_size) if lengths[r] > 0]
+                    valid_z = [gathered_z[r][:lengths[r]].cpu().numpy() for r in range(world_size) if lengths[r] > 0]
                     valid_l = [gathered_l[r][:lengths[r]].cpu().numpy() for r in range(world_size) if lengths[r] > 0]
                     valid_i = [gathered_i[r][:lengths[r]].cpu().numpy() for r in range(world_size) if lengths[r] > 0]
 
                     all_preds = np.concatenate(valid_p) if valid_p else np.array([], dtype=np.float32)
+                    all_logits = np.concatenate(valid_z) if valid_z else np.array([], dtype=np.float32)
                     all_labels = np.concatenate(valid_l) if valid_l else np.array([], dtype=np.float32)
                     all_indices = np.concatenate(valid_i) if valid_i else np.array([], dtype=np.int64)
 
                     if len(all_indices) > 0:
                         sort_order = np.argsort(all_indices)
                         all_preds = all_preds[sort_order]
+                        all_logits = all_logits[sort_order]
                         all_labels = all_labels[sort_order]
                         all_indices = all_indices[sort_order]
                 else:
                     all_preds = None
+                    all_logits = None
                     all_labels = None
                     all_indices = None
             else:
                 all_preds = np.array([], dtype=np.float32) if rank == 0 else None
+                all_logits = np.array([], dtype=np.float32) if rank == 0 else None
                 all_labels = np.array([], dtype=np.float32) if rank == 0 else None
                 all_indices = np.array([], dtype=np.int64) if rank == 0 else None
 
@@ -523,6 +563,7 @@ class Validator:
                         all_preds, all_labels, all_indices, avg_loss,
                         dataset=getattr(dataloader, 'dataset', None),
                         opt=getattr(model, 'opt', None),
+                        all_logits=all_logits,
                     )
                 except Exception as exc:
                     metric_error = f'{type(exc).__name__}: {exc}'
@@ -537,6 +578,8 @@ class Validator:
                 loss=res_dict['loss'],
                 accuracy=res_dict['accuracy'],
                 auc=res_dict['auc'],
+                auc_probability=res_dict.get('auc_probability'),
+                ranking_score_space=res_dict.get('ranking_score_space', 'logit' if all_logits is not None else 'probability'),
                 balanced_accuracy=res_dict['balanced_accuracy'],
                 best_threshold=res_dict['best_threshold'],
                 precision=res_dict['precision'],
@@ -544,6 +587,7 @@ class Validator:
                 f1=res_dict['f1'],
                 num_samples=res_dict['num_samples'],
                 predictions=all_preds,
+                logits=all_logits,
                 labels=all_labels,
                 indices=all_indices,
                 real_recall=res_dict['real_recall'],
@@ -556,6 +600,7 @@ class Validator:
 
         else:
             all_preds = local_preds
+            all_logits = local_logits
             all_labels = local_labels
             all_indices = local_indices
             num_samples = len(all_labels)
@@ -565,6 +610,7 @@ class Validator:
                 all_preds, all_labels, all_indices, avg_loss,
                 dataset=getattr(dataloader, 'dataset', None),
                 opt=getattr(model, 'opt', None),
+                all_logits=all_logits,
             )
 
             return ValidationResult(
@@ -572,6 +618,8 @@ class Validator:
                 loss=res_dict['loss'],
                 accuracy=res_dict['accuracy'],
                 auc=res_dict['auc'],
+                auc_probability=res_dict.get('auc_probability'),
+                ranking_score_space=res_dict.get('ranking_score_space', 'logit' if all_logits is not None else 'probability'),
                 balanced_accuracy=res_dict['balanced_accuracy'],
                 best_threshold=res_dict['best_threshold'],
                 precision=res_dict['precision'],
@@ -579,6 +627,7 @@ class Validator:
                 f1=res_dict['f1'],
                 num_samples=res_dict['num_samples'],
                 predictions=all_preds,
+                logits=all_logits,
                 labels=all_labels,
                 indices=all_indices,
                 real_recall=res_dict['real_recall'],

@@ -299,6 +299,15 @@ class ConfigValidator:
         if getattr(m, 'bn_policy', 'train') not in ('train', 'frozen'):
             report.add_error(f"model.bn_policy must be 'train' or 'frozen', got {getattr(m, 'bn_policy', None)}")
 
+        import math
+        smoothing = getattr(m, 'rgb_label_smoothing', 0.0)
+        if not isinstance(smoothing, (int, float)) or math.isnan(smoothing) or math.isinf(smoothing):
+            report.add_error(f"model.rgb_label_smoothing must be a finite float, got {smoothing!r}")
+        elif smoothing < 0.0 or smoothing >= 0.5:
+            report.add_error(f"model.rgb_label_smoothing must be in [0.0, 0.5), got {smoothing}")
+        elif smoothing > 0.0 and m.architecture != 'Wang2020_128':
+            report.add_error(f"model.rgb_label_smoothing > 0 is only supported for architecture 'Wang2020_128', got {m.architecture!r}")
+
         if m.init_gain <= 0:
             report.add_warning(
                 f'model.init_gain is non-positive: {m.init_gain}')

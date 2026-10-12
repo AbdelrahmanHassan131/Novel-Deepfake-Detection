@@ -74,14 +74,15 @@ def main():
     opt.isTrain = False
     dataset = RGBDataset(opt, args.dataroot)
     batches = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
-    threshold = .5
+    threshold = 0.5
+    score_space = 'probability'
     if args.threshold_file:
-        calibration = json.loads(Path(args.threshold_file).read_text(encoding='utf-8'))
-        if calibration['checkpoint_sha256'] != loader.metadata['checkpoint_sha256']:
-            raise ValueError('Threshold checkpoint mismatch')
-        if not calibration.get('source_splits') or set(calibration['source_splits']) - {'dev', 'val', 'external_dev'}:
-            raise ValueError('Calibration must come from development data')
-        threshold = calibration['threshold']
+        from evaluation.generalization import load_validated_threshold
+        threshold, score_space = load_validated_threshold(
+            args.threshold_file,
+            expected_checkpoint_hash=loader.metadata.get('checkpoint_sha256'),
+            eval_precision='fp32'
+        )
     root = Path(args.output_dir)
     root.mkdir(parents=True, exist_ok=True)
     report = {'checkpoint': loader.metadata, 'settings': vars(args),
@@ -89,6 +90,7 @@ def main():
               'conditions': {}}
     for condition in dict.fromkeys(['clean'] + args.conditions):
         scores = []
+        raw_logits = []
         print(f'Evaluating {condition}', flush=True)
         for batch, labels in batches:
             pixels = denormalize(batch.to(model.device)).clamp(0, 1)
@@ -100,9 +102,19 @@ def main():
             elif condition != 'clean':
                 pixels = corrupt(pixels, condition)
             with torch.no_grad():
-                scores.extend(detector(pixels).sigmoid().cpu().tolist())
-        report['conditions'][condition] = summarize(dataset.records, scores, threshold, args.bootstrap, args.seed)
-        export_predictions(root / f'{condition}_predictions.csv', dataset.records, scores, loader.metadata['checkpoint_sha256'])
+                batch_logits = detector(pixels).cpu()
+                batch_probs = batch_logits.sigmoid()
+                raw_logits.extend(batch_logits.tolist())
+                scores.extend(batch_probs.tolist())
+        report['conditions'][condition] = summarize(
+            dataset.records, scores, threshold, args.bootstrap, args.seed,
+            logits=raw_logits, score_space=score_space
+        )
+        export_predictions(
+            root / f'{condition}_predictions.csv', dataset.records, scores,
+            loader.metadata['checkpoint_sha256'],
+            logits=raw_logits, eval_precision='fp32'
+        )
         (root / 'robustness_report.json').write_text(json.dumps(report, indent=2, allow_nan=False), encoding='utf-8')
     print(root / 'robustness_report.json')
 

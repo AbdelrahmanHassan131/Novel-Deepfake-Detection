@@ -209,8 +209,8 @@ class TestSourceAwareLifecycle(unittest.TestCase):
             # 2. Same-dev reused selection and calibration
             pred_file_dev = Path(tmpdir) / "preds_dev.csv"
             rows_dev = [
-                {'sample_id': '1', 'path': 'p1.png', 'label': 0, 'group_id': 'g1', 'split': 'dev'},
-                {'sample_id': '2', 'path': 'p2.png', 'label': 1, 'group_id': 'g2', 'split': 'dev'},
+                {'sample_id': '1', 'path': 'p1.png', 'label': 0, 'group_id': 'g1', 'split': 'dev', 'eval_precision': 'fp32'},
+                {'sample_id': '2', 'path': 'p2.png', 'label': 1, 'group_id': 'g2', 'split': 'dev', 'eval_precision': 'fp32'},
             ]
             export_predictions(str(pred_file_dev), rows_dev, [0.3, 0.7], checkpoint_hash=ckpt_hash)
             artifact_dev = calibrate(str(pred_file_dev), str(out_file), eval_precision='fp32')

@@ -13,17 +13,114 @@ ALLOWED_CALIBRATION_SPLITS = frozenset({'dev', 'val', 'dev_calibration', 'extern
 FORBIDDEN_CALIBRATION_SPLITS = frozenset({'test', 'internal_test', 'external_test', 'final_test', 'challenge_test', 'unseen_test'})
 
 
-def binary_metrics(labels, probabilities, threshold=0.5, logits=None):
+def compute_interpolated_eer(labels, scores):
+    """Compute Equal Error Rate with continuous linear interpolation at FPR/FNR crossing."""
+    y = np.asarray(labels)
+    s = np.asarray(scores, dtype=float)
+    if len(np.unique(y)) < 2:
+        return None, None, None, None
+    fpr, tpr, thresholds = roc_curve(y, s)
+    fnr = 1.0 - tpr
+    gap = fpr - fnr
+    j = int(np.searchsorted(gap, 0.0))
+    if j == 0:
+        eer = float(fpr[0])
+    elif j >= len(gap):
+        eer = float(fpr[-1])
+    elif gap[j] == 0.0:
+        eer = float(fpr[j])
+    else:
+        denom = gap[j] - gap[j - 1]
+        weight = -gap[j - 1] / denom if denom > 0 else 0.5
+        eer = float(fpr[j - 1] + weight * (fpr[j] - fpr[j - 1]))
+    return float(eer), fpr, tpr, thresholds
+
+
+def compute_binary_predictions(probabilities, logits=None, threshold=0.5, score_space=None):
+    """
+    Compute binary predictions (0=real, 1=fake) using unified decision logic.
+
+    Args:
+        probabilities (array-like): Predicted probabilities in [0, 1].
+        logits (array-like, optional): Raw unscaled logits.
+        threshold (float): Decision threshold. Defaults to 0.5.
+        score_space (str, optional): 'probability' (default if None) or 'logit'.
+            Invalid strings will raise ValueError.
+
+    Returns:
+        tuple: (prediction_boolean_array, decision_score_space_str)
+    """
+    if score_space is not None and score_space not in ('probability', 'logit'):
+        raise ValueError(f"Unknown score_space '{score_space}'; expected 'logit' or 'probability'.")
+
+    p = np.asarray(probabilities, dtype=float)
+    if not np.isfinite(p).all() or ((p < 0.0) | (p > 1.0)).any():
+        raise ValueError('Probabilities must be finite and in [0,1]')
+
+    if logits is not None:
+        z = np.asarray(logits, dtype=float)
+        if z.shape != p.shape:
+            raise ValueError('Logits shape must match probabilities')
+        if not np.isfinite(z).all():
+            raise ValueError('Logits must be finite floats')
+    else:
+        z = None
+
+    effective_space = score_space or 'probability'
+
+    if effective_space == 'logit':
+        t = float(threshold)
+        if not np.isfinite(t):
+            raise ValueError(f'Logit threshold must be a finite float, got {threshold}')
+        if z is None:
+            raise ValueError("Score space is 'logit' but no logits provided.")
+        prediction = (z >= t)
+        return prediction, 'logit'
+    else:
+        # probability score space
+        t = float(threshold)
+        if not (0.0 <= t <= 1.0) or not np.isfinite(t):
+            raise ValueError(f'Probability threshold must be finite and in [0,1], got {threshold}')
+        if z is not None:
+            if t == 0.5:
+                prediction = (z >= 0.0)
+                return prediction, 'logit'
+            elif 0.0 < t < 1.0:
+                import math
+                tau_logit = float(math.log(t / (1.0 - t)))
+                prediction = (z >= tau_logit)
+                return prediction, 'logit'
+            elif t == 0.0:
+                prediction = np.ones(len(p), dtype=bool)
+                return prediction, 'probability'
+            else:  # t == 1.0
+                # Mathematical probability boundary 1.0 corresponds to logit +infinity.
+                # For finite logits, no sample can reach +inf, so all samples are predicted real (0).
+                prediction = np.zeros(len(p), dtype=bool)
+                return prediction, 'logit'
+        else:
+            prediction = (p >= t)
+            return prediction, 'probability'
+
+
+def binary_metrics(labels, probabilities, threshold=0.5, logits=None, score_space=None):
     y, p = np.asarray(labels), np.asarray(probabilities, dtype=float)
     if not len(y) or y.shape != p.shape or not np.isin(y, [0, 1]).all():
         raise ValueError('Expected binary labels with canonical mapping: real=0, fake=1')
-    if not np.isfinite(p).all() or ((p < 0) | (p > 1)).any() or not 0 <= threshold <= 1:
-        raise ValueError('Probabilities and threshold must be finite and in [0,1]')
+    if not np.isfinite(p).all() or ((p < 0) | (p > 1)).any():
+        raise ValueError('Probabilities must be finite and in [0,1]')
+
     if logits is not None:
         logits = np.asarray(logits, dtype=float)
         if logits.shape != p.shape:
             raise ValueError('Logits shape must match probabilities')
-    prediction = p >= threshold
+        if not np.isfinite(logits).all():
+            raise ValueError('Logits must be finite floats')
+
+    prediction, decision_score_space = compute_binary_predictions(
+        probabilities=p, logits=logits, threshold=threshold, score_space=score_space
+    )
+
     tn, fp, fn, tp = confusion_matrix(y, prediction, labels=[0, 1]).ravel()
     both = len(np.unique(y)) == 2
     prec, rec, f1, counts = precision_recall_fscore_support(y, prediction, labels=[0, 1], zero_division=0)
@@ -57,6 +154,29 @@ def binary_metrics(labels, probabilities, threshold=0.5, logits=None):
         'total_saturated': int(np.sum((p <= 1e-4) | (p >= 1.0 - 1e-4))),
     }
 
+    # Authoritative ranking scores
+    if logits is not None:
+        ranking_scores = logits
+        ranking_score_space = 'logit'
+    else:
+        ranking_scores = p
+        ranking_score_space = 'probability'
+
+    roc_auc = float(roc_auc_score(y, ranking_scores)) if both else None
+    avg_prec = float(average_precision_score(y, ranking_scores)) if both else None
+    roc_auc_logit = float(roc_auc_score(y, logits)) if (both and logits is not None) else None
+    roc_auc_probability = float(roc_auc_score(y, p)) if both else None
+
+    eer = None
+    fpr_at_tpr95 = None
+    tpr_at_fpr01 = None
+    if both:
+        eer, fpr, tpr, _ = compute_interpolated_eer(y, ranking_scores)
+        tpr95_indices = np.flatnonzero(tpr >= .95)
+        fpr_at_tpr95 = float(fpr[tpr95_indices].min()) if len(tpr95_indices) else None
+        fpr01_indices = np.flatnonzero(fpr <= .01)
+        tpr_at_fpr01 = float(tpr[fpr01_indices].max()) if len(fpr01_indices) else None
+
     result = dict(
         schema_version='2.0',
         samples=len(y),
@@ -66,11 +186,16 @@ def binary_metrics(labels, probabilities, threshold=0.5, logits=None):
         fake_recall=fake_recall,
         accuracy=float((tn + tp) / len(y)),
         balanced_accuracy=float(rec.mean()) if both else None,
-        roc_auc=float(roc_auc_score(y, p)) if both else None,
-        average_precision=float(average_precision_score(y, p)) if both else None,
+        roc_auc=roc_auc,
+        roc_auc_logit=roc_auc_logit,
+        roc_auc_probability=roc_auc_probability,
+        average_precision=avg_prec,
         fpr=float(fp / (tn + fp)) if tn + fp else None,
         fnr=float(fn / (tp + fn)) if tp + fn else None,
         threshold=float(threshold),
+        score_space=score_space or 'probability',
+        ranking_score_space=ranking_score_space,
+        decision_score_space=decision_score_space,
         confusion_matrix=[[int(tn), int(fp)], [int(fn), int(tp)]],
         macro_f1=float(f1.mean()) if both else None,
         per_class={
@@ -80,31 +205,21 @@ def binary_metrics(labels, probabilities, threshold=0.5, logits=None):
         score_quantiles=score_quantiles,
         logit_quantiles=logit_quantiles,
         saturation_counts=saturation_counts,
-        eer=None,
-        fpr_at_tpr95=None,
-        tpr_at_fpr01=None,
+        eer=eer,
+        interpolated_eer=eer,
+        fpr_at_tpr95=fpr_at_tpr95,
+        tpr_at_fpr01=tpr_at_fpr01,
         status='computed' if both else 'single_class_evaluated_ranking_metrics_undefined',
     )
     if not both:
         result['note'] = 'Single-class evaluation: ROC AUC, balanced accuracy, and EER are undefined and marked None.'
-    if both:
-        fpr, tpr, _ = roc_curve(y, p)
-        gap = fpr - (1 - tpr)
-        j = int(np.searchsorted(gap, 0))
-        if j == 0:
-            eer = fpr[0]
-        else:
-            weight = -gap[j - 1] / (gap[j] - gap[j - 1])
-            eer = fpr[j - 1] + weight * (fpr[j] - fpr[j - 1])
-        tpr95_indices = np.flatnonzero(tpr >= .95)
-        fpr_at_tpr95 = float(fpr[tpr95_indices].min()) if len(tpr95_indices) else None
-        fpr01_indices = np.flatnonzero(fpr <= .01)
-        tpr_at_fpr01 = float(tpr[fpr01_indices].max()) if len(fpr01_indices) else None
-        result.update(eer=float(eer), fpr_at_tpr95=fpr_at_tpr95, tpr_at_fpr01=tpr_at_fpr01)
+    if logits is None:
+        result['score_space_fallback'] = True
     return result
 
 
-def group_intervals(labels, probabilities, groups, threshold=.5, repeats=200, seed=42, other=None, other_threshold=None):
+def group_intervals(labels, probabilities, groups, threshold=.5, repeats=200, seed=42, other=None, other_threshold=None,
+                    logits=None, other_logits=None, score_space=None, other_score_space=None):
     """Cluster percentile bootstrap; paired differences share each resample.
 
     Supports independent thresholds per model in paired comparison.
@@ -126,18 +241,24 @@ def group_intervals(labels, probabilities, groups, threshold=.5, repeats=200, se
     rng = np.random.default_rng(seed)
     metrics = {k: [] for k in ('accuracy', 'balanced_accuracy', 'roc_auc', 'eer', 'fpr', 'fnr')}
     t2 = threshold if other_threshold is None else other_threshold
+    z1 = np.asarray(logits) if logits is not None else None
+    z2 = np.asarray(other_logits) if other_logits is not None else None
 
     for _ in range(repeats):
         selected = np.concatenate([indices[i] for i in rng.integers(len(unique), size=len(unique))])
-        first = binary_metrics(y[selected], p[selected], threshold)
-        second = binary_metrics(y[selected], np.asarray(other)[selected], t2) if other is not None else None
+        first = binary_metrics(y[selected], p[selected], threshold,
+                               logits=z1[selected] if z1 is not None else None,
+                               score_space=score_space)
+        second = binary_metrics(y[selected], np.asarray(other)[selected], t2,
+                                logits=z2[selected] if z2 is not None else None,
+                                score_space=other_score_space) if other is not None else None
         for key in metrics:
             if first[key] is not None and (second is None or second[key] is not None):
                 metrics[key].append(first[key] - second[key] if second else first[key])
 
     # Compute actual aligned full-sample difference on unresampled data
-    first_full = binary_metrics(y, p, threshold)
-    second_full = binary_metrics(y, np.asarray(other), t2) if other is not None else None
+    first_full = binary_metrics(y, p, threshold, logits=z1, score_space=score_space)
+    second_full = binary_metrics(y, np.asarray(other), t2, logits=z2, score_space=other_score_space) if other is not None else None
     if second_full is not None:
         observed_difference = {
             k: float(first_full[k] - second_full[k])
@@ -207,14 +328,15 @@ def read_predictions(path):
     return rows
 
 
-def summarize(records, probabilities, threshold=.5, repeats=200, seed=42, logits=None):
+def summarize(records, probabilities, threshold=.5, repeats=200, seed=42, logits=None, score_space=None):
     y, p = np.array([r['label'] for r in records]), np.asarray(probabilities)
     if logits is None and len(records) > 0 and all('logit' in r and r.get('logit') is not None for r in records):
         logits = np.array([float(r['logit']) for r in records])
     report = {
         'schema_version': '2.0',
-        'overall': binary_metrics(y, p, threshold, logits=logits),
-        'uncertainty': group_intervals(y, p, [r.get('group_id', '') for r in records], threshold, repeats, seed),
+        'overall': binary_metrics(y, p, threshold, logits=logits, score_space=score_space),
+        'uncertainty': group_intervals(y, p, [r.get('group_id', '') for r in records], threshold, repeats, seed,
+                                       logits=logits, score_space=score_space),
         'breakdowns': {},
     }
     fields = ('dataset_source', 'generator', 'manipulation_type', 'age_group', 'gender', 'ethnicity', 'skin_tone')
@@ -225,7 +347,9 @@ def summarize(records, probabilities, threshold=.5, repeats=200, seed=42, logits
         if any(known(g) for g in groups):
             breakdowns = {}
             for g, ix in groups.items():
-                res = binary_metrics(y[ix], p[ix], threshold)
+                ix_arr = np.asarray(ix)
+                sub_logits = logits[ix_arr] if logits is not None else None
+                res = binary_metrics(y[ix_arr], p[ix_arr], threshold, logits=sub_logits, score_space=score_space)
                 res['subgroup_sample_count'] = len(ix)
                 res['subgroup_share'] = float(len(ix) / len(records))
                 if len(ix) < 30:
@@ -238,14 +362,23 @@ def summarize(records, probabilities, threshold=.5, repeats=200, seed=42, logits
         if known(row.get('source_video_id')):
             videos[(row.get('dataset_source'), row['source_video_id'], row['label'])].append(i)
     if videos:
-        report['video_level'] = binary_metrics([key[2] for key in videos], [float(p[ix].mean()) for ix in videos.values()], threshold)
-        report['video_aggregation'] = 'mean frame probability by dataset_source, source_video_id, label; known IDs only'
+        if score_space == 'logit':
+            report['video_level'] = {
+                'status': 'unavailable: image-level logit threshold cannot be applied to mean-probability video aggregates without video-level calibration'
+            }
+            report['video_aggregation'] = 'mean frame probability by dataset_source, source_video_id, label; known IDs only'
+            report['video_aggregation_score_space'] = 'probability'
+        else:
+            report['video_level'] = binary_metrics([key[2] for key in videos], [float(p[ix].mean()) for ix in videos.values()], threshold, score_space='probability')
+            report['video_aggregation'] = 'mean frame probability by dataset_source, source_video_id, label; known IDs only'
+            report['video_aggregation_score_space'] = 'probability'
     report['fairness_note'] = 'Only supplied annotations are analyzed; missing annotations are not inferred. Small groups require cautious interpretation.'
     return report
 
 
 def calibrate(prediction_path, output_path, eval_precision=None, allow_external_dev=False,
-              selection_predictions_path=None, selection_manifest=None, train_manifest=None):
+              selection_predictions_path=None, selection_manifest=None, train_manifest=None,
+              score_space='probability'):
     import os
     rows = read_predictions(prediction_path)
     splits = {r['split'] for r in rows}
@@ -258,9 +391,35 @@ def calibrate(prediction_path, output_path, eval_precision=None, allow_external_
     y, p = np.array([r['label'] for r in rows]), np.array([r['probability'] for r in rows])
     if len(np.unique(y)) != 2:
         raise ValueError('Calibration requires both classes')
-    fpr, tpr, thresholds = roc_curve(y, p)
-    eligible = np.flatnonzero(np.isfinite(thresholds) & (thresholds <= 1) & (thresholds >= 0))
-    selected = eligible[np.argmax((tpr - fpr)[eligible])]
+
+    if score_space == 'logit':
+        if not all('logit' in r and r.get('logit') is not None for r in rows):
+            raise ValueError("Logit calibration requires 'logit' column in prediction file.")
+        logits = np.array([float(r['logit']) for r in rows])
+        if not np.all(np.isfinite(logits)):
+            raise ValueError("Logit calibration requires finite logits.")
+        fpr, tpr, thresholds = roc_curve(y, logits)
+        eligible = np.flatnonzero(np.isfinite(thresholds))
+        if len(eligible) == 0:
+            raise ValueError("No finite ROC thresholds found for logit calibration.")
+        j_scores = (tpr - fpr)[eligible]
+        max_j = np.max(j_scores)
+        tie_candidates = eligible[np.flatnonzero(j_scores == max_j)]
+        selected = tie_candidates[0]
+        selected_threshold = float(thresholds[selected])
+    elif score_space == 'probability':
+        fpr, tpr, thresholds = roc_curve(y, p)
+        eligible = np.flatnonzero(np.isfinite(thresholds) & (thresholds <= 1) & (thresholds >= 0))
+        if len(eligible) == 0:
+            raise ValueError("No finite ROC thresholds in [0, 1] found for probability calibration.")
+        j_scores = (tpr - fpr)[eligible]
+        max_j = np.max(j_scores)
+        tie_candidates = eligible[np.flatnonzero(j_scores == max_j)]
+        selected = tie_candidates[0]
+        selected_threshold = float(thresholds[selected])
+    else:
+        raise ValueError(f"Unknown score_space '{score_space}'; expected 'logit' or 'probability'.")
+
     hashes = {r.get('checkpoint_sha256') for r in rows}
     if len(hashes) != 1 or not all(known(h) for h in hashes):
         raise ValueError('Calibration requires predictions from one identified checkpoint')
@@ -351,8 +510,12 @@ def calibrate(prediction_path, output_path, eval_precision=None, allow_external_
         independence_status = 'same_dev_reused_selection_and_calibration'
 
     artifact = dict(
-        threshold=float(thresholds[selected]),
+        schema_version='2.0',
+        score_space=score_space,
+        threshold=selected_threshold,
         criterion='development Youden J',
+        label_mapping={'real': 0, 'fake': 1},
+        decision_rule='fake if logit >= logit_threshold' if score_space == 'logit' else 'fake if probability >= threshold',
         checkpoint_sha256=next(iter(hashes)),
         prediction_sha256=sha256(prediction_path),
         source_splits=sorted(splits),
@@ -360,6 +523,9 @@ def calibrate(prediction_path, output_path, eval_precision=None, allow_external_
         independence_status=independence_status,
         reference_evidence=reference_evidence,
     )
+    if score_space == 'logit':
+        artifact['logit_threshold'] = selected_threshold
+
     Path(output_path).write_text(json.dumps(artifact, indent=2), encoding='utf-8')
     return artifact
 
@@ -543,3 +709,324 @@ def summarize_seeds(seed_prediction_paths: List[str], threshold: float = 0.5,
     }
     res.update(aggregated)
     return res
+
+
+def load_validated_threshold(threshold_file, expected_checkpoint_hash=None, eval_precision=None):
+    """
+    Load and strictly validate a threshold artifact JSON file.
+
+    Supports:
+      - New logit artifacts ('score_space': 'logit')
+      - Probability artifacts ('score_space': 'probability')
+      - Narrowly validated legacy Colab external calibration schema
+        ('calibration_status': 'previously_inspected_external_data_not_independent_test')
+
+    Enforces:
+      - Forbidden splits can NEVER be bypassed, even with legacy tags.
+      - Checkpoint hash binding against expected_checkpoint_hash.
+      - Floating-point precision matching against eval_precision.
+      - Conflicting threshold fields rejected.
+      - Canonical label mapping and decision rules.
+      - Finite thresholds.
+
+    Returns:
+        tuple: (threshold_float, score_space_str)
+    """
+    t_path = Path(threshold_file)
+    if not t_path.is_file():
+        raise FileNotFoundError(f"Threshold artifact not found: {threshold_file}")
+
+    data = json.loads(t_path.read_text(encoding='utf-8'))
+
+    # 1. Forbidden split checks MUST always run first
+    source_splits = data.get('source_splits')
+    if source_splits is not None:
+        splits = set(source_splits)
+        forbidden = splits.intersection(FORBIDDEN_CALIBRATION_SPLITS)
+        if forbidden:
+            raise ValueError(f"Forbidden: threshold was calibrated on forbidden evaluation split(s): {sorted(forbidden)}")
+    else:
+        splits = None
+
+    # 2. Conflicting threshold fields
+    has_logit_thresh = 'logit_threshold' in data
+    has_thresh = 'threshold' in data
+    if has_logit_thresh and has_thresh:
+        if float(data['logit_threshold']) != float(data['threshold']):
+            raise ValueError(
+                f"Conflicting threshold fields in {threshold_file}: "
+                f"logit_threshold={data['logit_threshold']} vs threshold={data['threshold']}"
+            )
+
+    # 3. Score space validation
+    score_space = data.get('score_space', 'probability')
+    if score_space not in ('logit', 'probability'):
+        raise ValueError(f"Unknown score_space '{score_space}' in {threshold_file}; expected 'logit' or 'probability'.")
+
+    # 4. Legacy vs standard schema validation
+    legacy_tag = data.get('calibration_status')
+    if legacy_tag == 'previously_inspected_external_data_not_independent_test':
+        if score_space != 'logit':
+            raise ValueError(f"Legacy external calibration artifact in {threshold_file} must have score_space='logit'")
+        if not has_logit_thresh and not has_thresh:
+            raise ValueError(f"Legacy external calibration artifact missing 'logit_threshold' in {threshold_file}")
+        if not known(data.get('calibration_prediction_sha256')):
+            raise ValueError(f"Legacy external calibration artifact missing valid 'calibration_prediction_sha256' in {threshold_file}")
+        label_map = data.get('label_mapping')
+        if label_map != {'real': 0, 'fake': 1} and label_map != ['real', 'fake']:
+            raise ValueError(f"Legacy artifact label_mapping must be {{'real': 0, 'fake': 1}}, got {label_map}")
+        decision_rule = data.get('decision_rule')
+        if decision_rule != 'fake if logit >= logit_threshold':
+            raise ValueError(f"Legacy artifact decision_rule mismatch in {threshold_file}: got '{decision_rule}'")
+    elif legacy_tag is not None:
+        raise ValueError(f"Unknown calibration_status '{legacy_tag}' in {threshold_file}")
+    else:
+        # Standard calibration artifact requires source_splits from allowed development sets
+        if not source_splits:
+            raise ValueError(f"Threshold artifact {threshold_file} missing 'source_splits'")
+        if not splits or (splits - ALLOWED_CALIBRATION_SPLITS):
+            raise ValueError(
+                f"Threshold artifact {threshold_file} must come from development data {sorted(ALLOWED_CALIBRATION_SPLITS)}, got {sorted(splits)}"
+            )
+
+    # 5. Extract and validate threshold value
+    if score_space == 'logit':
+        if has_logit_thresh:
+            val = float(data['logit_threshold'])
+        elif has_thresh:
+            val = float(data['threshold'])
+        else:
+            raise ValueError(f"Logit threshold artifact {threshold_file} missing 'logit_threshold' or 'threshold'")
+        if not np.isfinite(val):
+            raise ValueError(f"Logit threshold in {threshold_file} must be finite")
+    else:
+        if has_logit_thresh:
+            raise ValueError(f"Probability threshold artifact {threshold_file} cannot contain 'logit_threshold'")
+        if not has_thresh:
+            raise ValueError(f"Probability threshold artifact {threshold_file} missing 'threshold'")
+        val = float(data['threshold'])
+        if not (0.0 <= val <= 1.0) or not np.isfinite(val):
+            raise ValueError(f"Invalid threshold {val} in {threshold_file}; must be in [0, 1]")
+
+    # 6. Label mapping if present
+    if 'label_mapping' in data:
+        lm = data['label_mapping']
+        if lm != {'real': 0, 'fake': 1} and lm != ['real', 'fake']:
+            raise ValueError(f"Threshold artifact label_mapping must be {{'real': 0, 'fake': 1}}, got {lm}")
+
+    # 7. Checkpoint hash binding
+    artifact_ckpt = data.get('checkpoint_sha256')
+    if expected_checkpoint_hash is not None:
+        if not known(artifact_ckpt) or artifact_ckpt != expected_checkpoint_hash:
+            raise ValueError(
+                f"Threshold artifact {threshold_file} was calibrated for checkpoint '{artifact_ckpt}', "
+                f"which does not match evaluation checkpoint '{expected_checkpoint_hash}'."
+            )
+
+    # 8. Eval precision validation
+    recorded_precision = data.get('eval_precision', 'unknown')
+    if eval_precision is not None:
+        if recorded_precision not in ('unknown', eval_precision):
+            raise ValueError(
+                f"Evaluation requires {eval_precision} precision, but threshold artifact {threshold_file} was calibrated on {recorded_precision}."
+            )
+
+    return val, score_space
+
+
+def compare_evaluation_runs(
+    control_pred_path: str,
+    smooth_pred_path: str,
+    control_thresh_path: str,
+    smooth_thresh_path: str,
+    control_checkpoint_path: Optional[str] = None,
+    smooth_checkpoint_path: Optional[str] = None,
+    output_json_path: Optional[str] = None,
+    output_md_path: Optional[str] = None,
+    control_name: str = 'control',
+    smooth_name: str = 'smoothing',
+    bootstrap_repeats: int = 500,
+    seed: int = 42,
+    eval_precision: str = 'fp32',
+) -> Dict[str, Any]:
+    """
+    Compare two matched evaluation runs (e.g. Arm A Control vs Arm B Smoothing).
+
+    Verifies:
+      - Whole-file checkpoint digest consistency across ALL prediction rows.
+      - Checkpoint binding against physical best.pth files if provided.
+      - Threshold artifact binding against matched checkpoints.
+      - Strict sample alignment (sample ID, ground-truth label, and canonical path).
+      - FP32 evaluation precision across all prediction rows.
+      - Generates paired cluster percentile bootstrap difference and SHA256 digests.
+    """
+    p_ctrl_file = Path(control_pred_path)
+    p_smth_file = Path(smooth_pred_path)
+    t_ctrl_file = Path(control_thresh_path)
+    t_smth_file = Path(smooth_thresh_path)
+
+    if not p_ctrl_file.is_file():
+        raise FileNotFoundError(f"Missing control prediction file: {control_pred_path}")
+    if not p_smth_file.is_file():
+        raise FileNotFoundError(f"Missing smoothing prediction file: {smooth_pred_path}")
+    if not t_ctrl_file.is_file():
+        raise FileNotFoundError(f"Missing control threshold file: {control_thresh_path}")
+    if not t_smth_file.is_file():
+        raise FileNotFoundError(f"Missing smoothing threshold file: {smooth_thresh_path}")
+
+    ctrl_pred_sha = sha256(str(p_ctrl_file))
+    smth_pred_sha = sha256(str(p_smth_file))
+    ctrl_thresh_sha = sha256(str(t_ctrl_file))
+    smth_thresh_sha = sha256(str(t_smth_file))
+
+    # Read predictions
+    rows_ctrl = read_predictions(str(p_ctrl_file))
+    rows_smth = read_predictions(str(p_smth_file))
+
+    if len(rows_ctrl) == 0:
+        raise ValueError("Control predictions file is empty")
+    if len(rows_ctrl) != len(rows_smth):
+        raise ValueError(f"Prediction row count mismatch: control has {len(rows_ctrl)}, smoothing has {len(rows_smth)}")
+
+    # Checkpoint digest validation across ALL rows
+    ctrl_hashes = {r.get('checkpoint_sha256') for r in rows_ctrl}
+    if len(ctrl_hashes) != 1 or not all(known(h) for h in ctrl_hashes):
+        raise ValueError("Arm A (Control) predictions must have exactly one consistent, known checkpoint_sha256 across all rows")
+    ctrl_ckpt_hash = next(iter(ctrl_hashes))
+
+    smth_hashes = {r.get('checkpoint_sha256') for r in rows_smth}
+    if len(smth_hashes) != 1 or not all(known(h) for h in smth_hashes):
+        raise ValueError("Arm B (Smoothing) predictions must have exactly one consistent, known checkpoint_sha256 across all rows")
+    smth_ckpt_hash = next(iter(smth_hashes))
+
+    # If physical checkpoints are provided, bind against their actual hashes
+    if control_checkpoint_path is not None:
+        p_ctrl_ckpt = Path(control_checkpoint_path)
+        if not p_ctrl_ckpt.is_file():
+            raise FileNotFoundError(f"Control checkpoint file not found: {control_checkpoint_path}")
+        expected_ctrl_ckpt = sha256(str(p_ctrl_ckpt))
+        if ctrl_ckpt_hash != expected_ctrl_ckpt:
+            raise ValueError(f"Control predictions checkpoint hash '{ctrl_ckpt_hash}' does not match best.pth '{expected_ctrl_ckpt}'")
+
+    if smooth_checkpoint_path is not None:
+        p_smth_ckpt = Path(smooth_checkpoint_path)
+        if not p_smth_ckpt.is_file():
+            raise FileNotFoundError(f"Smoothing checkpoint file not found: {smooth_checkpoint_path}")
+        expected_smth_ckpt = sha256(str(p_smth_ckpt))
+        if smth_ckpt_hash != expected_smth_ckpt:
+            raise ValueError(f"Smoothing predictions checkpoint hash '{smth_ckpt_hash}' does not match best.pth '{expected_smth_ckpt}'")
+
+    # Precision validation across ALL rows
+    if eval_precision is not None:
+        ctrl_precs = {r.get('eval_precision') for r in rows_ctrl}
+        if ctrl_precs != {eval_precision}:
+            raise ValueError(f"Control predictions eval_precision must be '{eval_precision}' across all rows, got {ctrl_precs}")
+        smth_precs = {r.get('eval_precision') for r in rows_smth}
+        if smth_precs != {eval_precision}:
+            raise ValueError(f"Smoothing predictions eval_precision must be '{eval_precision}' across all rows, got {smth_precs}")
+
+    # Load and validate frozen thresholds against the respective checkpoint hash
+    tau_ctrl, s_ctrl = load_validated_threshold(
+        str(t_ctrl_file),
+        expected_checkpoint_hash=ctrl_ckpt_hash,
+        eval_precision=eval_precision
+    )
+    tau_smth, s_smth = load_validated_threshold(
+        str(t_smth_file),
+        expected_checkpoint_hash=smth_ckpt_hash,
+        eval_precision=eval_precision
+    )
+
+    # Check sample-by-sample alignment: ID, label, and path
+    for i, (rc, rs) in enumerate(zip(rows_ctrl, rows_smth)):
+        if rc.get('sample_id') != rs.get('sample_id'):
+            raise ValueError(f"Sample ID alignment mismatch at index {i}: '{rc.get('sample_id')}' != '{rs.get('sample_id')}'")
+        if int(rc['label']) != int(rs['label']):
+            raise ValueError(f"Ground-truth label mismatch at index {i}: {rc['label']} != {rs['label']}")
+        if rc.get('path') != rs.get('path'):
+            raise ValueError(f"Sample path mismatch at index {i}: '{rc.get('path')}' != '{rs.get('path')}'")
+
+    y = np.array([int(r['label']) for r in rows_ctrl])
+    p_ctrl = np.array([float(r['probability']) for r in rows_ctrl])
+    z_ctrl = np.array([float(r['logit']) for r in rows_ctrl]) if all('logit' in r and r.get('logit') is not None for r in rows_ctrl) else None
+    p_smth = np.array([float(r['probability']) for r in rows_smth])
+    z_smth = np.array([float(r['logit']) for r in rows_smth]) if all('logit' in r and r.get('logit') is not None for r in rows_smth) else None
+
+    # Compute metrics
+    m_ctrl_05 = binary_metrics(y, p_ctrl, threshold=0.5, logits=z_ctrl, score_space='probability')
+    m_smth_05 = binary_metrics(y, p_smth, threshold=0.5, logits=z_smth, score_space='probability')
+
+    m_ctrl_frz = binary_metrics(y, p_ctrl, threshold=tau_ctrl, logits=z_ctrl, score_space=s_ctrl)
+    m_smth_frz = binary_metrics(y, p_smth, threshold=tau_smth, logits=z_smth, score_space=s_smth)
+
+    groups = [r.get('group_id', '') for r in rows_ctrl]
+    paired_diff = group_intervals(
+        y, p_smth, groups, threshold=tau_smth, repeats=bootstrap_repeats, seed=seed,
+        other=p_ctrl, other_threshold=tau_ctrl,
+        logits=z_smth, other_logits=z_ctrl,
+        score_space=s_smth, other_score_space=s_ctrl
+    )
+
+    comparison = {
+        'schema_version': '2.0',
+        'samples': len(y),
+        'file_digests': {
+            'control_predictions_sha256': ctrl_pred_sha,
+            'smooth_predictions_sha256': smth_pred_sha,
+            'control_threshold_sha256': ctrl_thresh_sha,
+            'smooth_threshold_sha256': smth_thresh_sha,
+            'control_checkpoint_sha256': ctrl_ckpt_hash,
+            'smooth_checkpoint_sha256': smth_ckpt_hash,
+        },
+        'control': {
+            'name': control_name,
+            'checkpoint_sha256': ctrl_ckpt_hash,
+            'frozen_threshold': tau_ctrl,
+            'score_space': s_ctrl,
+            'fixed_05': m_ctrl_05,
+            'frozen_calibrated': m_ctrl_frz,
+        },
+        'smoothing': {
+            'name': smooth_name,
+            'checkpoint_sha256': smth_ckpt_hash,
+            'frozen_threshold': tau_smth,
+            'score_space': s_smth,
+            'fixed_05': m_smth_05,
+            'frozen_calibrated': m_smth_frz,
+        },
+        'paired_difference_smoothing_minus_control': paired_diff,
+    }
+
+    def sat_pct(m):
+        return (m['saturation_counts']['total_saturated'] / m['samples']) * 100
+
+    md_table = fr"""# A/B Evaluation Summary (External Development Dataset: {len(y):,} images)
+
+| Metric | Arm A: Control ({control_name}) | Arm B: Smoothing ({smooth_name}) | Absolute Gain ($\Delta$) |
+| :--- | :---: | :---: | :---: |
+| **Logit ROC AUC** | {m_ctrl_frz['roc_auc_logit']:.5f} | {m_smth_frz['roc_auc_logit']:.5f} | {m_smth_frz['roc_auc_logit'] - m_ctrl_frz['roc_auc_logit']:+.5f} |
+| **Probability ROC AUC (Diagnostic)** | {m_ctrl_frz['roc_auc_probability']:.5f} | {m_smth_frz['roc_auc_probability']:.5f} | {m_smth_frz['roc_auc_probability'] - m_ctrl_frz['roc_auc_probability']:+.5f} |
+| **Continuous Logit EER** | {m_ctrl_frz['interpolated_eer']:.4f} | {m_smth_frz['interpolated_eer']:.4f} | {m_smth_frz['interpolated_eer'] - m_ctrl_frz['interpolated_eer']:+.4f} |
+| **Total Saturated ($p \le 10^{{-4}}$ or $\ge 1-10^{{-4}}$)** | {sat_pct(m_ctrl_frz):.2f}% | {sat_pct(m_smth_frz):.2f}% | {sat_pct(m_smth_frz) - sat_pct(m_ctrl_frz):+.2f}% |
+| **Frozen Logit Threshold ($\tau_z$)** | `{tau_ctrl:.4f}` | `{tau_smth:.4f}` | — |
+| **Accuracy @ Frozen Logit $\tau_z$** | {m_ctrl_frz['accuracy']*100:.2f}% | {m_smth_frz['accuracy']*100:.2f}% | {(m_smth_frz['accuracy'] - m_ctrl_frz['accuracy'])*100:+.2f}% |
+| **Balanced Accuracy @ Frozen $\tau_z$** | {m_ctrl_frz['balanced_accuracy']*100:.2f}% | {m_smth_frz['balanced_accuracy']*100:.2f}% | {(m_smth_frz['balanced_accuracy'] - m_ctrl_frz['balanced_accuracy'])*100:+.2f}% |
+| **Real Recall @ Frozen $\tau_z$** | {m_ctrl_frz['real_recall']*100:.2f}% | {m_smth_frz['real_recall']*100:.2f}% | {(m_smth_frz['real_recall'] - m_ctrl_frz['real_recall'])*100:+.2f}% |
+| **Fake Recall @ Frozen $\tau_z$** | {m_ctrl_frz['fake_recall']*100:.2f}% | {m_smth_frz['fake_recall']*100:.2f}% | {(m_smth_frz['fake_recall'] - m_ctrl_frz['fake_recall'])*100:+.2f}% |
+| **Macro F1 @ Frozen $\tau_z$** | {m_ctrl_frz['macro_f1']:.4f} | {m_smth_frz['macro_f1']:.4f} | {m_smth_frz['macro_f1'] - m_ctrl_frz['macro_f1']:+.4f} |
+| **Accuracy @ Default 0.5** | {m_ctrl_05['accuracy']*100:.2f}% | {m_smth_05['accuracy']*100:.2f}% | {(m_smth_05['accuracy'] - m_ctrl_05['accuracy'])*100:+.2f}% |
+| **Real / Fake Recall @ Default 0.5** | {m_ctrl_05['real_recall']*100:.1f}% / {m_ctrl_05['fake_recall']*100:.1f}% | {m_smth_05['real_recall']*100:.1f}% / {m_smth_05['fake_recall']*100:.1f}% | — |
+"""
+
+    if output_json_path is not None:
+        p_out = Path(output_json_path)
+        p_out.parent.mkdir(parents=True, exist_ok=True)
+        p_out.write_text(json.dumps(comparison, indent=2), encoding='utf-8')
+
+    if output_md_path is not None:
+        p_md = Path(output_md_path)
+        p_md.parent.mkdir(parents=True, exist_ok=True)
+        p_md.write_text(md_table, encoding='utf-8')
+
+    comparison['markdown_summary'] = md_table
+    return comparison

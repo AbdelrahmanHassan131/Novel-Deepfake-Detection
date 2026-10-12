@@ -133,23 +133,18 @@ class Evaluator:
             )
 
         threshold = 0.5
+        score_space = 'probability'
         threshold_file = (opt_overrides or {}).get('threshold_file')
         if threshold_file:
-            import json
-            from evaluation.generalization import ALLOWED_CALIBRATION_SPLITS, FORBIDDEN_CALIBRATION_SPLITS
-            with open(threshold_file, encoding='utf-8') as stream:
-                calibration = json.load(stream)
-            if calibration['checkpoint_sha256'] != metadata.get('checkpoint_sha256'):
-                raise ValueError('Threshold was selected for a different checkpoint')
-            source_splits = set(calibration.get('source_splits', []))
-            if not source_splits or source_splits.intersection(FORBIDDEN_CALIBRATION_SPLITS) or (source_splits - ALLOWED_CALIBRATION_SPLITS):
-                raise ValueError(f"Threshold must come from development data {sorted(ALLOWED_CALIBRATION_SPLITS)}, got {sorted(source_splits)}")
-            threshold = float(calibration['threshold'])
-            recorded_precision = calibration.get('eval_precision', 'unknown')
-            if recorded_precision not in ('unknown', 'fp32'):
-                raise ValueError('Standalone evaluation uses FP32. Recompute development predictions '
-                                 'in FP32 before calibrating a matching threshold.')
+            from evaluation.generalization import load_validated_threshold
+            threshold, score_space = load_validated_threshold(
+                threshold_file,
+                expected_checkpoint_hash=metadata.get('checkpoint_sha256'),
+                eval_precision='fp32'
+            )
         metadata['decision_threshold_source'] = threshold_file or 'fixed 0.5; no test calibration'
+        metadata['decision_threshold'] = threshold
+        metadata['score_space'] = score_space
         # 2. Build Dataloader
         dataloader = self._build_dataloader(model.opt)
 
@@ -164,22 +159,32 @@ class Evaluator:
 
         # 4. Compute Classification Metrics
         print("Computing classification metrics...")
-        metric_calc = ClassificationMetrics(threshold=threshold)
+        metric_calc = ClassificationMetrics(threshold=threshold, score_space=score_space)
         metrics = metric_calc.compute_all(
             probabilities=inference_result.probabilities,
-            labels=inference_result.labels
+            labels=inference_result.labels,
+            logits=getattr(inference_result, 'logits', None)
         )
 
-        from evaluation.generalization import export_predictions, summarize
+        from evaluation.generalization import export_predictions, summarize, compute_binary_predictions
         import json
         records = dataloader.dataset.records
-        inference_result.predictions = (inference_result.probabilities >= threshold).astype(float)
+
+        pred_binary, _ = compute_binary_predictions(
+            probabilities=inference_result.probabilities,
+            logits=getattr(inference_result, 'logits', None),
+            threshold=threshold,
+            score_space=score_space
+        )
+        inference_result.predictions = pred_binary.astype(float)
+
         export_predictions(os.path.join(self.output_dir, 'predictions.csv'), records,
                            inference_result.probabilities, metadata.get('checkpoint_sha256'),
                            logits=getattr(inference_result, 'logits', None), eval_precision='fp32')
         generalization = summarize(records, inference_result.probabilities, threshold,
                                   repeats=(opt_overrides or {}).get('bootstrap', 200),
-                                  logits=getattr(inference_result, 'logits', None))
+                                  logits=getattr(inference_result, 'logits', None),
+                                  score_space=score_space)
         generalization['checkpoint'] = metadata
         with open(os.path.join(self.output_dir, 'generalization_report.json'), 'w', encoding='utf-8') as stream:
             json.dump(generalization, stream, indent=2, allow_nan=False)
@@ -201,21 +206,26 @@ class Evaluator:
                 probabilities=inference_result.probabilities,
                 labels=inference_result.labels,
                 save_path=os.path.join(plots_dir, 'roc_curve.png'),
-                title=f'{detected_arch} ROC Curve'
+                title=f'{detected_arch} ROC Curve',
+                logits=getattr(inference_result, 'logits', None)
             )
 
             plot_paths['precision_recall_curve'] = plot_evaluation_pr_curve(
                 probabilities=inference_result.probabilities,
                 labels=inference_result.labels,
                 save_path=os.path.join(plots_dir, 'precision_recall_curve.png'),
-                title=f'{detected_arch} PR Curve'
+                title=f'{detected_arch} PR Curve',
+                logits=getattr(inference_result, 'logits', None)
             )
 
             plot_paths['confusion_matrix'] = plot_evaluation_confusion_matrix(
                 probabilities=inference_result.probabilities,
                 labels=inference_result.labels,
                 save_path=os.path.join(plots_dir, 'confusion_matrix.png'),
-                title=f'{detected_arch} Confusion Matrix', threshold=threshold
+                title=f'{detected_arch} Confusion Matrix',
+                threshold=threshold,
+                logits=getattr(inference_result, 'logits', None),
+                score_space=score_space
             )
 
             if self.collect_embeddings:

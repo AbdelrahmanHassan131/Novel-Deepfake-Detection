@@ -259,6 +259,7 @@ class ModelConfig(_FrozenMixin):
         self.backbone_lr_mult = defaults.get('backbone_lr_mult', 1.0)
         self.bn_policy = defaults.get('bn_policy', 'train')
         self.decay_bias_norm = defaults.get('decay_bias_norm', False)
+        self.rgb_label_smoothing = float(defaults.get('rgb_label_smoothing', 0.0))
 
     def to_dict(self):
         """Return this section as a dictionary."""

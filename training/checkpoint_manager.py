@@ -317,11 +317,13 @@ class CheckpointManager:
         if saved.get('arch') == 'Wang2020_128':
             saved = dict(dict(rgb_head_type='128d', rgb_dropout=0.5, fine_tune_policy='full',
                               bn_policy='train', backbone_lr_mult=1.0, aug_recipe='legacy',
-                              crop_policy='scale_and_crop'), **saved)
+                              crop_policy='scale_and_crop', rgb_label_smoothing=0.0), **saved)
+        saved.setdefault('rgb_label_smoothing', 0.0)
         from config.protocol import PREPROCESSING_KEYS
         required = list(PREPROCESSING_KEYS) + [
             'arch', 'embed_dim', 'fusion_type', 'rgb_head_type', 'rgb_dropout',
             'fine_tune_policy', 'bn_policy', 'backbone_lr_mult', 'decay_bias_norm',
+            'rgb_label_smoothing',
             'aug_recipe', 'crop_policy', 'blur_prob', 'blur_sig', 'jpg_prob',
             'jpg_method', 'jpg_qual', 'noise_prob', 'noise_std', 'downscale_prob',
             'downscale_range', 'optim', 'weight_decay', 'beta1', 'momentum',
