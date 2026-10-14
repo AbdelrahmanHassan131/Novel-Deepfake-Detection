@@ -68,9 +68,27 @@ else:
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-# 2. Dataset validation
+# 2. Dataset extraction from Google Drive (if not already extracted)
 DATA_ROOT = Path('/content/dataset/DatesetNoVideosNoGAN')
 UNSEEN_ROOT = Path('/content/unseenDataset/val to be deleted 2')
+
+TRAIN_ZIP = Path('/content/drive/MyDrive/DatasetNoVideoNoGan/DatesetNoVideosNoGAN.zip')
+UNSEEN_ZIP = Path('/content/drive/MyDrive/UnseenData/val to be deleted 2.zip')
+
+if not (DATA_ROOT / 'train/real').is_dir():
+    print(f'Extracting training dataset from {TRAIN_ZIP}...')
+    assert TRAIN_ZIP.is_file(), f'Training archive missing: {TRAIN_ZIP}'
+    Path('/content/dataset').mkdir(parents=True, exist_ok=True)
+    subprocess.run(['7z', 'x', str(TRAIN_ZIP), '-o/content/dataset/', '-y'], check=True, stdout=subprocess.DEVNULL)
+    print('Training dataset extracted successfully.')
+
+if not (UNSEEN_ROOT / 'real').is_dir():
+    print(f'Extracting external unseen dataset from {UNSEEN_ZIP}...')
+    assert UNSEEN_ZIP.is_file(), f'Unseen archive missing: {UNSEEN_ZIP}'
+    Path('/content/unseenDataset').mkdir(parents=True, exist_ok=True)
+    subprocess.run(['7z', 'x', str(UNSEEN_ZIP), '-o/content/unseenDataset/', '-y'], check=True, stdout=subprocess.DEVNULL)
+    print('External unseen dataset extracted successfully.')
+
 for split_path in (DATA_ROOT / 'train', DATA_ROOT / 'val', UNSEEN_ROOT):
     for label in ('real', 'fake'):
         assert (split_path / label).is_dir(), f'Missing required directory: {split_path / label}'
