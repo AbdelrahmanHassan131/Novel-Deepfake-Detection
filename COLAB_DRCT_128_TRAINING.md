@@ -24,7 +24,7 @@ MANIFEST = PREP_ROOT / 'selected_manifest.csv'
 BUNDLE = DRIVE_ROOT / 'preparation'
 OUTPUT_BASE = Path('/content/drct_experiments')
 DRIVE_RUNS = DRIVE_ROOT / 'runs'
-TRAINING_MODE = 'drct'  # explicitly change to 'rgb_control' for originals-only BCE
+TRAINING_MODE = 'rgb_control'  # 'rgb_control' for new 570k dataset (originals-only BCE); 'drct' if paired reconstructions exist
 assert TRAINING_MODE in ('drct', 'rgb_control')
 
 if not REPO_ROOT.exists():
@@ -46,10 +46,56 @@ subprocess.run([sys.executable, '-m', 'pip', 'install', '-q',
     'pytorch-metric-learning==2.8.1', 'scikit-learn', 'scipy', 'pillow', 'timm'], check=True)
 import torch, clip
 print('Python:', sys.version, 'Torch:', torch.__version__)
-print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU preparation only')
+print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'No GPU detected')
+
+# --- Extract Multi-Domain Dataset (570k Images) ---
+MULTI_CANDIDATES = [
+    Path('/content/drive/MyDrive/DataesetNoVideoMultipleDomainAndRealImages/DatasetNoVideoMultipleDomainAndRealImages.zip'),
+    Path('/content/drive/MyDrive/DatasetNoVideoMultipleDomainAndRealImages/DatasetNoVideoMultipleDomainAndRealImages.zip'),
+    Path('/content/drive/MyDrive/DatasetNoVideoMultipleDomainAndRealImages.zip'),
+    Path('/content/drive/MyDrive/DatasetNoVideoNoGan/DatesetNoVideosNoGAN.zip'),
+]
+MULTI_ZIP = next((p for p in MULTI_CANDIDATES if p.is_file()), None)
+
+if not (DATA_ROOT / 'train/real').is_dir():
+    assert MULTI_ZIP is not None, f"Dataset archive not found in any candidate path: {MULTI_CANDIDATES}"
+    print(f"Extracting multi-domain dataset from {MULTI_ZIP}...")
+    Path('/content/dataset').mkdir(parents=True, exist_ok=True)
+    subprocess.run(['7z', 'x', str(MULTI_ZIP), '-o/content/dataset/', '-y'], check=True, stdout=subprocess.DEVNULL)
+    print("Multi-domain dataset extracted.")
+
+# --- Extract External Unseen Dataset (60k Images) ---
+UNSEEN_ROOT = Path('/content/unseenDataset/val to be deleted 2')
+UNSEEN_CANDIDATES = [
+    Path('/content/drive/MyDrive/UnseenData/val to be deleted 2.zip'),
+    Path('/content/drive/MyDrive/unseenData/val to be deleted 2.zip'),
+    Path('/content/drive/MyDrive/UnseenData/val_to_be_deleted_2.zip'),
+    Path('/content/drive/MyDrive/shared_project_files/UnseenData/val to be deleted 2.zip'),
+]
+UNSEEN_ZIP = next((p for p in UNSEEN_CANDIDATES if p.is_file()), None)
+
+if not (UNSEEN_ROOT / 'real').is_dir():
+    assert UNSEEN_ZIP is not None, f"Unseen archive not found in any candidate path: {UNSEEN_CANDIDATES}"
+    print(f"Extracting external unseen dataset from {UNSEEN_ZIP}...")
+    Path('/content/unseenDataset').mkdir(parents=True, exist_ok=True)
+    subprocess.run(['7z', 'x', str(UNSEEN_ZIP), '-o/content/unseenDataset/', '-y'], check=True, stdout=subprocess.DEVNULL)
+    print("External unseen dataset extracted.")
+
+# Verify and report image counts
 for split in ('train', 'val'):
     for label in ('real', 'fake'):
-        assert (DATA_ROOT / split / label).is_dir(), DATA_ROOT / split / label
+        assert (DATA_ROOT / split / label).is_dir(), f"Missing {DATA_ROOT / split / label}"
+
+for label in ('real', 'fake'):
+    assert (UNSEEN_ROOT / label).is_dir(), f"Missing {UNSEEN_ROOT / label}"
+
+print('--- Verified Dataset Image Counts ---')
+print(f"Train Real:  {len(list((DATA_ROOT / 'train/real').glob('*'))):,}")
+print(f"Train Fake:  {len(list((DATA_ROOT / 'train/fake').glob('*'))):,}")
+print(f"Val Real:    {len(list((DATA_ROOT / 'val/real').glob('*'))):,}")
+print(f"Val Fake:    {len(list((DATA_ROOT / 'val/fake').glob('*'))):,}")
+print(f"Unseen Real: {len(list((UNSEEN_ROOT / 'real').glob('*'))):,}")
+print(f"Unseen Fake: {len(list((UNSEEN_ROOT / 'fake').glob('*'))):,}")
 ```
 
 ## 3. Prepare once OR restore
@@ -75,8 +121,12 @@ if (BUNDLE / 'bundle.json').is_file():
 else:
     base = PREP_ROOT / 'base_inventory.csv'
     if not base.is_file():
-        inventory_dataset_directory(DATA_ROOT, base)  # val on disk becomes dev
+        inventory_dataset_directory(DATA_ROOT, base, duplicate_policy='drop_train')  # val becomes dev
     copy_stable(base, DRIVE_ROOT / 'base_inventory.csv')
+    for suffix in ('.inventory_report.json', '.excluded_duplicates.csv'):
+        report = base.with_suffix(suffix)
+        if report.is_file():
+            copy_stable(report, DRIVE_ROOT / report.name)
     if TRAINING_MODE == 'drct':
         mapping = DRIVE_ROOT / 'reconstruction_mapping.csv'
         if not mapping.is_file():
@@ -102,6 +152,8 @@ if TRAINING_MODE == 'rgb_control':
 ```
 
 You can now end the CPU session. Keep the preparation bundle (CSV, verification JSON, bundle.json, reconstructions) and original dataset archive. Original images are NOT in the bundle. In a new session, extract the same original archive to DATA_ROOT, then run Cells 1-3. Reconstruction checksums are verified during the required copy from Drive; original images are not rehashed. A changed dataset requires a new preparation, not the unchanged-data flag.
+
+`duplicate_policy='drop_train'` explicitly removes training-manifest rows whose exact file content also occurs in development with the same label. Development rows and image files are preserved. The inventory report and exclusion CSV record the changed counts. Contradictory labels, overlap between evaluation splits, or loss of a training class still stop preparation. This handles byte-identical files, not near duplicates or shared identities.
 
 ## 4. Bounded GPU benchmark
 This uses pretrained CLIP, matching training. Its first use downloads authentic weights to the Colab cache; complete checkpoint restore does not download them.
@@ -185,12 +237,30 @@ This collection has informed past experiments; report it as external development
 ```python
 EXTERNAL_ROOT = Path('/content/unseenDataset/val to be deleted 2')
 assert EXTERNAL_ROOT.is_dir(), EXTERNAL_ROOT
+EVAL_UNSEEN_DIR = Path(run['experiment_dir']) / 'external_eval'
+
 subprocess.run([sys.executable, '-u', 'evaluate.py', '--checkpoint', str(BEST),
-    '--arch', 'DRCT_128', '--val_root', str(EXTERNAL_ROOT), '--split', 'external_dev',
+    '--arch', 'DRCT_128', '--val_root', str(EXTERNAL_ROOT), '--split', 'external_test',
     '--threshold_file', str(THRESHOLD), '--batch_size', str(BATCH), '--num_workers', '0',
     '--eval_precision', 'fp32', '--no_plots', '--no_tsne', '--no_gradcam', '--no_profiling',
-    '--output_dir', str(Path(run['experiment_dir']) / 'external_eval')], check=True)
+    '--output_dir', str(EVAL_UNSEEN_DIR)], check=True)
 mirror_tree(Path(run['experiment_dir']), Path(run['drive_dir']))
+
+# Display summary metrics on unseen dataset
+unseen_json = EVAL_UNSEEN_DIR / 'DRCT_128' / 'evaluation_report.json'
+if unseen_json.is_file():
+    with open(unseen_json, 'r') as f:
+        rep = json.load(f)
+    metrics = rep.get('classification_metrics', {})
+    print("\n" + "="*50)
+    print("      DRCT-128 EXTERNAL UNSEEN DATA EVALUATION")
+    print("="*50)
+    print(f"  Accuracy (Calibrated Threshold): {metrics.get('accuracy', 0.0)*100:.2f}%")
+    print(f"  ROC AUC:                         {metrics.get('roc_auc', 0.0):.4f}")
+    print(f"  Average Precision (PR AUC):      {metrics.get('pr_auc', metrics.get('average_precision', 0.0)):.4f}")
+    print(f"  Equal Error Rate (EER):          {metrics.get('eer', 0.0)*100:.2f}%")
+    print(f"  F1 Score:                        {metrics.get('f1_score', 0.0):.4f}")
+    print("="*50)
 ```
 
 ## 9. Optional MHA, after the standalone result

@@ -91,15 +91,21 @@ def inventory_dataset_directory(
     source_name: Optional[str] = None,
     map_val_to_dev: bool = True,
     generate_gate: bool = True,
+    duplicate_policy: str = 'error',
 ) -> Dict[str, Any]:
     """Inventory a standard dataset root into a DRCT base manifest.
     
     Standardizes split names to ['train', 'dev'] (or explicit splits),
     scans class folders recursively, produces collision-safe sample IDs,
     verifies non-empty binary coverage, and writes the verification gate.
+    With duplicate_policy='drop_train', exclude training rows whose exact
+    content also exists in evaluation, only when all copies agree on label.
+    Image files and evaluation rows are never deleted or relabeled.
     """
     root = Path(dataset_root).resolve()
     out_path = Path(output_manifest_path).resolve()
+    if duplicate_policy not in ('error', 'drop_train'):
+        raise ValueError("duplicate_policy must be 'error' or 'drop_train'")
     if not root.is_dir():
         raise FileNotFoundError(f"Dataset root not found: {root}")
 
@@ -172,29 +178,70 @@ def inventory_dataset_directory(
                     }
                     records.append(rec)
                     split_records_count += 1
+                    if len(records) % 10000 == 0:
+                        print(f'[InventoryDir] Hashed {len(records):,} images...', flush=True)
                 break
 
         if split_records_count == 0:
             raise ValueError(f"Requested split '{s}' contains 0 valid images in {split_dir}.")
 
-    # Refuse empty splits or splits without binary classes
-    for s in target_splits:
-        s_recs = [r for r in records if r['split'] == s]
-        labels = {int(r['label']) for r in s_recs}
-        if labels != {0, 1}:
-            raise ValueError(
-                f"Split '{s}' in '{root}' must contain both real (0) and fake (1) images. "
-                f"Found labels: {labels}"
-            )
+    scanned_count = len(records)
+    excluded = []
+    hashes = {}
+    for row in records:
+        hashes.setdefault(row['sha256'], []).append(row)
+    overlapping = {h: rows for h, rows in hashes.items()
+                   if len({r['split'] for r in rows}) > 1}
+    if duplicate_policy == 'drop_train':
+        removable_hashes = {h for h, rows in overlapping.items()
+                            if len({r['label'] for r in rows}) == 1}
+        kept = []
+        for row in records:
+            if row['split'] == 'train' and row['sha256'] in removable_hashes:
+                excluded.append(dict(row, exclusion_reason='exact_duplicate_in_evaluation'))
+            else:
+                kept.append(row)
+        records = kept
 
+    # Always write an exclusion trail, even if remaining conflicts prevent use.
+    excluded_path = out_path.with_suffix('.excluded_duplicates.csv')
+    write_drct_manifest(excluded_path, excluded)
+    report_path = out_path.with_suffix('.inventory_report.json')
+    counts = {}
+    for row in records:
+        key = (row['split'], int(row['label']))
+        counts[key] = counts.get(key, 0) + 1
+    cleanup_report = {
+        'status': 'failed_validation', 'duplicate_policy': duplicate_policy,
+        'scanned_samples': scanned_count, 'retained_samples': len(records),
+        'cross_split_content_hashes': len(overlapping),
+        'excluded_training_samples': len(excluded),
+        'evaluation_rows_preserved': True, 'image_files_changed': False,
+        'excluded_rows_csv': str(excluded_path),
+        'counts': [dict(split=s, label=l, count=n) for (s, l), n in sorted(counts.items())],
+    }
+    # Refuse empty splits, contradictory labels, or remaining evaluation overlap.
     val_res = validate_drct_records(records)
+    for s in target_splits:
+        labels = {label for (row_split, label) in counts if row_split == s}
+        if labels != {0, 1}:
+            val_res['errors'].append(f"Split '{s}' must retain both real (0) and fake (1) images; found {labels}.")
+            val_res['passed'] = False
+    cleanup_report['errors'] = val_res['errors']
+    report_path.write_text(json.dumps(cleanup_report, indent=2), encoding='utf-8')
     if not val_res['passed']:
-        raise ValueError(f"Directory inventory validation failed: {'; '.join(val_res['errors'][:10])}")
+        raise ValueError(f"Directory inventory validation failed: {'; '.join(val_res['errors'][:10])}. "
+                         f"Report: {report_path}. For same-label train/evaluation duplicates, explicitly use duplicate_policy='drop_train'.")
 
     write_drct_manifest(out_path, records)
 
     if generate_gate:
         generate_gate_sidecar(out_path, records, require_hashes=False)
+
+    cleanup_report['status'] = 'success'
+    cleanup_report['manifest_sha256'] = file_sha256(out_path)
+    report_path.write_text(json.dumps(cleanup_report, indent=2), encoding='utf-8')
+    print(f'[InventoryDir] Retained {len(records):,}; excluded {len(excluded):,} training duplicates. Report: {report_path}', flush=True)
 
     real_count = sum(1 for r in records if r['label'] == 0)
     fake_count = sum(1 for r in records if r['label'] == 1)
@@ -206,6 +253,10 @@ def inventory_dataset_directory(
         'real_count': real_count,
         'fake_count': fake_count,
         'splits': sorted(list(set(r['split'] for r in records))),
+        'scanned_samples': scanned_count,
+        'excluded_training_samples': len(excluded),
+        'inventory_report': str(report_path),
+        'excluded_rows_csv': str(excluded_path),
     }
 
 
@@ -680,6 +731,8 @@ def main():
     dir_parser.add_argument('--splits', nargs='+', default=None, help="List of split names (default: ['train', 'dev'])")
     dir_parser.add_argument('--source_name', default=None, help="Explicit dataset source name")
     dir_parser.add_argument('--no_gate', action='store_true', help="Skip gate sidecar generation")
+    dir_parser.add_argument('--duplicate_policy', choices=['error', 'drop_train'], default='error',
+                            help='Explicitly exclude same-label training copies of evaluation images; never delete files')
 
     # Import precomputed reconstructions command
     import_parser = subparsers.add_parser('import_rec', help="Import precomputed reconstruction pairs")
@@ -721,7 +774,7 @@ def main():
     elif args.command == 'inventory_dir':
         res = inventory_dataset_directory(
             args.dataset_root, args.output_manifest, splits=args.splits, source_name=args.source_name,
-            generate_gate=not args.no_gate
+            generate_gate=not args.no_gate, duplicate_policy=args.duplicate_policy
         )
         print(f"[InventoryDir] Success: {res['total_inventoried']} samples written to {res['output_manifest']}")
         print(f"  Splits: {res['splits']}; Real: {res['real_count']}, Fake: {res['fake_count']}")
