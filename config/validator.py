@@ -30,7 +30,7 @@ from config.types import (
 )
 
 
-class ConfigurationError(Exception):
+class ConfigurationError(ValueError):
     """Raised when configuration validation fails with fatal errors."""
 
     def __init__(self, errors):
@@ -39,6 +39,7 @@ class ConfigurationError(Exception):
         for i, err in enumerate(errors, 1):
             msg += f'  {i}. {err}\n'
         super().__init__(msg)
+
 
 
 class ValidationReport:
@@ -278,9 +279,10 @@ class ConfigValidator:
         # a custom registered model).
         from config.types import ArchitectureType
         known = [member.value for member in ArchitectureType]
-        if m.architecture not in known:
+        arch_str = m.architecture.value if hasattr(m.architecture, 'value') else str(m.architecture)
+        if arch_str not in known:
             report.add_warning(
-                f'model.architecture {m.architecture!r} is not in '
+                f'model.architecture {arch_str!r} is not in '
                 f'the known architecture list: {known}. '
                 f'Ensure it is registered in the model registry.')
 
@@ -305,12 +307,35 @@ class ConfigValidator:
             report.add_error(f"model.rgb_label_smoothing must be a finite float, got {smoothing!r}")
         elif smoothing < 0.0 or smoothing >= 0.5:
             report.add_error(f"model.rgb_label_smoothing must be in [0.0, 0.5), got {smoothing}")
-        elif smoothing > 0.0 and m.architecture != 'Wang2020_128':
-            report.add_error(f"model.rgb_label_smoothing > 0 is only supported for architecture 'Wang2020_128', got {m.architecture!r}")
+        elif smoothing > 0.0 and arch_str != 'Wang2020_128':
+            report.add_error(f"model.rgb_label_smoothing > 0 is only supported for architecture 'Wang2020_128', got {arch_str!r}. Label smoothing is not supported for DRCT.")
+
+        # DRCT-specific validation
+        if arch_str == 'DRCT_128':
+            if str(getattr(m, 'drct_backbone', '')).lower() not in ('dummy', 'tiny', 'mock') and config.data.crop_size != 224:
+                report.add_error('DRCT CLIP backbones require data.crop_size=224.')
+            if getattr(m, 'embed_dim', 128) != 128:
+                report.add_error(f"DRCT_128 strictly requires embed_dim=128, got {getattr(m, 'embed_dim', None)}")
+            alpha = getattr(m, 'drct_alpha', 0.3)
+            if not isinstance(alpha, (int, float)) or not math.isfinite(alpha) or alpha < 0.0 or alpha > 1.0:
+                report.add_error(f"model.drct_alpha must be between 0.0 and 1.0, got {alpha!r}")
+            pos_m = getattr(m, 'drct_pos_margin', 0.0)
+            neg_m = getattr(m, 'drct_neg_margin', 1.0)
+            if not math.isfinite(pos_m) or pos_m < 0.0:
+                report.add_error(f"model.drct_pos_margin must be >= 0.0, got {pos_m}")
+            if not math.isfinite(neg_m) or neg_m <= pos_m:
+                report.add_error(f"model.drct_neg_margin ({neg_m}) must be greater than drct_pos_margin ({pos_m})")
+            p_drop = getattr(m, 'drct_projection_dropout', 0.0)
+            if not math.isfinite(p_drop) or p_drop < 0.0 or p_drop > 1.0:
+                report.add_error(f"model.drct_projection_dropout must be in [0.0, 1.0], got {p_drop}")
+            p_act = getattr(m, 'drct_projection_activation', None)
+            if p_act is not None and p_act not in ('none', 'relu', 'gelu'):
+                report.add_error(f"model.drct_projection_activation must be 'none', 'relu', or 'gelu', got {p_act!r}")
 
         if m.init_gain <= 0:
             report.add_warning(
                 f'model.init_gain is non-positive: {m.init_gain}')
+
 
     @staticmethod
     def _check_runtime(config, report):

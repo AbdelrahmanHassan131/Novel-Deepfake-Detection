@@ -79,6 +79,7 @@ class CheckpointLoader:
                 'checkpoint_path': 'Pretrained/Default Weights',
             }
             opt = self._build_opt(arch, opt_overrides)
+            self.opt = opt
             from models import build_model
             model = build_model(opt)
             opt.isTrain = False
@@ -104,6 +105,7 @@ class CheckpointLoader:
 
         # Build the model through the registry
         opt = self._build_opt(arch, opt_overrides)
+        self.opt = opt
         model = self._build_and_restore(opt, arch)
 
         return model
@@ -145,8 +147,10 @@ class CheckpointLoader:
             'ConvNeXt_128': 'ConvNeXt_128',
             'Fusion_WWXC': 'Fusion_WWXC',
             'MHA_WWXC': 'MHA_WWXC',
+            'DRCT_128': 'DRCT_128',
             # Also accept direct registry names
             'Wang2020Raw': 'Wang2020Raw',
+
             'WolterWavelet2021Raw': 'WolterWavelet2021Raw',
             'WolterWavelet2021_128': 'WolterWavelet2021_128',
         }
@@ -243,7 +247,6 @@ class CheckpointLoader:
 
         # Restore the actual training configuration before runtime overrides.
         protocol = (self._checkpoint or {}).get('protocol', {})
-        saved = protocol.get('options', {})
         if self._checkpoint is not None and not protocol:
             import json
             legacy_path = (opt_overrides or {}).get('legacy_config')
@@ -251,17 +254,22 @@ class CheckpointLoader:
                 raise ValueError('Legacy checkpoint has no label/preprocessing metadata. Supply --legacy_config JSON from its original run; do not guess score direction.')
             with open(legacy_path, encoding='utf-8') as stream:
                 protocol = json.load(stream)
-            saved = protocol.get('options', {})
-            from config.protocol import PREPROCESSING_KEYS
-            missing = set(PREPROCESSING_KEYS) - set(saved)
+
+        # Refresh saved options from protocol (works for both embedded and legacy configs)
+        saved = protocol.get('options', {}) if isinstance(protocol, dict) else {}
+        if self._checkpoint is not None and not (self._checkpoint or {}).get('protocol'):
+            from config.protocol import get_preprocessing_keys_for_arch
+            required_keys = get_preprocessing_keys_for_arch(arch)
+            missing = set(required_keys) - set(saved)
             if missing:
                 raise ValueError(f'Legacy config missing preprocessing fields: {sorted(missing)}')
+
         for key, value in saved.items():
             setattr(opt, key, value)
-        mapping = protocol.get('label_mapping', {'real': 0, 'fake': 1})
+        mapping = protocol.get('label_mapping', {'real': 0, 'fake': 1}) if isinstance(protocol, dict) else {'real': 0, 'fake': 1}
         if mapping not in ({'real': 0, 'fake': 1}, {'real': 1, 'fake': 0}):
             raise ValueError('Checkpoint must declare binary real/fake label_mapping')
-        if self._checkpoint is not None and 'label_mapping' not in protocol:
+        if self._checkpoint is not None and (not isinstance(protocol, dict) or 'label_mapping' not in protocol):
             raise ValueError('Legacy config requires the ORIGINAL label_mapping')
         opt.score_sign = 1.0 if mapping['fake'] == 1 else -1.0
         opt.pretrained = False
@@ -269,9 +277,18 @@ class CheckpointLoader:
         opt.isTrain = True
         opt.continue_train = False
         opt.gpu_ids = self.gpu_ids
+
+        # Preserve saved training manifest provenance separately, but clear active evaluation paths
+        opt._saved_manifest = saved.get('manifest')
+        opt._saved_val_manifest = saved.get('val_manifest')
+        opt._saved_drct_manifest_path = saved.get('drct_manifest_path')
         opt.manifest = None
+        opt.val_manifest = None
+        opt.drct_manifest_path = None
+
         opt._loading_checkpoint = True
         opt._expert_state_dicts = (self._checkpoint or {}).get('expert_state_dicts', {})
+        opt._expert_metadata = (self._checkpoint or {}).get('expert_metadata', {})
         if arch == 'MHA_128' and 'fusion_type' not in saved:
             raise ValueError('Fusion checkpoint must declare fusion_type in its saved or legacy options')
         # Apply user overrides

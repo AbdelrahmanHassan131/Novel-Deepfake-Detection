@@ -7,6 +7,7 @@ from .base_dataset import BaseDataset
 from ..transforms.augmentations import data_augment
 from ..transforms.resize import custom_resize
 from ..transforms.identity import identity_image
+from ..transforms.drct_transforms import DRCTValTransform, DRCTTrainTransform, DRCT_IMAGE_SIZE
 from ..wavelets.backends import create_wavelet_backend
 
 
@@ -17,26 +18,14 @@ class FusionDataset(BaseDataset):
     Represents behavior used by: MHA_128, Fusion_128.
 
     Supports three backends controlled by ``opt.wavelet_backend``:
+        - 'cpu' (default): RGB images loaded, augmented; wavelets computed on CPU.
+        - 'gpu': RGB images loaded, augmented on CPU; wavelets computed on GPU.
+        - 'precomputed': Wavelet tensors loaded from precomputed .npy files.
 
-        ``'cpu'`` (default):
-            RGB images are loaded, augmented, and wavelet packets are
-            computed from the same augmented image each time.
-
-        ``'gpu'``:
-            RGB images are loaded and augmented on CPU.  The augmented
-            image is converted to a tensor, then wavelet packets are
-            computed on GPU using pytorch_wavelets.
-
-        ``'precomputed'``:
-            ``opt.precomputed_dir`` must point to a directory of ``.npy``
-            files whose folder structure mirrors the image dataset.
-            RGB images are still loaded and augmented normally.
-            Wavelet tensors are loaded from ``.npy`` files.
-
-    Backward compatibility:
-        When ``opt.wavelet_backend`` is not set, the dataset defaults to
-        ``'cpu'``.  The legacy ``opt.precomputed_dir`` auto-detection is
-        also honoured (see ``WaveletDataset`` for details).
+    Branch-aware Preprocessing:
+        When the RGB expert is DRCT_128, applies versioned DRCT preprocessing
+        (longest-edge resize to 224, symmetric zero padding, ImageNet normalization)
+        to the RGB branch, while preserving separate wavelet branch preprocessing.
     """
     def __init__(self, opt, root):
         # --- Resolve backend ---
@@ -51,6 +40,46 @@ class FusionDataset(BaseDataset):
             opt.wavelet_backend = backend_name
 
         self._backend = create_wavelet_backend(opt)
+
+        # --- Detect RGB expert architecture from metadata ---
+        self.rgb_is_drct = False
+        rgb_arch = getattr(opt, 'rgb_expert_arch', None)
+        if rgb_arch == 'DRCT_128':
+            self.rgb_is_drct = True
+        elif getattr(opt, '_expert_metadata', {}).get('rgb_model', {}).get('arch') == 'DRCT_128':
+            self.rgb_is_drct = True
+        external_input_sz = None
+        if getattr(opt, 'rgb_model_path', None) and os.path.isfile(opt.rgb_model_path):
+            try:
+                ckpt = torch.load(opt.rgb_model_path, map_location='cpu', weights_only=False)
+                arch_found = (
+                    ckpt.get('protocol', {}).get('options', {}).get('arch')
+                    or ckpt.get('protocol', {}).get('options', {}).get('model_name')
+                    or ckpt.get('model_name')
+                    or ckpt.get('arch')
+                )
+                if arch_found == 'DRCT_128':
+                    self.rgb_is_drct = True
+                    proto_opts = ckpt.get('protocol', {}).get('options', {})
+                    external_input_sz = proto_opts.get('drct_crop_size') or proto_opts.get('cropSize') or proto_opts.get('crop_size')
+            except Exception:
+                pass
+
+        expert_meta = getattr(opt, '_expert_metadata', {}).get('rgb_model', {})
+        drct_input_sz = expert_meta.get('input_size') or external_input_sz or getattr(opt, 'drct_crop_size', DRCT_IMAGE_SIZE)
+
+        if self.rgb_is_drct:
+            if drct_input_sz != 224:
+                raise ValueError(
+                    f"DRCT visual encoder requires input resolution 224x224 (got {drct_input_sz}). "
+                    "CLIP ViT positional embeddings do not support alternative resolutions without interpolation."
+                )
+            if opt.isTrain and not getattr(opt, 'no_flip', False):
+                self.drct_transform = DRCTTrainTransform(size=drct_input_sz)
+            else:
+                self.drct_transform = DRCTValTransform(size=drct_input_sz)
+        else:
+            self.drct_transform = None
 
         # --- Precomputed root (only for precomputed backend) ---
         self._precomputed_root = None
@@ -69,7 +98,7 @@ class FusionDataset(BaseDataset):
                 os.path.join(precomputed_dir, rel)
             )
 
-        # --- Image transforms (always needed for RGB branch) ---
+        # --- Image transforms for Wavelet and standard RGB branches ---
         if opt.isTrain:
             crop_func = transforms.RandomCrop(opt.cropSize)
         elif opt.no_crop:
@@ -123,30 +152,35 @@ class FusionDataset(BaseDataset):
 
     def __getitem__(self, index):
         path, target = self.samples[index]
-        img = self.loader(path)
+        raw_img = self.loader(path)
 
-        if self.image_transform is not None:
-            img = self.image_transform(img)
-
-        # RGB branch — always processed normally
-        rgb_tensor = self.rgb_normalize(img)
-
-        # Wavelet branch — routed through the backend
-        if self._backend.name == 'precomputed':
-            # ----- Precomputed: load .npy -----
-            npy_path = self._get_npy_path(path)
-            wavelet_tensor = self._backend(npy_path)
-        elif self._needs_to_tensor:
-            # ----- GPU backend: return raw CPU float32 tensor for GPU batched computation -----
-            img_array = np.array(img, dtype=np.float32)
-            if img_array.ndim == 3 and img_array.shape[2] == 3:
-                img_tensor = torch.from_numpy(
-                    img_array.transpose(2, 0, 1))  # (3, H, W)
+        if self.rgb_is_drct:
+            rgb_tensor = self.drct_transform(raw_img)
+            wav_img = self.image_transform(raw_img)
+            if self._backend.name == 'precomputed':
+                npy_path = self._get_npy_path(path)
+                wavelet_tensor = self._backend(npy_path)
+            elif self._needs_to_tensor:
+                img_array = np.array(wav_img, dtype=np.float32)
+                if img_array.ndim == 3 and img_array.shape[2] == 3:
+                    wavelet_tensor = torch.from_numpy(img_array.transpose(2, 0, 1))
+                else:
+                    wavelet_tensor = torch.from_numpy(img_array)
             else:
-                img_tensor = torch.from_numpy(img_array)
-            wavelet_tensor = img_tensor
+                wavelet_tensor = self._backend(wav_img)
         else:
-            # ----- CPU backend: pass image directly -----
-            wavelet_tensor = self._backend(img)
+            img = self.image_transform(raw_img) if self.image_transform is not None else raw_img
+            rgb_tensor = self.rgb_normalize(img)
+            if self._backend.name == 'precomputed':
+                npy_path = self._get_npy_path(path)
+                wavelet_tensor = self._backend(npy_path)
+            elif self._needs_to_tensor:
+                img_array = np.array(img, dtype=np.float32)
+                if img_array.ndim == 3 and img_array.shape[2] == 3:
+                    wavelet_tensor = torch.from_numpy(img_array.transpose(2, 0, 1))
+                else:
+                    wavelet_tensor = torch.from_numpy(img_array)
+            else:
+                wavelet_tensor = self._backend(img)
 
         return rgb_tensor, wavelet_tensor, target

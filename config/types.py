@@ -149,8 +149,10 @@ class ArchitectureType(Enum):
     CONVNEXT_128 = 'ConvNeXt_128'
     FUSION_WWXC = 'Fusion_WWXC'
     MHA_WWXC = 'MHA_WWXC'
+    DRCT_128 = 'DRCT_128'
     # Legacy aliases
     RES50 = 'res50'
+
 
     @classmethod
     def from_string(cls, value):

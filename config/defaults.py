@@ -93,7 +93,18 @@ MODEL_DEFAULTS = {
     'bn_policy': 'train',
     'decay_bias_norm': False,
     'rgb_label_smoothing': 0.0,
+    'drct_backbone': 'clip-ViT-L/14',
+    'drct_alpha': 0.3,
+    'drct_pos_margin': 0.0,
+    'drct_neg_margin': 1.0,
+    'drct_enable_contrastive': True,
+    'drct_freeze_encoder': True,
+    'drct_projection_activation': None,
+    'drct_projection_dropout': 0.0,
+    'drct_allow_download': False,
+    'drct_backbone_weights': None,
 }
+
 
 # ------------------------------------------------------------------
 # Training

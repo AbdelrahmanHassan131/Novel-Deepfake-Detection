@@ -172,7 +172,18 @@ def config_from_opt(opt):
         bn_policy=_get(opt, 'bn_policy', 'train'),
         decay_bias_norm=_get(opt, 'decay_bias_norm', False),
         rgb_label_smoothing=float(_get(opt, 'rgb_label_smoothing', 0.0)),
+        drct_backbone=_get(opt, 'drct_backbone', 'clip-ViT-L/14'),
+        drct_alpha=float(_get(opt, 'drct_alpha', 0.3)),
+        drct_pos_margin=float(_get(opt, 'drct_pos_margin', 0.0)),
+        drct_neg_margin=float(_get(opt, 'drct_neg_margin', 1.0)),
+        drct_enable_contrastive=bool(_get(opt, 'drct_enable_contrastive', True)),
+        drct_freeze_encoder=bool(_get(opt, 'drct_freeze_encoder', True)),
+        drct_projection_activation=_get(opt, 'drct_projection_activation', None),
+        drct_projection_dropout=float(_get(opt, 'drct_projection_dropout', 0.0)),
+        drct_allow_download=bool(_get(opt, 'drct_allow_download', False)),
+        drct_backbone_weights=_get(opt, 'drct_backbone_weights', None),
     )
+
 
     # ------------------------------------------------------------------
     # Training section
@@ -344,7 +355,7 @@ def config_to_opt(config):
     opt.precomputed_dir = config.wavelets.precomputed_dir
 
     # --- Model ---
-    opt.arch = config.model.architecture
+    opt.arch = config.model.architecture.value if hasattr(config.model.architecture, 'value') else config.model.architecture
     opt.pretrained = config.model.pretrained
     opt.num_classes = config.model.num_classes
     opt.init_type = config.model.init_type
@@ -360,8 +371,13 @@ def config_to_opt(config):
     opt.convnext_model_path = config.model.convnext_model_path
     opt.backbone_weights = getattr(config.model, 'backbone_weights', None)
     for key in ('rgb_head_type', 'rgb_dropout', 'fine_tune_policy',
-                'backbone_lr_mult', 'bn_policy', 'decay_bias_norm', 'rgb_label_smoothing'):
+                'backbone_lr_mult', 'bn_policy', 'decay_bias_norm', 'rgb_label_smoothing',
+                'drct_backbone', 'drct_alpha', 'drct_pos_margin', 'drct_neg_margin',
+                'drct_enable_contrastive', 'drct_freeze_encoder',
+                'drct_projection_activation', 'drct_projection_dropout',
+                'drct_allow_download', 'drct_backbone_weights'):
         setattr(opt, key, getattr(config.model, key))
+
 
     # --- Training ---
     opt.niter = config.training.epochs

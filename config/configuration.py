@@ -260,6 +260,17 @@ class ModelConfig(_FrozenMixin):
         self.bn_policy = defaults.get('bn_policy', 'train')
         self.decay_bias_norm = defaults.get('decay_bias_norm', False)
         self.rgb_label_smoothing = float(defaults.get('rgb_label_smoothing', 0.0))
+        self.drct_backbone = defaults.get('drct_backbone', 'clip-ViT-L/14')
+        self.drct_alpha = float(defaults.get('drct_alpha', 0.3))
+        self.drct_pos_margin = float(defaults.get('drct_pos_margin', 0.0))
+        self.drct_neg_margin = float(defaults.get('drct_neg_margin', 1.0))
+        self.drct_enable_contrastive = bool(defaults.get('drct_enable_contrastive', True))
+        self.drct_freeze_encoder = bool(defaults.get('drct_freeze_encoder', True))
+        self.drct_projection_activation = defaults.get('drct_projection_activation', None)
+        self.drct_projection_dropout = float(defaults.get('drct_projection_dropout', 0.0))
+        self.drct_allow_download = bool(defaults.get('drct_allow_download', False))
+        self.drct_backbone_weights = defaults.get('drct_backbone_weights', None)
+
 
     def to_dict(self):
         """Return this section as a dictionary."""

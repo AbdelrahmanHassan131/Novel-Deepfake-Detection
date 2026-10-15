@@ -74,7 +74,32 @@ def parse_args():
     parser.add_argument('--init_gain', type=float, default=MODEL_DEFAULTS['init_gain'],
                         help="Scaling factor for initialization")
 
+    # DRCT scoped parameters
+    parser.add_argument('--drct_backbone', type=str, default='clip-ViT-L/14',
+                        help="Visual backbone architecture for DRCT (e.g. 'clip-ViT-L/14', 'dummy')")
+    parser.add_argument('--drct_alpha', type=float, default=0.3,
+                        help="Weighting factor alpha for DRCT contrastive loss: (1-alpha)*cls + alpha*contrastive")
+    parser.add_argument('--drct_pos_margin', type=float, default=0.0,
+                        help="Positive pair margin for DRCT contrastive loss")
+    parser.add_argument('--drct_neg_margin', type=float, default=1.0,
+                        help="Negative pair margin for DRCT contrastive loss")
+    parser.add_argument('--drct_enable_contrastive', action=argparse.BooleanOptionalAction, default=True,
+                        help="Whether to include margin-based contrastive loss during DRCT training")
+    parser.add_argument('--drct_freeze_encoder', action=argparse.BooleanOptionalAction, default=True,
+                        help="Whether to freeze visual backbone parameters in DRCT")
+    parser.add_argument('--drct_projection_activation', choices=['none', 'relu', 'gelu'], default='none',
+                        help="Optional activation function in DRCT 128D projection layer")
+    parser.add_argument('--drct_projection_dropout', type=float, default=0.0,
+                        help="Dropout rate in DRCT 128D projection layer")
+    parser.add_argument('--drct_allow_download', '--allow_download', dest='drct_allow_download',
+                        action=argparse.BooleanOptionalAction, default=False,
+                        help="Allow downloading pretrained CLIP backbone weights from official sources")
+    parser.add_argument('--drct_backbone_weights', dest='drct_backbone_weights',
+                        type=str, default=None,
+                        help="Path to local cached pretrained CLIP weights (.pt or .pth)")
+
     # Data & Dataset
+
     parser.add_argument('--dataroot', type=str, required=True,
                         help="Path to dataset root directory (must contain class subfolders e.g., fake/ and real/)")
     parser.add_argument('--val_root', type=str, default=None,
@@ -309,6 +334,13 @@ def main():
         print(f"GPUs         : {opt.gpu_ids if opt.gpu_ids else 'CPU'}")
         print(f"Batch Size   : {opt.batch_size} (Accum steps: {getattr(opt, 'grad_accum_steps', 1)})")
         print(f"Learning Rate: {opt.lr}")
+        if opt.arch == 'DRCT_128':
+            print(f"DRCT Backbone: {getattr(opt, 'drct_backbone', 'clip-ViT-L/14')}")
+            print(f"DRCT Alpha   : {getattr(opt, 'drct_alpha', 0.3)} (pos_margin={getattr(opt, 'drct_pos_margin', 0.0)}, neg_margin={getattr(opt, 'drct_neg_margin', 1.0)})")
+            print(f"DRCT Frozen  : {getattr(opt, 'drct_freeze_encoder', True)}")
+            print("DRCT Feature : 128-dimensional embedding -> Linear(128, 1)")
+            print("DRCT Preproc : drct_clip_v1 (224x224, ImageNet norm)")
+
 
     # 2. Convert to structured Config & validate
     if is_main:
@@ -371,6 +403,21 @@ def main():
         )
         print(f"[rank={os.environ.get('RANK', '0')}] Dataset audit passed: "
               f"{len(rows):,} train / {len(dev_rows):,} development rows.", flush=True)
+
+        if opt_clean.arch == 'DRCT_128' and getattr(opt_clean, 'drct_alpha', 0.3) > 0.0:
+            from data.drct_preparation import check_drct_readiness
+            readiness = check_drct_readiness(opt_clean.manifest, split=opt_clean.manifest_split)
+            if not readiness.get('is_ready_for_full_drct'):
+                raise ValueError(
+                    f"DRCT manifest at '{opt_clean.manifest}' is not ready for full contrastive training (drct_alpha={opt_clean.drct_alpha}). "
+                    f"Missing real/fake reconstructions: {readiness.get('missing_real_reconstructions', 'unknown')}/"
+                    f"{readiness.get('missing_fake_reconstructions', 'unknown')}; "
+                    f"unverified links: {readiness.get('unverified_reconstruction_links', 'unknown')}. "
+                    "Import actual diffusion reconstructions using 'python -m data.drct_preparation import_rec --mapping_csv ...', "
+                    "or train the baseline ablation control with '--drct_alpha 0.0'."
+                )
+            if is_main:
+                print(f"[DRCT Readiness] Full contrastive mode verified: {readiness.get('paired_real_originals')} paired originals ready.")
     startup_profiler.end_phase('configuration_and_manifest_preflight')
     # Seed BEFORE constructing datasets and model weights, not just the training loop.
     if opt_clean.seed is not None:
@@ -466,6 +513,11 @@ def main():
     if runtime.is_main and hasattr(model, 'head_class_name'):
         print(f"  -> Fusion head class   : {model.head_class_name}")
         print(f"  -> Head param count    : {getattr(model, 'head_param_count', 0):,}")
+    elif runtime.is_main and opt_clean.arch == 'DRCT_128':
+        trainable_p = sum(p.numel() for p in model.model.parameters() if p.requires_grad)
+        total_p = sum(p.numel() for p in model.model.parameters())
+        print(f"  -> DRCT Model: {total_p:,} total parameters, {trainable_p:,} trainable (projection & classifier)")
+
 
     if runtime.is_main:
         print("[5/5] Initializing Trainer...")

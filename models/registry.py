@@ -69,6 +69,7 @@ def _ensure_registered():
     from models.convnext_128.trainer import ConvNeXt128Trainer
     from models.fusion_wwxc.trainer import ConcatenationFusionWWXCTrainer
     from models.mha_wwxc.trainer import MHAFusionWWXCTrainer
+    from models.drct.trainer import DRCT_128Trainer
 
     register_model('Wang2020Raw', Wang2020RawTrainer)
     register_model('Wang2020_128', Wang2020_128Trainer)
@@ -82,6 +83,8 @@ def _ensure_registered():
     register_model('ConvNeXt_128', ConvNeXt128Trainer)
     register_model('Fusion_WWXC', ConcatenationFusionWWXCTrainer)
     register_model('MHA_WWXC', MHAFusionWWXCTrainer)
+    register_model('DRCT_128', DRCT_128Trainer)
+
 
 
 def build_model(opt):

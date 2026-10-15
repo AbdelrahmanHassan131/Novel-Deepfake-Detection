@@ -124,6 +124,22 @@ class CheckpointManager:
         from config.protocol import checkpoint_metadata
         state['protocol'] = checkpoint_metadata(self.model)
         state['expert_state_dicts'] = {name: getattr(self.model, name).state_dict() for name in ('rgb_model', 'wavelet_model', 'xception_model', 'convnext_model') if hasattr(self.model, name)}
+        state['expert_metadata'] = {}
+        for name in ('rgb_model', 'wavelet_model', 'xception_model', 'convnext_model'):
+            if hasattr(self.model, name):
+                m = getattr(self.model, name)
+                is_drct = getattr(m, 'arch', '') == 'DRCT_128' or hasattr(m, 'encoder')
+                opt_obj = getattr(self.model, 'opt', None)
+                state['expert_metadata'][name] = {
+                    'arch': getattr(m, 'arch', 'DRCT_128' if is_drct else ('Wang2020_128' if name == 'rgb_model' else 'WolterWavelet2021_128')),
+                    'backbone_name': getattr(m, 'backbone_name', getattr(opt_obj, 'drct_backbone', 'dummy')),
+                    'embed_dim': getattr(m, 'embed_dim', getattr(opt_obj, 'embed_dim', 128)),
+                    'projection_activation': getattr(m, 'projection_activation', getattr(opt_obj, 'drct_projection_activation', None)),
+                    'projection_dropout': getattr(m, 'projection_dropout', getattr(opt_obj, 'drct_projection_dropout', 0.0)),
+                    'preprocessing_version': getattr(m, 'preprocessing_version', getattr(opt_obj, 'drct_preprocessing_version', 'drct_clip_v1')),
+                    'input_size': getattr(m, 'input_size', getattr(opt_obj, 'cropSize', 224)),
+                    'label_mapping': getattr(m, 'label_mapping', {'real': 0, 'fake': 1}),
+                }
         import random
         import numpy as np
         state['rng_state'] = {
@@ -147,7 +163,16 @@ class CheckpointManager:
         state = self._build_state(
             epoch, best_metric, global_step, scheduler, amp_state
         )
-        torch.save(state, filepath)
+        # Readers/Drive mirrors must only ever see a complete generation.
+        import tempfile
+        fd, temporary = tempfile.mkstemp(prefix='.checkpoint-', suffix='.tmp', dir=self.save_dir)
+        os.close(fd)
+        try:
+            torch.save(state, temporary)
+            os.replace(temporary, filepath)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
         print(f'[CheckpointManager] Saved {filepath}')
 
     def save_last(self, epoch, best_metric, global_step, scheduler=None,
@@ -330,6 +355,8 @@ class CheckpointManager:
             'lr_policy', 'lr_decay_iters', 'lr_gamma', 'lr_patience',
             'eligible_sources', 'early_stopping', 'early_stopping_patience',
             'early_stopping_min_delta', 'early_stopping_min_epochs',
+            'drct_backbone', 'drct_alpha', 'drct_pos_margin', 'drct_neg_margin',
+            'drct_enable_contrastive', 'drct_freeze_encoder',
         ]
         for key in required:
             if key in saved and hasattr(self.model.opt, key) and saved[key] != getattr(self.model.opt, key):
