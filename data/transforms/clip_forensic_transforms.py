@@ -70,14 +70,14 @@ class CLIPForensicTrainTransform:
     def __init__(
         self,
         size: int = CLIP_IMAGE_SIZE,
-        native_crop_prob: float = 0.4,
-        jpg_prob: float = 0.5,
-        jpg_qual: Sequence[int] = (50, 60, 70, 80, 90, 95),
+        native_crop_prob: float = 0.6,
+        jpg_prob: float = 0.8,
+        jpg_qual: Sequence[int] = (50, 60, 70, 75, 80, 85, 90, 95),
         jpg_method: Sequence[str] = ("cv2", "pil"),
-        blur_prob: float = 0.3,
+        blur_prob: float = 0.35,
         blur_sig: Tuple[float, float] = (0.1, 2.0),
-        downscale_prob: float = 0.25,
-        downscale_range: Tuple[float, float] = (0.5, 1.0),
+        downscale_prob: float = 0.35,
+        downscale_range: Tuple[float, float] = (0.55, 1.0),
         color_jitter_prob: float = 0.3,
         p_flip: float = 0.5,
         mean=None,
@@ -99,21 +99,34 @@ class CLIPForensicTrainTransform:
         self.version = CLIP_FORENSIC_VERSION
 
     def _random_spatial_crop(self, pil_img: Image.Image) -> Image.Image:
-        w, h = pil_img.size
-        # 1. Native-scale random crop preserves high-frequency upsampling/VAE cues when image >= size
-        if w >= self.size and h >= self.size and random() < self.native_crop_prob:
-            left = int(uniform(0, w - self.size + 1)) if w > self.size else 0
-            top = int(uniform(0, h - self.size + 1)) if h > self.size else 0
-            return pil_img.crop((left, top, left + self.size, top + self.size))
+        """Resolution-invariant spatial crop.
 
-        # 2. Otherwise random resized crop (scale 0.65..1.0) preserving aspect ratio reasonably
-        scale = uniform(0.65, 1.0)
-        crop_side = max(16, int(round(min(w, h) * scale)))
+        Eliminates size/aspect-ratio shortcuts (e.g., 178x218 JPG reals vs 256x256 PNG fakes)
+        by always taking a square crop from the image and resampling both classes through a
+        shared effective-resolution distribution before producing the final 224x224 input.
+        """
+        w, h = pil_img.size
+        min_side = min(w, h)
+
+        # Always take a square crop with scale in [0.75, 1.0] of min(w, h)
+        scale = uniform(0.75, 1.0)
+        crop_side = max(32, int(round(min_side * scale)))
         left = int(uniform(0, max(1, w - crop_side + 1))) if w > crop_side else 0
         top = int(uniform(0, max(1, h - crop_side + 1))) if h > crop_side else 0
         cropped = pil_img.crop((left, top, min(w, left + crop_side), min(h, top + crop_side)))
-        interp = choice([Image.Resampling.BICUBIC, Image.Resampling.BILINEAR])
-        return cropped.resize((self.size, self.size), resample=interp)
+
+        # Harmonize effective Nyquist bandwidth across mismatched source resolutions
+        # (e.g. 178px CelebA vs 256px/512px diffusion outputs) via shared intermediate scale
+        if self.native_crop_prob > 0.0 and random() < self.native_crop_prob:
+            shared_res = int(choice((160, 178, 192, 208, 224)))
+            if cropped.size[0] > shared_res:
+                interp_down = choice([Image.Resampling.BILINEAR, Image.Resampling.BICUBIC])
+                cropped = cropped.resize((shared_res, shared_res), resample=interp_down)
+
+        interp_final = choice([Image.Resampling.BICUBIC, Image.Resampling.BILINEAR])
+        if cropped.size != (self.size, self.size):
+            cropped = cropped.resize((self.size, self.size), resample=interp_final)
+        return cropped
 
     def _apply_forensic_degradations(self, pil_img: Image.Image) -> Image.Image:
         # 1. Optional downscale-upscale resampling (breaks 112px vs 256px Nyquist shortcut)

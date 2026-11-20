@@ -111,6 +111,7 @@ print('Verified base manifest ready:', BASE_MANIFEST)
 ## Cell 3 (Stage 1 — Immediate): Train `EFFORT_128` (Multi-Layer + Orthogonal SVD CLIP ViT-L/14)
 
 Works **immediately** on your existing dataset with zero reconstruction preprocessing:
+
 - Taps 4 evenly spaced CLIP ViT-L/14 blocks (`[5, 11, 17, 23]`) + final visual token
 - Applies Orthogonal SVD Residual Adaptation (`rank=16` on last 12 blocks, ~1.9M trainable params)
 - Applies symmetric forensic augmentations (native CLIP norm + native/resized crop mix + JPEG + blur + downscale-upscale + mild color jitter)
@@ -159,7 +160,7 @@ print('Stage 1 EFFORT_128 best checkpoint:', BEST_S1)
 
 ## Cell 4 (Stage 2 — Game Changer for CelebA → LDM): Generate Paired SD-1.5 + SDXL VAE Reconstructions
 
-Passing your CelebA real images through **SD-1.5 VAE + SDXL VAE** creates paired fakes of the **exact same faces** (~5–8 minutes on L4 for 20,000 per class!). This breaks the *"is this CelebA?"* shortcut and teaches Latent Diffusion VAE artifacts directly.
+Passing your CelebA real images through **SD-1.5 VAE + SDXL VAE** creates paired fakes of the **exact same faces** (~5–8 minutes on L4 for 20,000 per class!). This breaks the _"is this CelebA?"_ shortcut and teaches Latent Diffusion VAE artifacts directly.
 
 ```python
 REC_DIR = Path('/content/dataset/reconstructions_multi_vae')
@@ -218,6 +219,25 @@ run_python('train.py', [
 ])
 
 # 5B. Full DRCT_128 with Forensic Augmentations (Thesis Ablation Comparator)
+# Note: DRCT_128 requires 100% of train originals in its manifest to have reconstructions.
+# Since Cell 4 used --max_per_class 20000, build a clean 100%-paired 80K train subset (20K real + 20K fake + 40K recon) + full dev split:
+from data.drct_manifest import read_drct_manifest, write_drct_manifest
+from data.drct_preparation import generate_gate_sidecar, check_drct_readiness
+
+all_rows = read_drct_manifest(DRCT_MANIFEST)
+reconstructed_parents = {
+    r['parent_id'] for r in all_rows
+    if r['split'] == 'train' and r['sample_kind'] in ('real_reconstruction', 'fake_reconstruction')
+}
+drct_paired_rows = [
+    r for r in all_rows
+    if r['split'] != 'train' or r['sample_id'] in reconstructed_parents or r['parent_id'] in reconstructed_parents
+]
+DRCT_PAIRED_MANIFEST = PREP_DIR / 'drct_fully_paired_manifest.csv'
+write_drct_manifest(DRCT_PAIRED_MANIFEST, drct_paired_rows)
+generate_gate_sidecar(DRCT_PAIRED_MANIFEST, require_hashes=False)
+print('DRCT 100%-paired readiness:', check_drct_readiness(DRCT_PAIRED_MANIFEST, split='train')['is_ready_for_full_drct'])
+
 RUN_NAME_DRCT = 'drct128_stage2_paired_forensic'
 RUN_ID_DRCT = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex[:8]
 EXP_DIR_DRCT = DRIVE_OUT / 'runs' / f'{RUN_NAME_DRCT}_{RUN_ID_DRCT}'
@@ -230,8 +250,8 @@ run_python('train.py', [
     '--embed_dim', '128',
     '--drct_alpha', '0.3', '--drct_pos_margin', '0.0', '--drct_neg_margin', '1.0',
     '--dataroot', str(DATA_ROOT),
-    '--manifest', str(DRCT_MANIFEST), '--manifest_split', 'train',
-    '--val_manifest', str(DRCT_MANIFEST), '--val_manifest_split', 'dev',
+    '--manifest', str(DRCT_PAIRED_MANIFEST), '--manifest_split', 'train',
+    '--val_manifest', str(DRCT_PAIRED_MANIFEST), '--val_manifest_split', 'dev',
     '--allow_source_overlap', '--allow_aggregate_sources',
     '--name', RUN_NAME_DRCT, '--run_id', RUN_ID_DRCT, '--checkpoints_dir', str(DRIVE_OUT / 'runs'),
     '--gpu_ids', '0', '--batch_size', str(BATCH), '--grad_accum_steps', str(ACCUM),
@@ -291,4 +311,91 @@ for label, arch, exp_dir, manifest_used in [
             f"EER={rep['eer']*100:.2f}% | RealRec={rep['per_class']['real']['recall']*100:.2f}% | "
             f"FakeRec={rep['per_class']['fake']['recall']*100:.2f}%"
         )
+```
+
+---
+
+## Cell 7 (Breakthrough Upgrade): Frozen Multi-Layer CLIP (`--effort_svd_rank 0`) + Resolution-Harmonized `DRCT_128`
+
+When `train/real` is `178x218 JPG` (CelebA) and `train/fake` is `256x256 PNG` (ADM/DDIM/DDPM):
+1. Keeping CLIP ViT-L/14 **100% frozen** (`DRCT_128` or `EFFORT_128 --effort_svd_rank 0`) prevents the backbone from memorizing the `178x218` vs `256x256` shortcut (achieving **0.9365 ROC AUC / 14.02% EER** on 60K unseen images!).
+2. Updating `CLIPForensicTrainTransform` to harmonize effective resolution (`160..224`) + `80%` JPEG compression removes the residual threshold shift so `RealRec` and `FakeRec` both stay high at the dev-calibrated threshold.
+
+```python
+# Pull the resolution-harmonized transform fix first!
+subprocess.run(['git', 'pull', '--ff-only', 'origin', 'GeneralizationDeepFakeDetection'], cwd=REPO_ROOT, check=True)
+
+# 7A. Frozen Multi-Layer CLIP (RINE-128 style: effort_svd_rank=0) on the 100%-paired 80K manifest
+RUN_NAME_RINE = 'effort128_frozen_multilayer_paired80k'
+RUN_ID_RINE = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex[:8]
+EXP_DIR_RINE = DRIVE_OUT / 'runs' / f'{RUN_NAME_RINE}_{RUN_ID_RINE}'
+
+run_python('train.py', [
+    '--arch', 'EFFORT_128',
+    '--drct_backbone', 'clip_vit_l14', '--pretrained', '--drct_allow_download',
+    '--embed_dim', '128',
+    '--effort_svd_rank', '0',           # 100% FROZEN CLIP ViT-L/14 (zero shortcut memorization!)
+    '--effort_multi_layer', '--effort_num_layers', '4',
+    '--effort_ortho_weight', '0.0', '--effort_label_smoothing', '0.05', '--effort_dropout', '0.3',
+    '--drct_alpha', '0.3', '--drct_pos_margin', '0.0', '--drct_neg_margin', '1.0',
+    '--dataroot', str(DATA_ROOT),
+    '--manifest', str(DRCT_PAIRED_MANIFEST), '--manifest_split', 'train',
+    '--val_manifest', str(DRCT_PAIRED_MANIFEST), '--val_manifest_split', 'dev',
+    '--allow_source_overlap', '--allow_aggregate_sources',
+    '--name', RUN_NAME_RINE, '--run_id', RUN_ID_RINE, '--checkpoints_dir', str(DRIVE_OUT / 'runs'),
+    '--gpu_ids', '0', '--batch_size', str(BATCH), '--grad_accum_steps', str(ACCUM),
+    '--val_batch_size', str(BATCH), '--num_workers', str(WORKERS), '--pin_memory',
+    '--class_bal', '--optim', 'adamw', '--lr', '0.0002', '--weight_decay', '0.01', '--lr_policy', 'cosine',
+    '--epochs', '5', '--epochs_decay', '0', '--monitor_metric', 'auc',
+    '--use_amp', '--amp_dtype', AMP_DTYPE, '--val_precision', 'fp32',
+    '--seed', '42', '--log_freq', '50', '--val_epoch_freq', '1', '--save_epoch_freq', '1',
+])
+
+# 7B. Pure Paired-Real-Only DRCT_128 (20K Real CelebA 178x218 vs 20K Multi-VAE Reconstructed CelebA 178x218)
+# ZERO 178x218-vs-256x256 and ZERO JPG-vs-PNG difference between Real and Fake!
+from data.drct_manifest import read_drct_manifest, write_drct_manifest
+from data.drct_preparation import generate_gate_sidecar
+
+paired_rows = read_drct_manifest(DRCT_PAIRED_MANIFEST)
+pure_real_pair_train = [
+    r for r in paired_rows
+    if r['split'] == 'train' and r['sample_kind'] in ('real_original', 'real_reconstruction')
+]
+# Split 10% of paired real+recon as matched dev set (zero resolution shift in threshold calibration!)
+pair_ids = sorted({r['parent_id'] for r in pure_real_pair_train})
+dev_pair_ids = set(pair_ids[:max(1, len(pair_ids) // 10)])
+pure_manifest_rows = []
+for r in pure_real_pair_train:
+    rc = dict(r)
+    rc['split'] = 'dev' if r['parent_id'] in dev_pair_ids else 'train'
+    pure_manifest_rows.append(rc)
+
+PURE_PAIRED_MANIFEST = PREP_DIR / 'pure_real_vs_recon_manifest.csv'
+write_drct_manifest(PURE_PAIRED_MANIFEST, pure_manifest_rows)
+generate_gate_sidecar(PURE_PAIRED_MANIFEST, require_hashes=False)
+
+RUN_NAME_PURE = 'effort128_frozen_multilayer_pure_recon_only'
+RUN_ID_PURE = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex[:8]
+EXP_DIR_PURE = DRIVE_OUT / 'runs' / f'{RUN_NAME_PURE}_{RUN_ID_PURE}'
+
+run_python('train.py', [
+    '--arch', 'EFFORT_128',
+    '--drct_backbone', 'clip_vit_l14', '--pretrained', '--drct_allow_download',
+    '--embed_dim', '128',
+    '--effort_svd_rank', '0',
+    '--effort_multi_layer', '--effort_num_layers', '4',
+    '--effort_ortho_weight', '0.0', '--effort_label_smoothing', '0.05', '--effort_dropout', '0.3',
+    '--drct_alpha', '0.3', '--drct_pos_margin', '0.0', '--drct_neg_margin', '1.0',
+    '--dataroot', str(DATA_ROOT),
+    '--manifest', str(PURE_PAIRED_MANIFEST), '--manifest_split', 'train',
+    '--val_manifest', str(PURE_PAIRED_MANIFEST), '--val_manifest_split', 'dev',
+    '--allow_source_overlap', '--allow_aggregate_sources',
+    '--name', RUN_NAME_PURE, '--run_id', RUN_ID_PURE, '--checkpoints_dir', str(DRIVE_OUT / 'runs'),
+    '--gpu_ids', '0', '--batch_size', str(BATCH), '--grad_accum_steps', str(ACCUM),
+    '--val_batch_size', str(BATCH), '--num_workers', str(WORKERS), '--pin_memory',
+    '--class_bal', '--optim', 'adamw', '--lr', '0.0002', '--weight_decay', '0.01', '--lr_policy', 'cosine',
+    '--epochs', '5', '--epochs_decay', '0', '--monitor_metric', 'auc',
+    '--use_amp', '--amp_dtype', AMP_DTYPE, '--val_precision', 'fp32',
+    '--seed', '42', '--log_freq', '50', '--val_epoch_freq', '1', '--save_epoch_freq', '1',
+])
 ```

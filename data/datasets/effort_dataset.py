@@ -64,18 +64,18 @@ class EFFORTDataset(BaseDataset):
                 ds_list = _as_float_list(getattr(opt, "downscale_range", None), (0.5, 1.0))
                 downscale_range = (ds_list[0], ds_list[-1]) if len(ds_list) >= 2 else (0.5, 1.0)
             else:
-                jpg_prob = 0.5
-                jpg_qual = (50, 60, 70, 80, 90, 95)
+                jpg_prob = 0.8
+                jpg_qual = (50, 60, 70, 75, 80, 85, 90, 95)
                 jpg_method = ("cv2", "pil")
-                blur_prob = 0.3
+                blur_prob = 0.35
                 blur_sig = (0.1, 2.0)
-                downscale_prob = 0.25
-                downscale_range = (0.5, 1.0)
+                downscale_prob = 0.35
+                downscale_range = (0.55, 1.0)
 
             p_flip = 0.0 if getattr(opt, "no_flip", False) else 0.5
             transform = CLIPForensicTrainTransform(
                 size=crop_size,
-                native_crop_prob=0.4,
+                native_crop_prob=0.6,
                 jpg_prob=jpg_prob,
                 jpg_qual=jpg_qual,
                 jpg_method=jpg_method,
