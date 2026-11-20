@@ -182,6 +182,17 @@ def config_from_opt(opt):
         drct_projection_dropout=float(_get(opt, 'drct_projection_dropout', 0.0)),
         drct_allow_download=bool(_get(opt, 'drct_allow_download', False)),
         drct_backbone_weights=_get(opt, 'drct_backbone_weights', None),
+        drct_aug_mode=_get(opt, 'drct_aug_mode', 'standard'),
+        effort_svd_rank=int(_get(opt, 'effort_svd_rank', 16)),
+        effort_svd_blocks=int(_get(opt, 'effort_svd_blocks', 12)),
+        effort_multi_layer=bool(_get(opt, 'effort_multi_layer', True)),
+        effort_num_layers=int(_get(opt, 'effort_num_layers', 4)),
+        effort_layer_indices=_get(opt, 'effort_layer_indices', None),
+        effort_head_hidden=int(_get(opt, 'effort_head_hidden', 256)),
+        effort_dropout=float(_get(opt, 'effort_dropout', 0.3)),
+        effort_ortho_weight=float(_get(opt, 'effort_ortho_weight', 0.1)),
+        effort_label_smoothing=float(_get(opt, 'effort_label_smoothing', 0.05)),
+        effort_preprocessing_version=_get(opt, 'effort_preprocessing_version', 'clip_forensic_v1'),
     )
 
 
@@ -375,7 +386,11 @@ def config_to_opt(config):
                 'drct_backbone', 'drct_alpha', 'drct_pos_margin', 'drct_neg_margin',
                 'drct_enable_contrastive', 'drct_freeze_encoder',
                 'drct_projection_activation', 'drct_projection_dropout',
-                'drct_allow_download', 'drct_backbone_weights'):
+                'drct_allow_download', 'drct_backbone_weights', 'drct_aug_mode',
+                'effort_svd_rank', 'effort_svd_blocks', 'effort_multi_layer',
+                'effort_num_layers', 'effort_layer_indices', 'effort_head_hidden',
+                'effort_dropout', 'effort_ortho_weight', 'effort_label_smoothing',
+                'effort_preprocessing_version'):
         setattr(opt, key, getattr(config.model, key))
 
 

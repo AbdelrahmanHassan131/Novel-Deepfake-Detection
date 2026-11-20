@@ -270,6 +270,17 @@ class ModelConfig(_FrozenMixin):
         self.drct_projection_dropout = float(defaults.get('drct_projection_dropout', 0.0))
         self.drct_allow_download = bool(defaults.get('drct_allow_download', False))
         self.drct_backbone_weights = defaults.get('drct_backbone_weights', None)
+        self.drct_aug_mode = defaults.get('drct_aug_mode', 'standard')
+        self.effort_svd_rank = int(defaults.get('effort_svd_rank', 16))
+        self.effort_svd_blocks = int(defaults.get('effort_svd_blocks', 12))
+        self.effort_multi_layer = bool(defaults.get('effort_multi_layer', True))
+        self.effort_num_layers = int(defaults.get('effort_num_layers', 4))
+        self.effort_layer_indices = defaults.get('effort_layer_indices', None)
+        self.effort_head_hidden = int(defaults.get('effort_head_hidden', 256))
+        self.effort_dropout = float(defaults.get('effort_dropout', 0.3))
+        self.effort_ortho_weight = float(defaults.get('effort_ortho_weight', 0.1))
+        self.effort_label_smoothing = float(defaults.get('effort_label_smoothing', 0.05))
+        self.effort_preprocessing_version = defaults.get('effort_preprocessing_version', 'clip_forensic_v1')
 
 
     def to_dict(self):

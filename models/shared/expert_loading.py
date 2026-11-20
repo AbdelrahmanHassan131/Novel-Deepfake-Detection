@@ -43,10 +43,19 @@ def validate_expert_checkpoint(checkpoint, expected_type: str, expected_embed_di
     # 1. Architecture dispatch & weights validation
     saved_arch = saved_opts.get('arch') or checkpoint.get('model_name')
     is_drct = False
+    is_effort = False
 
     if expected_type == 'rgb':
+        # Check if EFFORT-128
+        if saved_arch == 'EFFORT_128':
+            is_effort = True
+            if 'fc.weight' not in weights:
+                raise ValueError("EFFORT expert checkpoint missing 'fc.weight' classifier layer")
+            actual_dim = weights['fc.weight'].shape[1]
+            if actual_dim != dim:
+                raise ValueError(f"RGB expert embedding dim mismatch: expected {dim}, got {actual_dim} (EFFORT expert must have a {dim}-D embedding checkpoint)")
         # Check if DRCT-128
-        if saved_arch == 'DRCT_128' or (saved_arch is None and any(k.startswith('projection.') for k in weights)):
+        elif saved_arch == 'DRCT_128' or (saved_arch is None and any(k.startswith('projection.') for k in weights)):
             is_drct = True
             if saved_arch and saved_arch != 'DRCT_128':
                 raise ValueError(f"RGB expert claimed invalid architecture '{saved_arch}', expected 'DRCT_128'")
@@ -95,7 +104,9 @@ def validate_expert_checkpoint(checkpoint, expected_type: str, expected_embed_di
 
     # 3. Preprocessing protocol validation
     if opt is not None and saved_opts:
-        if is_drct:
+        if is_effort:
+            keys_to_check = ('drct_backbone', 'effort_preprocessing_version')
+        elif is_drct:
             keys_to_check = ('drct_backbone', 'drct_preprocessing_version')
         else:
             keys_to_check = PREPROCESSING_KEYS
@@ -162,7 +173,13 @@ def load_expert(opt, name, device):
     dim = getattr(opt, 'embed_dim', 128)
 
     if name == 'rgb':
-        is_drct = (
+        is_effort = (
+            embedded_meta.get('arch') == 'EFFORT_128'
+            or saved_opts.get('arch') == 'EFFORT_128'
+            or getattr(opt, 'rgb_expert_arch', None) == 'EFFORT_128'
+            or (checkpoint is not None and checkpoint.get('model_name') == 'EFFORT_128')
+        )
+        is_drct = (not is_effort) and (
             embedded_meta.get('arch') == 'DRCT_128'
             or saved_opts.get('arch') == 'DRCT_128'
             or getattr(opt, 'rgb_expert_arch', None) == 'DRCT_128'
@@ -170,7 +187,46 @@ def load_expert(opt, name, device):
             or (checkpoint is not None and checkpoint.get('model_name') == 'DRCT_128')
         )
 
-        if is_drct:
+        if is_effort:
+            from models.effort.effort_model import EFFORT128Model
+            backbone_name = (
+                embedded_meta.get('backbone_name')
+                or saved_opts.get('drct_backbone')
+                or getattr(opt, 'drct_backbone', 'dummy')
+            )
+            effort_core = EFFORT128Model(
+                backbone_name=backbone_name,
+                pretrained=False,
+                allow_download=False,
+                embed_dim=dim,
+                svd_rank=int(embedded_meta.get('effort_svd_rank', saved_opts.get('effort_svd_rank', getattr(opt, 'effort_svd_rank', 16)))),
+                svd_last_n_blocks=int(embedded_meta.get('effort_svd_blocks', saved_opts.get('effort_svd_blocks', getattr(opt, 'effort_svd_blocks', 12)))),
+                multi_layer=bool(embedded_meta.get('effort_multi_layer', saved_opts.get('effort_multi_layer', getattr(opt, 'effort_multi_layer', True)))),
+                num_tapped_layers=int(embedded_meta.get('effort_num_layers', saved_opts.get('effort_num_layers', getattr(opt, 'effort_num_layers', 4)))),
+                head_hidden_dim=int(embedded_meta.get('effort_head_hidden', saved_opts.get('effort_head_hidden', getattr(opt, 'effort_head_hidden', 256)))),
+                head_dropout=float(embedded_meta.get('effort_dropout', saved_opts.get('effort_dropout', getattr(opt, 'effort_dropout', 0.3)))),
+            )
+            effort_core.load_state_dict(weights, strict=(embedded is None))
+
+            class _EFFORT128Extractor(nn.Module):
+                def __init__(self, core: EFFORT128Model):
+                    super().__init__()
+                    self.core = core
+                    self.arch = 'EFFORT_128'
+                    self.backbone_name = core.backbone_name
+                    self.embed_dim = core.embed_dim
+                    self.input_size = 224
+                    self.preprocessing_version = 'clip_forensic_v1'
+                    self.label_mapping = {'real': 0, 'fake': 1}
+
+                def forward(self, x: torch.Tensor) -> torch.Tensor:
+                    return self.core.forward_features(x)
+
+                def forward_features(self, x: torch.Tensor) -> torch.Tensor:
+                    return self.core.forward_features(x)
+
+            model = _EFFORT128Extractor(effort_core)
+        elif is_drct:
             backbone_name = (
                 embedded_meta.get('backbone_name')
                 or saved_opts.get('drct_backbone')

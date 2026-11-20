@@ -25,8 +25,18 @@ class DRCTDataset(BaseDataset):
         if str(getattr(opt, 'drct_backbone', 'clip_vit_l14')).lower() not in ('dummy', 'tiny', 'mock') and crop_size != DRCT_IMAGE_SIZE:
             raise ValueError('DRCT CLIP backbones require 224-pixel inputs; restore the saved preprocessing configuration.')
         is_train = getattr(opt, 'isTrain', False)
+        aug_mode = getattr(opt, 'drct_aug_mode', 'standard')
 
-        if is_train and not getattr(opt, 'no_flip', False):
+        if aug_mode == 'forensic':
+            from ..transforms.clip_forensic_transforms import CLIPForensicTrainTransform, CLIPForensicValTransform
+            if is_train:
+                transform = CLIPForensicTrainTransform(
+                    size=crop_size,
+                    p_flip=0.0 if getattr(opt, 'no_flip', False) else 0.5,
+                )
+            else:
+                transform = CLIPForensicValTransform(size=crop_size)
+        elif is_train and not getattr(opt, 'no_flip', False):
             transform = DRCTTrainTransform(size=crop_size)
         else:
             transform = DRCTValTransform(size=crop_size)

@@ -331,6 +331,28 @@ class ConfigValidator:
             p_act = getattr(m, 'drct_projection_activation', None)
             if p_act is not None and p_act not in ('none', 'relu', 'gelu'):
                 report.add_error(f"model.drct_projection_activation must be 'none', 'relu', or 'gelu', got {p_act!r}")
+            aug_mode = getattr(m, 'drct_aug_mode', 'standard')
+            if aug_mode not in ('standard', 'forensic'):
+                report.add_error(f"model.drct_aug_mode must be 'standard' or 'forensic', got {aug_mode!r}")
+
+        # EFFORT-specific validation
+        if arch_str == 'EFFORT_128':
+            if str(getattr(m, 'drct_backbone', '')).lower() not in ('dummy', 'tiny', 'mock', 'dummy_multilayer') and config.data.crop_size != 224:
+                report.add_error('EFFORT_128 CLIP backbones require data.crop_size=224.')
+            if getattr(m, 'embed_dim', 128) != 128:
+                report.add_error(f"EFFORT_128 strictly requires embed_dim=128, got {getattr(m, 'embed_dim', None)}")
+            svd_rank = getattr(m, 'effort_svd_rank', 16)
+            if not isinstance(svd_rank, int) or svd_rank < 0:
+                report.add_error(f"model.effort_svd_rank must be an integer >= 0, got {svd_rank!r}")
+            ortho_w = getattr(m, 'effort_ortho_weight', 0.1)
+            if not isinstance(ortho_w, (int, float)) or not math.isfinite(ortho_w) or ortho_w < 0.0:
+                report.add_error(f"model.effort_ortho_weight must be >= 0.0, got {ortho_w!r}")
+            e_smooth = getattr(m, 'effort_label_smoothing', 0.05)
+            if not isinstance(e_smooth, (int, float)) or not math.isfinite(e_smooth) or e_smooth < 0.0 or e_smooth >= 0.5:
+                report.add_error(f"model.effort_label_smoothing must be in [0.0, 0.5), got {e_smooth!r}")
+            e_drop = getattr(m, 'effort_dropout', 0.3)
+            if not isinstance(e_drop, (int, float)) or not math.isfinite(e_drop) or e_drop < 0.0 or e_drop > 1.0:
+                report.add_error(f"model.effort_dropout must be in [0.0, 1.0], got {e_drop!r}")
 
         if m.init_gain <= 0:
             report.add_warning(

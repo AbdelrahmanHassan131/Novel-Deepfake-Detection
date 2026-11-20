@@ -150,6 +150,7 @@ class ArchitectureType(Enum):
     FUSION_WWXC = 'Fusion_WWXC'
     MHA_WWXC = 'MHA_WWXC'
     DRCT_128 = 'DRCT_128'
+    EFFORT_128 = 'EFFORT_128'
     # Legacy aliases
     RES50 = 'res50'
 

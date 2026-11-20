@@ -148,6 +148,7 @@ class CheckpointLoader:
             'Fusion_WWXC': 'Fusion_WWXC',
             'MHA_WWXC': 'MHA_WWXC',
             'DRCT_128': 'DRCT_128',
+            'EFFORT_128': 'EFFORT_128',
             # Also accept direct registry names
             'Wang2020Raw': 'Wang2020Raw',
 

@@ -43,11 +43,16 @@ class FusionDataset(BaseDataset):
 
         # --- Detect RGB expert architecture from metadata ---
         self.rgb_is_drct = False
+        self.rgb_is_effort = False
         rgb_arch = getattr(opt, 'rgb_expert_arch', None)
         if rgb_arch == 'DRCT_128':
             self.rgb_is_drct = True
+        elif rgb_arch == 'EFFORT_128':
+            self.rgb_is_effort = True
         elif getattr(opt, '_expert_metadata', {}).get('rgb_model', {}).get('arch') == 'DRCT_128':
             self.rgb_is_drct = True
+        elif getattr(opt, '_expert_metadata', {}).get('rgb_model', {}).get('arch') == 'EFFORT_128':
+            self.rgb_is_effort = True
         external_input_sz = None
         if getattr(opt, 'rgb_model_path', None) and os.path.isfile(opt.rgb_model_path):
             try:
@@ -62,13 +67,23 @@ class FusionDataset(BaseDataset):
                     self.rgb_is_drct = True
                     proto_opts = ckpt.get('protocol', {}).get('options', {})
                     external_input_sz = proto_opts.get('drct_crop_size') or proto_opts.get('cropSize') or proto_opts.get('crop_size')
+                elif arch_found == 'EFFORT_128':
+                    self.rgb_is_effort = True
+                    external_input_sz = 224
             except Exception:
                 pass
 
         expert_meta = getattr(opt, '_expert_metadata', {}).get('rgb_model', {})
         drct_input_sz = expert_meta.get('input_size') or external_input_sz or getattr(opt, 'drct_crop_size', DRCT_IMAGE_SIZE)
 
-        if self.rgb_is_drct:
+        if self.rgb_is_effort:
+            from ..transforms.clip_forensic_transforms import CLIPForensicTrainTransform, CLIPForensicValTransform
+            if opt.isTrain:
+                self.drct_transform = CLIPForensicTrainTransform(size=224, p_flip=0.0 if getattr(opt, 'no_flip', False) else 0.5)
+            else:
+                self.drct_transform = CLIPForensicValTransform(size=224)
+            self.rgb_is_drct = True  # reuse branch-isolated RGB path in __getitem__
+        elif self.rgb_is_drct:
             if drct_input_sz != 224:
                 raise ValueError(
                     f"DRCT visual encoder requires input resolution 224x224 (got {drct_input_sz}). "

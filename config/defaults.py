@@ -103,6 +103,17 @@ MODEL_DEFAULTS = {
     'drct_projection_dropout': 0.0,
     'drct_allow_download': False,
     'drct_backbone_weights': None,
+    'drct_aug_mode': 'standard',
+    'effort_svd_rank': 16,
+    'effort_svd_blocks': 12,
+    'effort_multi_layer': True,
+    'effort_num_layers': 4,
+    'effort_layer_indices': None,
+    'effort_head_hidden': 256,
+    'effort_dropout': 0.3,
+    'effort_ortho_weight': 0.1,
+    'effort_label_smoothing': 0.05,
+    'effort_preprocessing_version': 'clip_forensic_v1',
 }
 
 

@@ -10,6 +10,9 @@ LEGACY_PREPROCESSING_KEYS = (
 DRCT_PREPROCESSING_KEYS = (
     'drct_backbone', 'drct_preprocessing_version',
 )
+EFFORT_PREPROCESSING_KEYS = (
+    'drct_backbone', 'effort_preprocessing_version',
+)
 PREPROCESSING_KEYS = LEGACY_PREPROCESSING_KEYS
 
 
@@ -17,6 +20,8 @@ def get_preprocessing_keys_for_arch(arch: str = None):
     """Return required preprocessing keys scoped to the model architecture."""
     if arch == 'DRCT_128':
         return DRCT_PREPROCESSING_KEYS
+    if arch == 'EFFORT_128':
+        return EFFORT_PREPROCESSING_KEYS
     return LEGACY_PREPROCESSING_KEYS
 
 

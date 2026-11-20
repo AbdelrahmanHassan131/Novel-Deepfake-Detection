@@ -35,7 +35,10 @@ def dataset_folder(opt, root):
         arch = getattr(opt, 'arch', '') or getattr(opt, 'architecture', '')
         backend = getattr(opt, 'wavelet_backend', 'cpu')
 
-        if 'DRCT' in arch:
+        if 'EFFORT' in arch:
+            from ..datasets.effort_dataset import EFFORTDataset
+            return EFFORTDataset(opt, root)
+        elif 'DRCT' in arch:
             from ..datasets.drct_dataset import DRCTDataset
             return DRCTDataset(opt, root)
         elif 'Wolter' in arch and backend == 'gpu':

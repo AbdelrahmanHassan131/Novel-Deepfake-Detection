@@ -97,6 +97,28 @@ def parse_args():
     parser.add_argument('--drct_backbone_weights', dest='drct_backbone_weights',
                         type=str, default=None,
                         help="Path to local cached pretrained CLIP weights (.pt or .pth)")
+    parser.add_argument('--drct_aug_mode', choices=['standard', 'forensic'], default='standard',
+                        help="DRCT transform mode: 'standard' (drct_clip_v1) or 'forensic' (native CLIP norm + JPEG/blur/crop augmentations)")
+
+    # EFFORT_128 scoped parameters (Multi-Layer + Orthogonal SVD CLIP adaptation)
+    parser.add_argument('--effort_svd_rank', type=int, default=16,
+                        help="Trainable orthogonal SVD residual rank r per adapted linear layer (0 = fully frozen CLIP)")
+    parser.add_argument('--effort_svd_blocks', type=int, default=12,
+                        help="Number of final ViT transformer blocks to adapt with SVDResidualLinear")
+    parser.add_argument('--effort_multi_layer', action=argparse.BooleanOptionalAction, default=True,
+                        help="Enable RINE-style intermediate ViT block [CLS] fusion")
+    parser.add_argument('--effort_num_layers', type=int, default=4,
+                        help="Number of evenly spaced ViT transformer blocks to tap when effort_multi_layer=True")
+    parser.add_argument('--effort_layer_indices', type=str, default=None,
+                        help="Optional comma-separated 0-based ViT block indices to tap (e.g. '5,11,17,23')")
+    parser.add_argument('--effort_head_hidden', type=int, default=256,
+                        help="Hidden dimension of the EFFORT_128 forensic bottleneck MLP")
+    parser.add_argument('--effort_dropout', type=float, default=0.3,
+                        help="Dropout probability in EFFORT_128 head")
+    parser.add_argument('--effort_ortho_weight', type=float, default=0.1,
+                        help="Weight for EFFORT SVD orthogonality regularization loss")
+    parser.add_argument('--effort_label_smoothing', type=float, default=0.05,
+                        help="Label smoothing factor in [0.0, 0.5) for EFFORT_128 BCE training")
 
     # Data & Dataset
 
@@ -339,7 +361,13 @@ def main():
             print(f"DRCT Alpha   : {getattr(opt, 'drct_alpha', 0.3)} (pos_margin={getattr(opt, 'drct_pos_margin', 0.0)}, neg_margin={getattr(opt, 'drct_neg_margin', 1.0)})")
             print(f"DRCT Frozen  : {getattr(opt, 'drct_freeze_encoder', True)}")
             print("DRCT Feature : 128-dimensional embedding -> Linear(128, 1)")
-            print("DRCT Preproc : drct_clip_v1 (224x224, ImageNet norm)")
+            print(f"DRCT Preproc : {'clip_forensic_v1' if getattr(opt, 'drct_aug_mode', 'standard') == 'forensic' else 'drct_clip_v1'}")
+        elif opt.arch == 'EFFORT_128':
+            print(f"EFFORT Backbone : {getattr(opt, 'drct_backbone', 'clip-ViT-L/14')}")
+            print(f"EFFORT SVD Rank : {getattr(opt, 'effort_svd_rank', 16)} (last {getattr(opt, 'effort_svd_blocks', 12)} blocks, ortho_w={getattr(opt, 'effort_ortho_weight', 0.1)})")
+            print(f"EFFORT MultiLyr : {getattr(opt, 'effort_multi_layer', True)} (taps={getattr(opt, 'effort_num_layers', 4)})")
+            print(f"EFFORT Smoothing: {getattr(opt, 'effort_label_smoothing', 0.05)} | Contrastive alpha={getattr(opt, 'drct_alpha', 0.0)}")
+            print("EFFORT Feature  : 128-dimensional embedding -> Linear(128, 1) (clip_forensic_v1)")
 
 
     # 2. Convert to structured Config & validate
@@ -513,10 +541,10 @@ def main():
     if runtime.is_main and hasattr(model, 'head_class_name'):
         print(f"  -> Fusion head class   : {model.head_class_name}")
         print(f"  -> Head param count    : {getattr(model, 'head_param_count', 0):,}")
-    elif runtime.is_main and opt_clean.arch == 'DRCT_128':
+    elif runtime.is_main and opt_clean.arch in ('DRCT_128', 'EFFORT_128'):
         trainable_p = sum(p.numel() for p in model.model.parameters() if p.requires_grad)
         total_p = sum(p.numel() for p in model.model.parameters())
-        print(f"  -> DRCT Model: {total_p:,} total parameters, {trainable_p:,} trainable (projection & classifier)")
+        print(f"  -> {opt_clean.arch} Model: {total_p:,} total parameters, {trainable_p:,} trainable")
 
 
     if runtime.is_main:
