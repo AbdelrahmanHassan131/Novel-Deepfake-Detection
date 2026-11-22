@@ -322,8 +322,14 @@ When `train/real` is `178x218 JPG` (CelebA) and `train/fake` is `256x256 PNG` (A
 2. Updating `CLIPForensicTrainTransform` to harmonize effective resolution (`160..224`) + `80%` JPEG compression removes the residual threshold shift so `RealRec` and `FakeRec` both stay high at the dev-calibrated threshold.
 
 ```python
-# Pull the resolution-harmonized transform fix first!
+# Pull the resolution-harmonized transform fix AND clear cached project modules in Colab's Python process!
 subprocess.run(['git', 'pull', '--ff-only', 'origin', 'GeneralizationDeepFakeDetection'], cwd=REPO_ROOT, check=True)
+for mod_name in list(sys.modules):
+    if mod_name.startswith(('data.', 'models.', 'config.', 'training.', 'evaluation.')) or mod_name in ('data', 'models', 'config', 'training', 'evaluation'):
+        del sys.modules[mod_name]
+import data.transforms.clip_forensic_transforms as _cft
+assert _cft.CLIPForensicTrainTransform().jpg_prob == 0.8, 'Transform reload failed — restart runtime or push commit first!'
+print('Confirmed updated resolution-harmonized clip_forensic_transforms loaded (jpg_prob=0.8)!')
 
 # 7A. Frozen Multi-Layer CLIP (RINE-128 style: effort_svd_rank=0) on the 100%-paired 80K manifest
 RUN_NAME_RINE = 'effort128_frozen_multilayer_paired80k'

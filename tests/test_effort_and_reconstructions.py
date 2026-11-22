@@ -320,6 +320,88 @@ class TestEffortAndReconstructions(unittest.TestCase):
             self.assertTrue(train_gens.isdisjoint(test_gens))
             self.assertTrue(dev_gens.isdisjoint(test_gens))
 
+    def test_two_stream_mha_and_fusion_with_effort_svd0_and_wolter_roundtrip(self):
+        """Verify MHA_128 & Fusion_128 embed EFFORT_128(svd_rank=0) + WolterWavelet2021_128 and reload with exact parity."""
+        from training.checkpoint_manager import CheckpointManager
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+
+            # 1. Save EFFORT_128 (svd_rank=0) expert checkpoint
+            eff_opt = _make_effort_opt(svd_rank=0, multi_layer=True)
+            eff_opt_clean = config_to_opt(load_config(eff_opt, validate=True, freeze=True))
+            eff_trainer = build_model(eff_opt_clean)
+            eff_trainer.eval()
+            eff_ckpt = tmp_path / "effort_svd0_best.pth"
+            torch.save({
+                "model_name": "EFFORT_128",
+                "epoch": 1,
+                "model_state_dict": eff_trainer.model.state_dict(),
+                "protocol": checkpoint_metadata(eff_trainer),
+            }, eff_ckpt)
+
+            # 2. Save WolterWavelet2021_128 expert checkpoint
+            wav_opt = argparse.Namespace(
+                arch="WolterWavelet2021_128", isTrain=True, continue_train=False, gpu_ids=[],
+                embed_dim=128, wavelet_level=3, wavelet_type="haar", wavelet_mode="reflect",
+                use_log_packets=True, wavelet_log_mode="signed_log1p", wavelet_backend="cpu",
+                cropSize=224, loadSize=256, no_crop=False, no_resize=False, rz_interp=["bilinear"],
+                optim="adam", lr=1e-3, beta1=0.9, weight_decay=0.0, init_gain=0.02,
+                name="test_wav", checkpoints_dir=str(tmp_path / "wav_ckpts"),
+            )
+            wav_opt_clean = config_to_opt(load_config(wav_opt, validate=True, freeze=True))
+            wav_trainer = build_model(wav_opt_clean)
+            wav_trainer.eval()
+            wav_ckpt = tmp_path / "wolter_best.pth"
+            torch.save({
+                "model_name": "WolterWavelet2021_128",
+                "epoch": 1,
+                "model_state_dict": wav_trainer.model.state_dict(),
+                "protocol": checkpoint_metadata(wav_trainer),
+            }, wav_ckpt)
+
+            rgb_x = torch.randn(2, 3, 224, 224)
+            wav_x = torch.randn(2, 192, 28, 28)
+            labels = torch.tensor([0.0, 1.0])
+
+            for arch_name, fusion_type in [("MHA_128", "token_attention"), ("Fusion_128", "concat")]:
+                with self.subTest(arch=arch_name, fusion_type=fusion_type):
+                    f_opt = argparse.Namespace(
+                        arch=arch_name, fusion_type=fusion_type, isTrain=True, continue_train=False,
+                        gpu_ids=[], embed_dim=128, num_heads=4, dropout=0.1,
+                        rgb_model_path=str(eff_ckpt), wavelet_model_path=str(wav_ckpt),
+                        drct_backbone="dummy", effort_preprocessing_version="clip_forensic_v1",
+                        wavelet_level=3, wavelet_type="haar", wavelet_mode="reflect",
+                        use_log_packets=True, wavelet_log_mode="signed_log1p", wavelet_backend="cpu",
+                        cropSize=224, loadSize=256, no_crop=False, no_resize=False, rz_interp=["bilinear"],
+                        optim="adam", lr=1e-3, beta1=0.9, weight_decay=0.0, init_gain=0.02,
+                        name=f"test_{arch_name}", checkpoints_dir=str(tmp_path / f"ckpt_{arch_name}"),
+                    )
+                    f_opt_clean = config_to_opt(load_config(f_opt, validate=True, freeze=True))
+                    trainer = build_model(f_opt_clean)
+                    trainer.train(True)
+                    trainer.set_input((rgb_x, wav_x, labels))
+                    trainer.optimize_parameters()
+
+                    trainer.eval()
+                    with torch.no_grad():
+                        orig_out = trainer.forward(rgb_x, wav_x).clone()
+                        if arch_name == "MHA_128":
+                            attn = trainer.model.last_attention
+                            self.assertEqual(tuple(attn.shape), (2, 4, 3, 3))
+                            torch.testing.assert_close(attn.sum(dim=-1), torch.ones(2, 4, 3), rtol=1e-4, atol=1e-4)
+
+                    save_dir = tmp_path / f"saved_{arch_name}"
+                    mgr = CheckpointManager(str(save_dir), trainer)
+                    mgr.save_best(epoch=1, best_metric=0.95, global_step=1)
+
+                    # Reload self-contained checkpoint with external expert files removed/ignored
+                    loader = CheckpointLoader(str(save_dir / "best.pth"), device="cpu")
+                    restored = loader.load(opt_overrides={"rgb_model_path": "", "wavelet_model_path": ""})
+                    with torch.no_grad():
+                        reloaded_out = restored.forward(rgb_x, wav_x)
+                    torch.testing.assert_close(orig_out, reloaded_out, rtol=1e-5, atol=1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()

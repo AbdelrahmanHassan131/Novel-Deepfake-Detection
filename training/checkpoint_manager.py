@@ -130,7 +130,7 @@ class CheckpointManager:
                 m = getattr(self.model, name)
                 is_drct = getattr(m, 'arch', '') == 'DRCT_128' or hasattr(m, 'encoder')
                 opt_obj = getattr(self.model, 'opt', None)
-                state['expert_metadata'][name] = {
+                meta_entry = {
                     'arch': getattr(m, 'arch', 'DRCT_128' if is_drct else ('Wang2020_128' if name == 'rgb_model' else 'WolterWavelet2021_128')),
                     'backbone_name': getattr(m, 'backbone_name', getattr(opt_obj, 'drct_backbone', 'dummy')),
                     'embed_dim': getattr(m, 'embed_dim', getattr(opt_obj, 'embed_dim', 128)),
@@ -140,6 +140,14 @@ class CheckpointManager:
                     'input_size': getattr(m, 'input_size', getattr(opt_obj, 'cropSize', 224)),
                     'label_mapping': getattr(m, 'label_mapping', {'real': 0, 'fake': 1}),
                 }
+                if meta_entry['arch'] == 'EFFORT_128':
+                    for eff_key in (
+                        'effort_svd_rank', 'effort_svd_blocks', 'effort_multi_layer',
+                        'effort_num_layers', 'effort_head_hidden', 'effort_dropout',
+                    ):
+                        if hasattr(m, eff_key):
+                            meta_entry[eff_key] = getattr(m, eff_key)
+                state['expert_metadata'][name] = meta_entry
         import random
         import numpy as np
         state['rng_state'] = {

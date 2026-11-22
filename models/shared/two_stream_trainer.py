@@ -47,6 +47,8 @@ class TwoStreamTrainer(BaseModel):
     def forward(self, rgb=None, wavelet=None):
         rgb = self.rgb_input if rgb is None else rgb
         wavelet = self.wavelet_input if wavelet is None else wavelet
+        if wavelet.shape[1] == 3:
+            wavelet = self._get_gpu_wavelet_backend()(wavelet)
         self.rgb_embed = self.rgb_model(rgb)
         self.wavelet_embed = self.wavelet_model(wavelet)
         expected = (rgb.shape[0], self.embed_dim)

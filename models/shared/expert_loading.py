@@ -206,7 +206,11 @@ def load_expert(opt, name, device):
                 head_hidden_dim=int(embedded_meta.get('effort_head_hidden', saved_opts.get('effort_head_hidden', getattr(opt, 'effort_head_hidden', 256)))),
                 head_dropout=float(embedded_meta.get('effort_dropout', saved_opts.get('effort_dropout', getattr(opt, 'effort_dropout', 0.3)))),
             )
-            effort_core.load_state_dict(weights, strict=(embedded is None))
+            core_weights = {
+                (k[5:] if k.startswith('core.') else k): v
+                for k, v in weights.items()
+            }
+            effort_core.load_state_dict(core_weights, strict=True)
 
             class _EFFORT128Extractor(nn.Module):
                 def __init__(self, core: EFFORT128Model):
@@ -218,6 +222,12 @@ def load_expert(opt, name, device):
                     self.input_size = 224
                     self.preprocessing_version = 'clip_forensic_v1'
                     self.label_mapping = {'real': 0, 'fake': 1}
+                    self.effort_svd_rank = core.svd_rank
+                    self.effort_svd_blocks = core.svd_last_n_blocks
+                    self.effort_multi_layer = core.multi_layer
+                    self.effort_num_layers = len(core.tapped_indices) if core.tapped_indices else 4
+                    self.effort_head_hidden = core.head_hidden_dim
+                    self.effort_dropout = core.head_dropout
 
                 def forward(self, x: torch.Tensor) -> torch.Tensor:
                     return self.core.forward_features(x)
