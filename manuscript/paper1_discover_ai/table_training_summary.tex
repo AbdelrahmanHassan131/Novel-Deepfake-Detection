@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Phase} & \textbf{Component} & \textbf{State} & \textbf{Dataset Split} \\ \hline
+1 & Spatial RGB Expert & Unfrozen (End-to-End) & Sub-model Train/Val \\ \hline
+1 & Frequency Expert & Unfrozen (End-to-End) & Sub-model Train/Val \\ \hline
+2 & Spatial RGB Expert & \textbf{Frozen} & N/A \\ \hline
+2 & Frequency Expert & \textbf{Frozen} & N/A \\ \hline
+2 & MHA Fusion Module & Unfrozen (Trained) & MHA Train/Val (80/20) \\ \hline
+3 & End-to-End Pipeline & Evaluation Only & MHA Test/Validation \\ \hline
+\end{tabular}
+\caption{Compact summary of the training protocol, detailing the freezing stages and dataset utilization.}
+\label{tab:training_summary}
+\end{table}

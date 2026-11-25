@@ -3,7 +3,6 @@
 > **Prerequisite:** Run on the same L4 session where `DatasetMultiDomainClean_v2` and `LOGO_MANIFEST` (`/content/multidomain_v2_prep/multidomain_v2_logo_manifest.csv`) are already prepared (if you restarted Colab, run Cells 1–2 of `COLAB_TRAIN_MULTIDOMAIN_V2_L4.md` first).
 
 ### Why This `WolterWavelet2021_128` Run Is Completely Different From Your Old `52%` Run
-
 - Your old Wavelet model trained with **`jpg_prob = 0.0`** on a JPG-vs-PNG shortcut dataset.
 - Here we train on **`DatasetMultiDomainClean_v2` (556K images, 154K PNG + 80K JPG reals)** with the **exact same LOGO split** (holding out `SDXL_Refine` + `DiffFace`) and **symmetric forensic augmentations** (`jpg_prob=0.8`, `blur_prob=0.35`, `downscale_prob=0.35`) using fast **GPU-batched Haar Level-3 `signed_log1p` wavelets** (~3–4 min/epoch on L4!).
 
@@ -165,13 +164,19 @@ print('=' * 112)
 This trains **both** your proposed **`MHA_128` (`token_attention`)** and the mandatory **`Fusion_128` (`concat` control)** from your **exact saved frozen `EFFORT_128` + `WolterWavelet2021_128` checkpoints** (~12–15 min per model on L4):
 
 ```python
-import sys, subprocess
+import gc, sys, subprocess, torch
 from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
 
+# 0. Free any leftover GPU memory from an interrupted run
+gc.collect()
+if torch.cuda.is_available():
+    torch.cuda.empty_cache()
+
 # 1. Pull latest code (includes EFFORT_128 embedded checkpoint reload fix) & flush module cache
-subprocess.run(['git', 'pull', '--ff-only'], cwd='/content/repo', check=True)
+REPO_ROOT = Path('/content/Novel-Deepfake-Detection')
+subprocess.run(['git', 'pull', '--ff-only', 'origin', 'GeneralizationDeepFakeDetection'], cwd=REPO_ROOT, check=True)
 for mod_name in list(sys.modules):
     if mod_name.split('.')[0] in ('data', 'models', 'config', 'training', 'evaluation'):
         del sys.modules[mod_name]
@@ -291,7 +296,7 @@ def score_all(imgs, bs=64):
                 for im in chunk
             ], dim=0).cuda()
 
-            s_rgb.extend(rgb_model(x_rgb).squeeze(1).cpu().tolist())
+            s_rgb.extend(rgb_model.model(x_rgb).squeeze(1).cpu().tolist())
             s_wav.extend(wav_model(x_wav).squeeze(1).cpu().tolist())
             s_fus.extend(fusion_model(x_rgb, x_wav).squeeze(1).cpu().tolist())
             s_mha.extend(mha_model(x_rgb, x_wav).squeeze(1).cpu().tolist())
