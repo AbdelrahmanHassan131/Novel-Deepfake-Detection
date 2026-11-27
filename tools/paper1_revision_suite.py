@@ -332,6 +332,8 @@ def train_cached_fusion_head(
     n_train = len(tr_y)
     g = torch.Generator(device=dev)
     g.manual_seed(seed)
+    tr_eval_n = min(n_train, 20000)
+    tr_eval_idx = torch.randperm(n_train, generator=g, device=dev)[:tr_eval_n]
 
     for ep in range(1, epochs + 1):
         head.train()
@@ -363,11 +365,10 @@ def train_cached_fusion_head(
         sched.step()
         head.eval()
         with torch.no_grad():
-            # Deterministic train eval (subset up to 20K for speed)
-            tr_eval_n = min(n_train, 20000)
-            tr_logits = head(tr_r[:tr_eval_n], tr_w[:tr_eval_n]).flatten().cpu().numpy()
-            tr_y_sub = tr_y[:tr_eval_n].cpu().numpy().astype(np.int64)
-            tr_auc = float(roc_auc_score(tr_y_sub, tr_logits))
+            # Deterministic shuffled train eval subset (both classes guaranteed)
+            tr_logits = head(tr_r[tr_eval_idx], tr_w[tr_eval_idx]).flatten().cpu().numpy()
+            tr_y_sub = tr_y[tr_eval_idx].cpu().numpy().astype(np.int64)
+            tr_auc = float(roc_auc_score(tr_y_sub, tr_logits)) if len(np.unique(tr_y_sub)) == 2 else float("nan")
             tr_acc = float(((tr_logits >= 0.0).astype(np.int64) == tr_y_sub).mean())
 
             dv_logits_t = head(dv_r, dv_w).flatten()

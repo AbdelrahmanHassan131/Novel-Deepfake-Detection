@@ -1,0 +1,261 @@
+[
+  {
+    "split": "dev",
+    "label": 0,
+    "source": "celeba",
+    "generator": "real",
+    "count": 20000
+  },
+  {
+    "split": "dev",
+    "label": 0,
+    "source": "fairface_val",
+    "generator": "real",
+    "count": 9430
+  },
+  {
+    "split": "dev",
+    "label": 0,
+    "source": "ffhq256",
+    "generator": "real",
+    "count": 14000
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "CoDiff",
+    "generator": "CoDiff",
+    "count": 2500
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "DCFace",
+    "generator": "DCFace",
+    "count": 2500
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "DiffFace",
+    "generator": "DiffFace",
+    "count": 1152
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "DreamBooth",
+    "generator": "DreamBooth",
+    "count": 2500
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "FreeDoM_I",
+    "generator": "FreeDoM_I",
+    "count": 1718
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "FreeDoM_T",
+    "generator": "FreeDoM_T",
+    "count": 1912
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "HPS",
+    "generator": "HPS",
+    "count": 2500
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "LoRA",
+    "generator": "LoRA",
+    "count": 1148
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "SDXL",
+    "generator": "SDXL",
+    "count": 2500
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "SDXL_Refine",
+    "generator": "SDXL_Refine",
+    "count": 2500
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "adm",
+    "generator": "adm",
+    "count": 5000
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "cycle_diff",
+    "generator": "cycle_diff",
+    "count": 2500
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "ddim",
+    "generator": "ddim",
+    "count": 5000
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "ddpm",
+    "generator": "ddpm",
+    "count": 5000
+  },
+  {
+    "split": "dev",
+    "label": 1,
+    "source": "diffswap",
+    "generator": "diffswap",
+    "count": 5000
+  },
+  {
+    "split": "train",
+    "label": 0,
+    "source": "celeba",
+    "generator": "real",
+    "count": 80000
+  },
+  {
+    "split": "train",
+    "label": 0,
+    "source": "fairface",
+    "generator": "real",
+    "count": 86744
+  },
+  {
+    "split": "train",
+    "label": 0,
+    "source": "ffhq256",
+    "generator": "real",
+    "count": 56000
+  },
+  {
+    "split": "train",
+    "label": 0,
+    "source": "utkface",
+    "generator": "real",
+    "count": 11867
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "CoDiff",
+    "generator": "CoDiff",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "DCFace",
+    "generator": "DCFace",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "DiffFace",
+    "generator": "DiffFace",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "DreamBooth",
+    "generator": "DreamBooth",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "FreeDoM_I",
+    "generator": "FreeDoM_I",
+    "count": 12434
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "FreeDoM_T",
+    "generator": "FreeDoM_T",
+    "count": 13776
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "HPS",
+    "generator": "HPS",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "LoRA",
+    "generator": "LoRA",
+    "count": 8401
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "SDXL",
+    "generator": "SDXL",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "SDXL_Refine",
+    "generator": "SDXL_Refine",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "adm",
+    "generator": "adm",
+    "count": 20000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "cycle_diff",
+    "generator": "cycle_diff",
+    "count": 15000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "ddim",
+    "generator": "ddim",
+    "count": 20000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "ddpm",
+    "generator": "ddpm",
+    "count": 20000
+  },
+  {
+    "split": "train",
+    "label": 1,
+    "source": "diffswap",
+    "generator": "diffswap",
+    "count": 20000
+  }
+]

@@ -1,765 +1,553 @@
 \documentclass[fleqn,10pt]{wlscirep}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\title{Multi-Domain Deepfake Detection via Spatial-Frequency Feature Learning and Bidirectional Multi-Head Attention Fusion}
+\usepackage{lineno}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{float}
+\linenumbers
 
-\author[1, *]{Abdelrahman Hassan }
-\author[2]{Ahmed Hassan }
-\author[3]{Hossam Abdelmunim }
-\affil[1, 2, 3]{Computer and Systems Engineering Department, Faculty of Engineering, Ain Shams University, Cairo, Egypt}
+\title{Multi-Domain Deepfake Detection via Decoupled Spatial-Frequency Feature Learning and Sample-Dependent Multi-Token Attention Fusion}
 
-\affil[*]{2201662@eng.asu.edu.eg }
-
-\keywords{Deepfake Detection, Generative Adversarial Networks, Diffusion Models, Spatial-Domain Analysis, Wavelet Frequency Features, Multi-Head Attention, Feature Fusion, Multimedia Forensics, ResNet Backbone, Synthetic Image Classification, FaceForensics++, CelebA Dataset, Zenodo Dataset, t-SNE Visualization, Grad-CAM Explainability, Frequency-Domain Forensics, Image Authenticity Verification}
+\author[1,*]{Abdelrahman Hassan}
+\author[1]{Ahmed Hassan}
+\author[1]{Hossam Abdelmunim}
+\affil[1]{Computer and Systems Engineering Department, Faculty of Engineering, Ain Shams University, Cairo, Egypt}
+\affil[*]{2201662@eng.asu.edu.eg}
 
 \begin{abstract}
-The rapid advancement of generative modeling has made synthetic facial media detection a critical challenge in multimedia forensics. As deepfakes synthesized by Generative Adversarial Networks (GANs) and modern denoising diffusion models achieve high visual fidelity, single-domain detectors often face inherent trade-offs between localized spatial blending anomalies and global spectral irregularities. This paper presents a modular multi-domain deepfake detection framework that integrates spatial-domain and frequency-domain representations through a bidirectional Multi-Head Attention (MHA) fusion architecture. To evaluate the framework under controlled yet diverse generation paradigms, we curate a multi-source benchmark of 1,016,855 facial images---comprising 263,953 authentic and 752,902 synthetic samples---aggregated from CelebA, FaceForensics++, FakeAVCeleb, Celeb-DF, and Zenodo diffusion repositories (ADM, DDPM, DDIM, and DiffSwap), partitioned under strict identity-level and video-level separation. We investigate three primary detection configurations: (1) a modified spatial-domain expert utilizing an RGB ResNet-50 backbone with a 128-dimensional latent bottleneck, (2) a lightweight frequency-domain expert leveraging a three-level Haar wavelet packet decomposition (192 sub-bands) coupled with a compact convolutional network, and (3) a bidirectional MHA fusion module that integrates frozen 128-dimensional spatial and frequency embeddings through multi-head projection, residual normalization, and non-linear feed-forward refinement. Within the evaluated multi-generator benchmark, the spatial expert achieves 98.73\% accuracy (1.54\% EER), while the wavelet expert achieves 95.42\% accuracy (5.92\% EER) but exhibits an elevated false-positive rate on authentic faces (88.07\% recall). The proposed MHA fusion model achieves 98.82\% accuracy, a 0.9992 ROC-AUC, and a 1.27\% Equal Error Rate (EER), effectively restoring authentic-class sensitivity to 97.20\% and reducing synthetic false negatives by 38.3\% relative to the spatial expert. In comparative evaluation against a static concatenation baseline (\texttt{Fusion\_128}), multi-run statistical validation ($N=4$ independent seeds) confirms that while static concatenation achieves marginally higher accuracy at a single default threshold ($98.84\%$ vs.\ $98.82\%$, $p = 0.284$), the MHA architecture yields statistically significant improvements ($p < 0.01$) in threshold-independent ranking calibration (improving ROC-AUC from 0.9900 to 0.9992 and reducing EER from 1.32\% to 1.27\%). Modularity experiments with ConvNeXt and Xception backbones, bottleneck dimensionality ablations, white-box FGSM stress testing, and t-SNE and Grad-CAM visualizations demonstrate the within-benchmark efficacy and interpretability of the framework, while independent cross-dataset transfer to unseen generators and unconstrained environments is identified as a vital direction for future research.
+Detecting synthetic facial imagery across heterogeneous generative models remains challenging because spatial-domain and frequency-domain detectors exhibit complementary strengths and failure modes. This study presents a decoupled two-stage multi-domain deepfake detection framework combining a spatial RGB ResNet-50 expert (\texttt{Wang2020\_128}, 23.77M parameters) and a lightweight three-level Haar wavelet-packet convolutional expert (\texttt{Wolter2021\_128}, 1.73M parameters, 192 spectral sub-bands), each projecting to a supervised 128-dimensional embedding before freezing. Addressing the single-token attention degeneracy where sequence length $T=1$ collapses softmax weights to unity, we replace single-token cross-attention with genuinely sample-dependent multi-token self-attention (\texttt{MHA\_128}, 199,425 parameters over $[\mathbf{x}_{\text{cls}}, \mathbf{x}_s, \mathbf{x}_f]$) alongside a lightweight modality-gating module (\texttt{GatedFusion}, 41,987 parameters) and three capacity-matched controls ($\approx$198K--199K parameters). To prevent base-expert memorization bias and format shortcuts, experts are trained on 439,222 images spanning four native high-resolution authentic face sources and thirteen diffusion generators under a Leave-One-Generator-Out (LOGO) split, while fusion heads are cross-fitted on 58,103 out-of-sample held-out images and evaluated on untouched in-domain ($n=12,729$) and four unseen photorealistic domains (LFW camera reals vs.\ unseen LDM, SDXL\_Refine, DiffFace, and StyleGAN) under matched JPEG $Q=85$ recompression. Across four seeds, cross-fitted fusion lifts held-out accuracy from 98.76\% (RGB) and 97.53\% (Wavelet) to 99.12\% (\texttt{MHA\_128}, 0.9997 ROC-AUC, 0.87\% EER) and ranks first on strictly native PNG-only controls (98.90\%, 0.9996 AUC), while decisively outperforming unfrozen joint end-to-end training (52.10\% unseen accuracy, 4.5\% real recall). Under unseen domain shift, \texttt{MHA\_128} achieves the lowest probability calibration error ($\text{ECE}=0.039$), whereas lightweight \texttt{GatedFusion} achieves the highest four-domain unseen mean accuracy ($85.71\% \pm 0.06\%$, $0.9164$ AUC) and perturbation resilience (97.7\% at JPEG $Q=30$), while fair-attribute auditing on held-out FairFace validation faces yields $0.00\%$ false-positive disparity across race, gender, and age.
 \end{abstract}
+
 \begin{document}
 
 \flushbottom
 \maketitle
 \thispagestyle{empty}
 
+\noindent\textbf{Keywords:} deepfake detection, frequency-domain forensics, wavelet packet decomposition, spatial-frequency fusion, multi-head attention, cross-domain generalization.
+
 \section*{Introduction}
 
 \subsection*{Problem Context and Forensic Motivation}
-Generative Adversarial Networks (GANs) and modern denoising diffusion models now synthesize facial imagery with sufficient visual realism to routinely bypass human visual inspection. Despite their photorealistic appearance, generative synthesis pipelines inevitably leave subtle structural and statistical traces introduced during spatial upsampling, facial boundary blending, and iterative score-based denoising \cite{ref1, ref2, ref3}. Detecting these manipulations across diverse generation families requires forensic models capable of capturing complementary signal irregularities rather than relying solely on surface-level visual artifacts.
+Modern generative models---spanning Generative Adversarial Networks (GANs), pixel-space denoising diffusion models (ADM, DDPM, DDIM) \cite{ref1,ref2,ref3}, latent diffusion architectures (LDM, SDXL), and diffusion-based face swapping (DiffSwap, DiffFace) \cite{ref16,ref21}---synthesize photorealistic facial media that routinely deceive human observers. Although visually convincing, each synthesis paradigm introduces subtle statistical regularities during spatial upsampling, local boundary blending, or iterative denoising \cite{ref4,ref5}. Single-modality detectors often trade off sensitivity against specificity when deployed across heterogeneous generation pipelines and post-processing degradations.
 
-\subsection*{Domain-Specific Forensic Limitations: Spatial and Spectral Trade-Offs}
-Forensic detectors designed exclusively around spatial-domain pixel statistics or isolated frequency-domain spectra face inherent trade-offs when evaluated across diverse synthesis families. Spatial convolutional networks excel at identifying localized blending boundaries, color mismatches, and warping defects typical of face-swapping pipelines, yet they can be sensitive to lossy compression, spatial smoothing, and camera sensor noise \cite{ref4, ref5}. Furthermore, in modern diffusion synthesis, artifacts are distributed globally across the image as subtle variance perturbations rather than localized boundary seams, making them difficult to isolate purely through local spatial receptive fields.
+\subsection*{Spatial-Frequency Trade-Offs and Motivation for Sample-Dependent Fusion}
+Spatial convolutional backbones operating on RGB pixels effectively capture localized semantic artifacts and face-swap seams \cite{ref4,ref28}, yet end-to-end fine-tuned CNNs can over-specialize to seen training generators and exhibit elevated false-positive rates on out-of-distribution camera imagery \cite{ref5,ref31}. Conversely, frequency-domain wavelet-packet networks isolate multi-scale spectral anomalies across approximation and detail sub-bands \cite{ref8} and exhibit strong resilience to compression, yet lack high-level semantic context.
 
-Conversely, frequency-domain detectors effectively isolate periodic upsampling grid artifacts and abnormal high-frequency energy distributions across wavelet or Fourier sub-bands \cite{ref8}. However, purely spectral detectors lack high-level semantic context. Consequently, they frequently exhibit elevated false-positive rates on authentic images whose high-frequency textures are naturally pronounced due to sharp illumination transitions, diverse camera ISP pipelines, or fine hair and skin details. Single-domain detectors therefore struggle to maintain balanced sensitivity and specificity across heterogeneous mixtures of GAN and diffusion manipulations.
+Combining spatial and frequency cues via static feature concatenation applies fixed global weights identically to every image, regardless of compression severity or conflicting modality reliability. Furthermore, our prior single-token cross-attention formulation ($T=1$) mathematically collapsed attention weights to $\text{Softmax}(s)=1.0$ identically for all inputs, preventing true sample-dependent weighting. In this revised work, we directly resolve that theoretical contradiction by introducing genuinely sample-dependent multi-token self-attention (\texttt{MHA\_128} over a three-token sequence $[\mathbf{x}_{\text{cls}}, \mathbf{x}_s, \mathbf{x}_f]$) and explicit sample-dependent modality gating (\texttt{GatedFusion}), and by benchmarking both against strictly capacity-matched ($\approx$199K-parameter) pure-MLP, FFN-only, and linear-mixing controls under an out-of-sample cross-fitted protocol.
 
-\subsection*{Motivation for Decoupled Multi-Domain Fusion and Research Scope}
-To overcome the limitations of isolated modalities, multi-domain forensic architectures seek to combine spatial semantic sensitivity with spectral sub-band specificity \cite{ref6, ref7}. Nevertheless, conventional multi-branch approaches typically merge representations via static feature concatenation or linear projection. In static concatenation, fixed global weights are applied uniformly across all samples. When an input image undergoes spatial degradation or contains conflicting modality cues---such as clean spatial semantics paired with noisy high-frequency spectra---static concatenation cannot adaptively modulate feature contributions, which can degrade threshold-independent calibration and tail ranking.
-
-To investigate these dynamics within a controlled experimental setting, this study proposes a modular, two-stage multi-domain detection framework. Rather than optimizing a monolithic end-to-end multi-branch network, which is prone to gradient starvation where the faster-converging spatial stream dominates optimization, our framework enforces a decoupled staged design: domain experts are trained independently with compact latent bottlenecks and subsequently frozen, allowing a bidirectional Multi-Head Attention (MHA) fusion module to be evaluated strictly as a cross-domain feature transformation core.
-
-Specifically, the primary contributions of this study are:
+Specifically, our contributions are:
 \begin{enumerate}
-    \item \textbf{Decoupled Expert Representation Learning with Compact Bottlenecks:} We adapt and retrain a spatial RGB ResNet-50 expert (modified from Wang et al. \cite{ref4}) and a lightweight three-level Haar wavelet packet convolutional expert (modified from Wolter et al. \cite{ref8}, requiring only 1.73M parameters across 192 frequency sub-bands), equipping each with a supervised 128-dimensional latent bottleneck prior to freezing their weights.
-    \item \textbf{Bidirectional Multi-Head Feature Fusion Architecture:} We formulate a bidirectional cross-attention fusion block with residual LayerNorm and an expanded two-layer feed-forward network. We provide a rigorous mathematical clarification of the attention mechanism operating on single-token domain embeddings, a complete layer-by-layer architectural specification, computational footprint measurements (4.60 GFLOPs, 13.1\,ms latency), and multi-seed statistical variance evaluation ($N=4$) comparing MHA against static concatenation (\texttt{Fusion\_128}).
-    \item \textbf{Large-Scale Multi-Generator Benchmark Evaluation and Modularity:} We systematically evaluate the framework on a curated benchmark of 1,016,855 images spanning GAN and diffusion manipulations (FaceForensics++, CelebA, FakeAVCeleb, Celeb-DF, and Zenodo diffusion subsets) under strict video-level and identity-level splits. We demonstrate architectural modularity by incorporating ConvNeXt and Xception backbones, evaluate robustness under training augmentations and white-box FGSM attack, and delineate the clear boundary between strong within-benchmark discrimination and the open challenge of external cross-dataset generalization.
+    \item \textbf{Clarified Modular Two-Stage Architecture with Exact Parameter Accounting:} We adapt two established domain experts---\texttt{Wang2020\_128} (ResNet-50 \cite{ref4} augmented with a supervised 128-D bottleneck; 23,770,433 parameters) and \texttt{Wolter2021\_128} (3-level Haar Wavelet Packet CNN \cite{ref8} with 192 spectral sub-bands and a 128-D bottleneck; 1,727,553 parameters)---and empirically demonstrate via a controlled unfrozen joint-training baseline that staged decoupling prevents severe unseen-real collapse (4.5\% vs.\ 90.3\%--94.8\% unseen real recall).
+    \item \textbf{True Sample-Dependent Multi-Token Attention \& Capacity-Matched Ablation Suite:} We replace degenerate single-token attention with three-token multi-head self-attention (\texttt{MHA\_128}, 199,425 parameters) and sample-dependent \texttt{GatedFusion} (41,987 parameters), and rigorously isolate attention vs.\ feed-forward capacity against three 1:1 parameter-matched controls (\texttt{ConcatMatchedMLP}, \texttt{NoAttnFFN}, \texttt{LinearMix}) across $N=4$ independent seeds with Holm--Bonferroni multiplicity correction, probability calibration metrics (Brier score, ECE, reliability diagrams), and a 16-configuration concatenation width/dropout sweep.
+    \item \textbf{Shortcut-Free Multi-Domain Benchmark, Cross-Fitted Stacking, and Comprehensive Audits:} We construct a verified 556,082-image multi-domain benchmark combining four native high-resolution authentic face datasets (FairFace, CelebA, FFHQ-256, UTKFace) and fifteen balanced diffusion/face-swap generators under a Leave-One-Generator-Out (LOGO) split, enforce out-of-sample cross-fitted fusion training to eliminate base-expert memorization bias, and report per-generator recall/AUC, strictly native PNG-only same-pipeline controls, matched JPEG $Q=85$ unseen cross-domain generalization (LFW vs.\ LDM, SDXL\_Refine, DiffFace, StyleGAN), end-to-end raw-pixel white-box FGSM sweeps, nine real-world perturbations, and FairFace ground-truth demographic fairness audits.
 \end{enumerate}
 
-\section*{Background and Related Work in Deepfake Forensics}
+\section*{Related Work}
 
-\subsection*{Spatial-Domain Deepfake Detection}
-Spatial-domain forensic detectors operate directly on RGB pixel intensities to uncover local synthesis defects, boundary blending seams, and geometric inconsistencies. Deep convolutional backbones, including Xception \cite{ref28} and ResNet variants, have served as foundational feature extractors in facial forgery detection. By utilizing depthwise separable convolutions or residual skip connections, these networks mitigate vanishing gradients and learn hierarchical local-to-global spatial representations \cite{ref24}.
+\subsection*{Spatial-Domain and Universal Foundation Detectors}
+Early spatial forgery detectors relied on compact or depthwise-separable CNNs such as MesoNet \cite{ref24} and Xception \cite{ref28}. Wang et al.\ \cite{ref4} established that ResNet-50 trained with aggressive Gaussian blur and JPEG compression augmentations generalizes across multiple CNN generators, while Ricker et al.\ \cite{ref5} analyzed spatial artifacts of denoising diffusion models (ADM, DDPM, DDIM). Subsequent spatial approaches targeted forgery-invariant feature disentanglement, including UCF \cite{ref31}, semantic decoupling \cite{ref29}, and convolutional vision-transformer hybrids \cite{ref30}. More recently, universal detectors leveraging frozen vision-language foundation models (e.g., CLIP feature space \cite{ref41}) and diffusion reconstruction contrastive learning (DRCT \cite{ref42}) have demonstrated strong transfer across unseen generative families, highlighting the limitations of end-to-end fine-tuned CNN backbones under severe paradigm shift. In this study, we focus specifically on controlled spatial--frequency fusion over fixed CNN and wavelet experts without claiming global state-of-the-art superiority over large foundation-model detectors.
 
-A foundational milestone in generalizable spatial detection was established by Wang et al. \cite{ref4}, who demonstrated that standard ResNet-50 classifiers trained on a single CNN generator (ProGAN) with aggressive Gaussian blur and JPEG compression augmentations could detect spatial upsampling artifacts across multiple CNN architectures. More recently, Ricker et al. \cite{ref5} investigated spatial-domain forensics for denoising diffusion models (including ADM \cite{ref3}, DDPM \cite{ref1}, and DDIM \cite{ref2}), showing that iterative reverse-diffusion sampling distributes subtle pixel-level synthesis errors globally across the image rather than concentrating them strictly at blending boundaries. Recent spatial approaches, including forgery semantics decoupling \cite{ref29}, UCF \cite{ref31}, and hybrid vision-transformer models \cite{ref30}, have further advanced spatial artifact isolation. Nevertheless, purely spatial detectors remain susceptible to performance degradation when spatial post-processing obscures pixel-level textures.
-
-\subsection*{Frequency-Domain and Wavelet-Packet Forensics}
-To capture periodic traces introduced by transposed convolutions, upsampling filters, and spectral regularizers, frequency-domain detectors transform inputs into Fourier, Discrete Cosine Transform (DCT), or wavelet representations. While standard Fast Fourier Transform (FFT) spectra discard spatial localization, Wolter et al. \cite{ref8} introduced full Wavelet Packet Decomposition (WPD) for deepfake detection. By recursively partitioning both low-frequency approximation and high-frequency detail components across multiple scales, WPD preserves joint spatial-frequency localization and exposes abnormal cross-band energy correlations that synthetic generators fail to match to natural camera imagery.
-
-Despite their resilience to moderate spatial smoothing, standalone wavelet detectors lack semantic scene context. Consequently, natural high-frequency textures in authentic faces---such as sharp beard strands, detailed eyelashes, or intricate background patterns---can trigger false alarms, leading to reduced recall on authentic images.
-
-\subsection*{Multi-Domain Fusion in Multimedia Forensics}
-To combine the semantic sensitivity of RGB networks with the spectral specificity of frequency transforms, forensic frameworks have increasingly adopted multi-domain fusion \cite{ref6, ref7}. However, conventional multi-branch architectures typically concatenate extracted features into a single classification layer. In such static configurations, fixed linear projections cannot dynamically account for domain-specific reliability differences.
-
-Furthermore, training multi-branch networks end-to-end from scratch frequently results in modality dominance, where the more rapidly optimizing spatial stream dominates gradient updates, leaving the frequency branch under-optimized. Decoupling expert representation learning from cross-domain fusion provides a principled strategy to preserve specialized single-domain representations while enabling targeted investigation of fusion mechanisms.
+\subsection*{Frequency-Domain and Spatial-Frequency Fusion Forensics}
+Frequency-domain detectors analyze spectral irregularities via Fourier transforms, DCT coefficients, or multi-scale wavelets. Wolter et al.\ \cite{ref8} introduced full Wavelet Packet Decomposition (WPD) CNNs that preserve spatial-frequency localization across recursive sub-bands, while earlier dual-stream fusion architectures combined RGB and spectral cues through dual-attention or information decomposition \cite{ref6,ref7}. Recent spatial-frequency works have advanced dual-domain integration substantially: FreqDebias (CVPR 2025) \cite{ref45} mitigates spectral shortcut bias via consistency-driven frequency debiasing; FAViT (2026) \cite{ref43} combines a frequency-aware Vision Transformer with bidirectional cross-attention for post-processing robustness; and LGF-Net (2026) \cite{ref44} integrates learnable Gabor filters with gated cross-modal fusion. Unlike monolithic end-to-end dual-branch architectures, our work isolates the fusion mechanism under strictly frozen 128-D experts, cross-fitted out-of-sample stacking, and 1:1 parameter-matched structural ablations so that performance differences can be attributed transparently to sample-dependent weighting, capacity, or modality complementarity rather than confounded backbone updates.
 
 \section*{Proposed Multi-Domain Detection Framework}
 
-\subsection*{Overall Architectural Workflow and Decoupled Design}
-The proposed multi-domain detection framework comprises three modular components: (1) a modified spatial-domain expert (\texttt{Wang2020\_128}), (2) a modified frequency-domain expert (\texttt{Wolter2021\_128}), and (3) a bidirectional Multi-Head Attention fusion module (\texttt{MHA\_128}). The complete pipeline follows a staged execution principle: the two expert backbones are first trained to convergence with compact 128-dimensional latent bottlenecks, after which their parameters are frozen to serve as deterministic feature extractors for the fusion module.
+\subsection*{Attribution of Adopted vs.\ Newly Introduced Components}
+To make architectural increments transparent (overview in Figure~\ref{fig:architecture}), we explicitly distinguish adopted baselines from components newly introduced in this study:
+\begin{itemize}
+    \item \textbf{Adopted Backbones:} The ResNet-50 convolutional trunk from Wang et al.\ \cite{ref4,ref25} (23,508,032 parameters) and the 4-block Wavelet Packet CNN trunk from Wolter et al.\ \cite{ref8} (1,661,760 parameters over 3-level Haar packets).
+    \item \textbf{New Contributions in This Study:} (i) Supervised 128-D latent projection bottlenecks appended to both experts; (ii) GPU-batched differentiable 3-level Haar WPD with $\text{signed\_log1p}$ scaling; (iii) sample-dependent three-token multi-head self-attention (\texttt{MHA\_128}, 199,425 parameters) and modality gating (\texttt{GatedFusion}, 41,987 parameters); (iv) exact capacity-matched structural ablation heads (\texttt{ConcatMatchedMLP}, \texttt{NoAttnFFN}, \texttt{LinearMix}); and (v) an out-of-sample cross-fitted staged training protocol eliminating base-expert memorization bias.
+\end{itemize}
 
-\subsection*{First Stream: Modified Spatial-Domain Expert (Wang2020\_128)}
-\begin{figure}[ht]
+\begin{figure}[tbp]
 \centering
-\includegraphics[width=\linewidth]{fig1_Wang2020_modified_128D}
-\caption{Modified RGB Wang2020 Model (Spatial Domain) with ResNet-50 Backbone and 128-D latent projection. The source facial image is an entirely synthetic, AI-generated sample sourced from ThisPersonDoesNotExist.com, used strictly for architectural illustration (it does not depict a real human individual).}
-\label{fig:fig1_Wang2020_modified_128D}
+\includegraphics[width=\linewidth]{figures/fig1_architecture.png}
+\caption{Complete decoupled dual-stream architecture showing exact tensor dimensions, layer sequences, and trainable parameter counts across Phase 1 (independent spatial \texttt{Wang2020\_128} and frequency \texttt{Wolter2021\_128} experts) and Phase 2 (cross-fitted sample-dependent \texttt{MHA\_128} multi-token self-attention and matched fusion controls).}
+\label{fig:architecture}
 \end{figure}
 
-Our spatial-domain stream, illustrated in Figure \ref{fig:fig1_Wang2020_modified_128D}, adapts the ResNet-50 forensic detector of Wang et al. \cite{ref4, ref25} and retrains it on our multi-generator dataset. While the original architecture maps the 2048-dimensional global average pooled ResNet-50 feature vector directly to a single binary logit, we insert a compact 128-dimensional latent bottleneck layer immediately preceding the binary classification head. During Phase 1 training, this modified network is optimized end-to-end so that binary cross-entropy supervision forces the 128-dimensional bottleneck to encode discriminative spatial cues, including blending seams, color-space discontinuities, and localized warping artifacts.
-
-Specifically, an input RGB image resized to $224 \times 224 \times 3$ is normalized using standard ImageNet statistics and processed through the ResNet-50 stages to yield a feature vector $h_s \in \mathbb{R}^{2048}$. A linear projection maps $h_s$ to the 128-dimensional embedding space, followed by a Rectified Linear Unit (ReLU) activation and Dropout ($p = 0.5$) for regularization:
+\subsection*{Phase 1: Spatial and Frequency Experts with 128-D Bottlenecks}
+\paragraph{Spatial Expert (\texttt{Wang2020\_128}).}
+An input RGB image resized to $224 \times 224 \times 3$ and ImageNet-normalized is encoded by ResNet-50 into a global-average-pooled descriptor $\mathbf{h}_s \in \mathbb{R}^{2048}$. A supervised bottleneck maps $\mathbf{h}_s$ to $\mathbf{x}_s \in \mathbb{R}^{128}$:
 \begin{equation}
-X_s = \text{Dropout}\left(\text{ReLU}\left(W_{s,\text{proj}} h_s + b_{s,\text{proj}}\right)\right) \in \mathbb{R}^{128}
+\mathbf{x}_s = \operatorname{ReLU}\!\left(\mathbf{W}_{s,\text{proj}}\mathbf{h}_s + \mathbf{b}_{s,\text{proj}}\right) \in \mathbb{R}^{128},
+\label{eq:spatial_embed}
 \end{equation}
-where $W_{s,\text{proj}} \in \mathbb{R}^{128 \times 2048}$ and $b_{s,\text{proj}} \in \mathbb{R}^{128}$. During Phase 1 training, a temporary linear head computes the binary logit using Binary Cross-Entropy with Logits Loss (\texttt{BCEWithLogitsLoss}) and the Adam optimizer. Once Phase 1 converges, the temporary classification head is discarded and all parameters of the spatial expert are frozen, yielding a deterministic spatial representation extractor $X_s$ for Phase 2 fusion.
+where $\mathbf{W}_{s,\text{proj}} \in \mathbb{R}^{128 \times 2048}$ and $\mathbf{b}_{s,\text{proj}} \in \mathbb{R}^{128}$. During Phase 1 training, $\operatorname{Dropout}(0.5)$ and a linear classifier $\mathbf{w}_s^\top \mathbf{x}_s + b_s$ are applied under label-smoothed binary cross-entropy ($s=0.05$). After convergence, the 129-parameter temporary linear head is discarded and all 23,770,304 remaining backbone and bottleneck parameters are frozen in evaluation mode.
 
-\subsection*{Second Stream: Modified Frequency-Domain Expert (Wolter2021\_128)}
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\linewidth]{fig2_WolterWaveletesWolter2021_modified_128D.jpg}
-\caption{Modified Wavelet Packet Wolter2021 Architecture (Frequency Domain) with 3-level Haar decomposition (192 sub-bands) and 128-D latent projection. The source facial image is an entirely synthetic, AI-generated sample sourced from ThisPersonDoesNotExist.com, used strictly for architectural illustration (it does not depict a real human individual).}
-\label{fig:fig2_WolterWaveletesWolter2021_modified_128D}
-\end{figure}
-
-Our frequency-domain stream, shown in Figure \ref{fig:fig2_WolterWaveletesWolter2021_modified_128D}, builds upon the Wavelet Packet CNN architecture introduced by Wolter et al. \cite{ref8}. Rather than operating on raw spatial pixels, this branch applies a three-level 2D Wavelet Packet Decomposition (WPD) to each RGB channel, partitioning the image into $4^3 = 64$ frequency sub-bands per color channel ($3 \times 64 = 192$ total spectral channels) that capture approximation, horizontal, vertical, and diagonal oscillations across multiple frequency scales.
-
-The selection of a three-level decomposition ($L=3$, 192 channels) reflects a principled trade-off between spectral resolution and representation complexity \cite{ref8}. A shallower two-level decomposition ($L=2$, yielding $3 \times 4^2 = 48$ channels) provides coarse frequency partitioning that fails to isolate narrowband periodic upsampling artifacts and subtle high-frequency diffusion denoising residuals. Conversely, a four-level decomposition ($L=4$, yielding $3 \times 4^4 = 768$ channels at reduced spatial resolution) quadruples input dimensionality, substantially increasing computational overhead and promoting overfitting to camera-specific sensor noise. The three-level representation ($192 \times 28 \times 28$) preserves sufficient spatial-frequency granularity while keeping the downstream convolutional network compact. To stabilize heavy-tailed wavelet coefficient distributions and accentuate subtle high-frequency energy deviations, the magnitude of the wavelet packet coefficients $C_{i,j,k}$ is log-scaled prior to convolutional processing:
+\paragraph{Frequency Expert (\texttt{Wolter2021\_128}).}
+Each $224 \times 224$ RGB channel (in $[0,255]$ float32) undergoes a three-level 2D orthogonal Haar (\texttt{db1}) Wavelet Packet Decomposition with reflection padding on GPU, yielding $3 \times 4^3 = 192$ spectral sub-bands of spatial size $28 \times 28$ (tensor shape $192 \times 28 \times 28$). To compress heavy-tailed magnitudes while preserving coefficient polarity, we apply signed logarithmic scaling:
 \begin{equation}
-\tilde{C}_{i,j,k} = \log\left(\lvert C_{i,j,k} \rvert + \epsilon\right), \quad \epsilon = 10^{-6}
+\tilde{C}_{c,u,v} = \operatorname{sign}\!\left(C_{c,u,v}\right)\log\!\left(1 + \lvert C_{c,u,v} \rvert\right).
+\label{eq:wavelet_log}
 \end{equation}
-
-\subsubsection*{Wavelet Expert Architectural Specifications}
-To ensure reproducibility, the exact parameterization of the \texttt{Wolter2021\_128} expert is specified as follows. The three-level WPD is computed using the orthogonal Haar wavelet family (\texttt{db1}) with reflection boundary padding to prevent artificial edge ringing across the 192 spectral sub-bands. The resulting $192$-channel tensor is processed by a lightweight Convolutional Neural Network (CNN) comprising sequential $3 \times 3$ convolutional blocks with zero-padding ($\text{padding}=1$), two-dimensional Batch Normalization (\texttt{BatchNorm2d}), ReLU activations, and $2 \times 2$ max-pooling layers, followed by global average pooling to form a 512-dimensional spectral descriptor $h_f \in \mathbb{R}^{512}$.
-
-Analogous to the spatial expert, we introduce a 128-dimensional latent bottleneck layer ($\text{Linear}(512 \to 128) \to \text{ReLU} \to \text{Dropout}(0.5)$) prior to the binary classification head. After end-to-end Phase 1 training on the spectral stream, the binary classification head is removed and all wavelet expert weights are frozen, providing a compact 128-dimensional frequency embedding $X_f \in \mathbb{R}^{128}$ that complements the spatial stream within the evaluated benchmark.
-
-\subsection*{Third Stream: Bidirectional Multi-Head Attention Fusion Module (MHA\_128)}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.9\linewidth]{fig3_WholeArch}
-\caption{Complete architecture of the proposed multi-domain deepfake detection framework. Pretrained and frozen Wang2020 (RGB) and Wolter2021 (Wavelet) experts extract 128-dimensional domain embeddings, which interact through parallel 4-head cross-attention blocks, residual LayerNorm, and feed-forward networks prior to classification. The source facial image is an entirely synthetic, AI-generated sample sourced from ThisPersonDoesNotExist.com, used strictly for architectural illustration (it does not depict a real human individual).}
-\label{fig:fig3_WholeArch}
-\end{figure}
-
-Our central fusion module, depicted in Figure \ref{fig:fig3_WholeArch}, is a bidirectional Multi-Head Attention (MHA) network that integrates the frozen 128-dimensional embeddings extracted from the spatial expert ($X_s \in \mathbb{R}^{1 \times D}$) and the frequency expert ($X_f \in \mathbb{R}^{1 \times D}$), where $D = 128$.
-
-Each 128-dimensional vector is projected across $N_{\text{heads}} = 4$ parallel heads of dimension $D_k = D / N_{\text{heads}} = 32$. Specifically, for each head $h \in \{1, \dots, N_{\text{heads}}\}$ in the two parallel cross-attention pathways (spatial querying frequency $s \to f$, and frequency querying spatial $f \to s$), the head-specific Query, Key, and Value projections are computed as:
-\begin{align}
-Q_s^{(h)} = X_s W_s^{Q,(h)}, \quad K_f^{(h)} = X_f W_f^{K,(h)}, \quad V_f^{(h)} = X_f W_f^{V,(h)} \\
-Q_f^{(h)} = X_f W_f^{Q,(h)}, \quad K_s^{(h)} = X_s W_s^{K,(h)}, \quad V_s^{(h)} = X_s W_s^{V,(h)}
-\end{align}
-where $W_d^{Q,(h)}, W_d^{K,(h)}, W_d^{V,(h)} \in \mathbb{R}^{D \times D_k}$ (with learnable biases) for domain $d \in \{s, f\}$. Within each head, scaled dot-product cross-attention interactions are computed and concatenated across all $N_{\text{heads}} = 4$ heads via output projection matrices $W_{s \to f}^O, W_{f \to s}^O \in \mathbb{R}^{D \times D}$:
-\begin{align}
-A_{s \to f} &= \text{Concat}\left(\text{head}_{s \to f}^{(1)}, \dots, \text{head}_{s \to f}^{(4)}\right) W_{s \to f}^O, \quad \text{head}_{s \to f}^{(h)} = \text{Softmax}\left(\frac{Q_s^{(h)} \left(K_f^{(h)}\right)^T}{\sqrt{D_k}}\right) V_f^{(h)} \\
-A_{f \to s} &= \text{Concat}\left(\text{head}_{f \to s}^{(1)}, \dots, \text{head}_{f \to s}^{(4)}\right) W_{f \to s}^O, \quad \text{head}_{f \to s}^{(h)} = \text{Softmax}\left(\frac{Q_f^{(h)} \left(K_s^{(h)}\right)^T}{\sqrt{D_k}}\right) V_s^{(h)}
-\end{align}
-
-Following the bidirectional multi-head projections, each pathway incorporates a residual skip connection and Layer Normalization ($\text{LN}$) to preserve domain information while integrating cross-domain context:
+The $192 \times 28 \times 28$ tensor is processed by four sequential convolutional blocks---$\text{Conv}_{3\times 3}(\text{pad}=1) \to \text{BatchNorm2d} \to \text{ReLU} \to \text{MaxPool}_{2\times 2}$---with exact channel progression $192 \to 64 \to 128 \to 256 \to 512$ (spatial maps $28\times 28 \to 14\times 14 \to 7\times 7 \to 3\times 3 \to 1\times 1$), followed by global average pooling to $\mathbf{h}_f \in \mathbb{R}^{512}$ and the 128-D bottleneck:
 \begin{equation}
-Z^{(1)}_s = \text{LN}\left(X_s + A_{s \to f}\right), \quad Z^{(1)}_f = \text{LN}\left(X_f + A_{f \to s}\right)
+\mathbf{x}_f = \operatorname{ReLU}\!\left(\mathbf{W}_{f,\text{proj}}\mathbf{h}_f + \mathbf{b}_{f,\text{proj}}\right) \in \mathbb{R}^{128},
+\label{eq:freq_embed}
 \end{equation}
-Each normalized representation is then transformed by a two-layer position-wise Feed-Forward Network ($\text{FFN}$) with an expanded hidden dimension $H = 512$ and dropout ($p = 0.1$), followed by a second residual connection and Layer Normalization:
-\begin{align}
-\text{FFN}_d\left(Z^{(1)}_d\right) &= W_{2,d} \cdot \text{ReLU}\left(W_{1,d} Z^{(1)}_d + b_{1,d}\right) + b_{2,d} \\
-Z_d &= \text{LN}\left(Z^{(1)}_d + \text{FFN}_d\left(Z^{(1)}_d\right)\right), \quad d \in \{s, f\}
-\end{align}
-where $W_{1,d} \in \mathbb{R}^{512 \times 128}$, $W_{2,d} \in \mathbb{R}^{128 \times 512}$, $b_{1,d} \in \mathbb{R}^{512}$, and $b_{2,d} \in \mathbb{R}^{128}$.
+where $\mathbf{W}_{f,\text{proj}} \in \mathbb{R}^{128 \times 512}$ and $\mathbf{b}_{f,\text{proj}} \in \mathbb{R}^{128}$. Including the Phase 1 temporary linear head ($128 \to 1$), the exact parameter count is $1,727,553$ (Table~\ref{tab:arch_params}).
 
-Finally, the refined domain representations $Z_s$ and $Z_f$ are concatenated into $[Z_s \parallel Z_f] \in \mathbb{R}^{1 \times 256}$ and passed through a three-layer Multi-Layer Perceptron (MLP) classification head to yield the scalar forgery logit $y \in \mathbb{R}$:
-\begin{align}
-X_{\text{fuse}} &= \text{ReLU}\left(W_{\text{fuse}} [Z_s \parallel Z_f] + b_{\text{fuse}}\right) \\
-X_{\text{cls}} &= \text{ReLU}\left(W_{\text{c1}} X_{\text{fuse}} + b_{\text{c1}}\right) \\
-y &= W_{\text{c2}} X_{\text{cls}} + b_{\text{c2}}
-\end{align}
-where $W_{\text{fuse}} \in \mathbb{R}^{128 \times 256}$, $b_{\text{fuse}} \in \mathbb{R}^{128}$, $W_{\text{c1}} \in \mathbb{R}^{64 \times 128}$, $b_{\text{c1}} \in \mathbb{R}^{64}$, $W_{\text{c2}} \in \mathbb{R}^{1 \times 64}$, and $b_{\text{c2}} \in \mathbb{R}^1$. Table \ref{tab:mha_architecture} reports the complete layer-by-layer specification and exact trainable parameter counts for the MHA fusion module.
-
-\subsubsection*{Mathematical Behavior of Cross-Attention with Single-Token Embeddings}
-It is essential from an architectural perspective to clarify the operational behavior of the cross-attention mechanism when applied to global pooled embeddings. In the present formulation, each domain expert produces a single global 128-dimensional latent vector ($X_s, X_f \in \mathbb{R}^{1 \times 128}$), meaning the input sequence length to the cross-attention block is $T = 1$. In each attention head $h$, the query $Q^{(h)}$ and key $K^{(h)}$ are vectors in $\mathbb{R}^{1 \times 32}$. Consequently, the scaled dot-product $\frac{Q^{(h)} (K^{(h)})^T}{\sqrt{D_k}}$ evaluates to a single scalar value.
-
-Under a sequence length of 1, the softmax normalization over keys operates on a single element:
+\subsection*{Phase 2: Sample-Dependent Multi-Token Attention (\texttt{MHA\_128}) and Matched Controls}
+\paragraph{Resolving Single-Token Softmax Degeneracy.}
+When scaled dot-product attention is applied to a single key token ($T=1$), $\operatorname{Softmax}\!\left(\mathbf{q}^\top\mathbf{k}/\sqrt{D_k}\right) = \exp(s)/\exp(s) = 1.0$ identically for every input sample, preventing competitive weighting across modalities. To achieve genuine sample-dependent weighting, \texttt{MHA\_128} (\texttt{TokenAttentionFusion}) constructs a three-token sequence $\mathbf{H}_0 \in \mathbb{R}^{3 \times D}$ ($D=128$, sequence length $L=3$) by prepending a learnable classification token $\mathbf{x}_{\text{cls}} \in \mathbb{R}^{1 \times D}$ to the layer-normalized spatial and frequency embeddings and adding learnable modality-type embeddings $\mathbf{E}_{\text{type}} \in \mathbb{R}^{3 \times D}$:
 \begin{equation}
-\text{Softmax}\left(\frac{Q^{(h)} (K^{(h)})^T}{\sqrt{D_k}}\right) = \frac{\exp(s)}{\exp(s)} = 1.0
+\mathbf{H}_0 = \begin{bmatrix} \mathbf{x}_{\text{cls}} \\ \operatorname{LN}_s(\mathbf{x}_s)^\top \\ \operatorname{LN}_f(\mathbf{x}_f)^\top \end{bmatrix} + \mathbf{E}_{\text{type}} \in \mathbb{R}^{3 \times 128}.
+\label{eq:token_seq}
 \end{equation}
-identically, regardless of the numerical value of the dot-product.
+Multi-head self-attention with $N_{\text{heads}}=4$ heads ($D_k = D/4 = 32$) computes per-head projections with explicit learnable biases:
+\begin{equation}
+\mathbf{Q}^{(h)} = \mathbf{H}_0 \mathbf{W}^{Q,(h)} + \mathbf{1}\mathbf{b}^{Q,(h)\top}, \quad
+\mathbf{K}^{(h)} = \mathbf{H}_0 \mathbf{W}^{K,(h)} + \mathbf{1}\mathbf{b}^{K,(h)\top}, \quad
+\mathbf{V}^{(h)} = \mathbf{H}_0 \mathbf{W}^{V,(h)} + \mathbf{1}\mathbf{b}^{V,(h)\top},
+\label{eq:qkv}
+\end{equation}
+where $\mathbf{W}^{Q,(h)},\mathbf{W}^{K,(h)},\mathbf{W}^{V,(h)} \in \mathbb{R}^{128 \times 32}$ and $\mathbf{b}^{Q,(h)},\mathbf{b}^{K,(h)},\mathbf{b}^{V,(h)} \in \mathbb{R}^{32}$. Because each query attends over $L=3$ distinct keys ($\{\text{CLS}, \text{RGB}, \text{Wavelet}\}$), the attention weights $\boldsymbol{\alpha}^{(h)} = \operatorname{Softmax}\!\left(\mathbf{Q}^{(h)}(\mathbf{K}^{(h)})^\top/\sqrt{D_k}\right) \in \mathbb{R}^{3 \times 3}$ vary strictly as a function of each input image:
+\begin{equation}
+\operatorname{MHA}(\mathbf{H}_0) = \operatorname{Concat}\!\left(\boldsymbol{\alpha}^{(1)}\mathbf{V}^{(1)}, \dots, \boldsymbol{\alpha}^{(4)}\mathbf{V}^{(4)}\right)\mathbf{W}^O + \mathbf{1}\mathbf{b}^{O\top}.
+\label{eq:mha_out}
+\end{equation}
+Standard pre-/post-residual Transformer blocks with LayerNorm and a GELU feed-forward network ($128 \to 512 \to 128$, dropout $p=0.2$) refine all three tokens, and the refined $[\text{CLS}]$ token produces the raw forgery logit $y \in \mathbb{R}$:
+\begin{align}
+\mathbf{H}_1 &= \operatorname{LN}_1\!\left(\mathbf{H}_0 + \operatorname{MHA}(\mathbf{H}_0)\right), \label{eq:res1}\\
+\mathbf{H}_2 &= \operatorname{LN}_2\!\left(\mathbf{H}_1 + \operatorname{FFN}(\mathbf{H}_1)\right), \label{eq:res2}\\
+\operatorname{FFN}(\mathbf{Z}) &= \operatorname{Drop}\!\left(\operatorname{Drop}\!\left(\operatorname{GELU}(\mathbf{Z}\mathbf{W}_1 + \mathbf{1}\mathbf{b}_1^\top)\right)\mathbf{W}_2 + \mathbf{1}\mathbf{b}_2^\top\right), \label{eq:ffn}\\
+y &= \mathbf{w}_{\text{cls}}^\top \mathbf{H}_{2,\text{cls}}^\top + b_{\text{cls}}. \label{eq:logit}
+\end{align}
 
-Therefore, with single-token inputs, the cross-attention operation does not perform competitive token selection, dynamic routing, or instance-dependent suppression across a sequence. Instead, each attention head mathematically reduces to an unweighted linear value projection $V^{(h)} = X W^V$, recombined through the output projection matrix $W^O$. The empirical utility of this block stems not from selective token routing, but from its subsequent structural transformations: multi-head projection into distinct 32-dimensional subspaces, residual summation with the input, Layer Normalization, and especially the position-wise Feed-Forward Network ($\text{FFN}: 128 \to 512 \to 128$) with intermediate non-linear channel expansion, dropout, and a second residual LayerNorm. This non-linear transformation provides the model with representational capacity beyond a simple linear concatenation layer, explaining its observed impact on calibration and ranking without invoking unverified claims of instance-level token selection.
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|l|c|r|}
-\hline
-\textbf{Module / Layer} & \textbf{Specifications} & \textbf{Output Shape} & \textbf{Trainable Parameters} \\ \hline
-Spatial Stream ($X_s$) & Wang2020-128 Backbone (Frozen) & $1 \times 128$ & — \\
-Frequency Stream ($X_f$) & Wolter2021-128 Backbone (Frozen) & $1 \times 128$ & — \\ \hline
-\textbf{Cross-Attention Blocks} & \multicolumn{3}{c|}{(Parallel spatial $s \to f$ and frequency $f \to s$ paths)} \\ \hline
-Multihead Attention ($A$) & $N_{\text{heads}}=4$, $D=128$, $D_k=32$, $\text{bias}=\text{True}$ & $1 \times 128$ & $2 \times 66{,}048 = 132{,}096$ \\
-LayerNorm 1 & $\text{features}=128$ & $1 \times 128$ & $2 \times 256 = 512$ \\
-Feed-Forward Network & $\text{Linear}(128 \to 512 \to 128)$, $\text{dropout}=0.1$ & $1 \times 128$ & $2 \times 131{,}712 = 263{,}424$ \\
-LayerNorm 2 & $\text{features}=128$ & $1 \times 128$ & $2 \times 256 = 512$ \\ \hline
-\textbf{Fusion \& Classification} & \multicolumn{3}{c|}{(Concatenation and MLP Classification Head)} \\ \hline
-Concatenation ($[Z_s \parallel Z_f]$) & Combine refined spatial and frequency tokens & $1 \times 256$ & — \\
-Linear Fusion & $\text{Linear}(256 \to 128)$, $\text{ReLU}$, $\text{dropout}=0.1$ & $1 \times 128$ & $32{,}896$ \\
-Classification FC1 & $\text{Linear}(128 \to 64)$, $\text{ReLU}$, $\text{dropout}=0.1$ & $1 \times 64$ & $8{,}256$ \\
-Classification FC2 & $\text{Linear}(64 \to 1)$ & $1 \times 1$ & $65$ \\ \hline
-\textbf{Total Trainable Core} & \multicolumn{2}{l|}{MHA Fusion Classifier Module} & \textbf{437,761} \\ \hline
-\end{tabular}
-\caption{\label{tab:mha_architecture}Detailed architectural specifications and layer-by-layer trainable parameter counts for the proposed Multi-Head Attention (MHA) fusion model.}
-\end{table}
-
-\subsection*{Model Complexity, Computational Footprint, and Parameter Efficiency}
-Because full inference requires executing both the spatial expert and the frequency expert before fusing their embeddings, quantifying computational overhead is essential. Table \ref{tab:parameter_counts} summarizes the parameter counts, FP32 model memory footprints, theoretical floating-point operations (GFLOPs per $224 \times 224$ image), and average single-image inference latency measured on an NVIDIA T4 GPU (16\,GB VRAM, batch size 1).
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|l|r|r|r|r|}
-\hline
-\textbf{Model Component} & \textbf{Architecture Base} & \textbf{Parameters} & \textbf{Size (MB)} & \textbf{GFLOPs} & \textbf{Latency (ms)} \\ \hline
-Spatial Expert (\texttt{Wang2020\_128}) & ResNet-50 + 128-D Proj. & 23,770,433 & 90.68 & 4.120 & 8.4 \\
-Frequency Expert (\texttt{Wolter2021\_128}) & 3-Level WPD + CNN + 128-D & 1,727,553 & 6.59 & 0.480 & 4.1 \\
-Simple Fusion Head (\texttt{Fusion\_128}) & Concatenation + MLP & 107,009 & 0.41 & 0.0002 & 0.3 \\
-Proposed MHA Head (\texttt{MHA\_128}) & Dual Cross-Attention + MLP & 437,761 & 1.67 & 0.0009 & 0.6 \\ \hline
-\textbf{Full Dual-Stream MHA Pipeline} & \textbf{Both Experts + MHA Head} & \textbf{25,935,747} & \textbf{98.94} & \textbf{4.601} & \textbf{13.1} \\ \hline
-\end{tabular}
-\caption{\label{tab:parameter_counts}Computational footprint comparison across sub-model experts, fusion heads, and the complete end-to-end dual-stream MHA pipeline ($224 \times 224$ input resolution, FP32 precision on NVIDIA T4 GPU).}
-\end{table}
-
-As shown in Table \ref{tab:parameter_counts}, the modified \texttt{Wolter2021\_128} wavelet expert requires only 1.73M parameters (6.59\,MB) and 0.480 GFLOPs---representing just 7.3\% of the parameter count and 11.7\% of the FLOPs of the ResNet-50 spatial backbone. Furthermore, the \texttt{MHA\_128} fusion head adds only 0.44M parameters (1.67\,MB) and less than 0.001 GFLOPs (0.6\,ms latency). Consequently, the complete dual-stream MHA pipeline operates at 4.601 GFLOPs and 13.1\,ms per image ($\sim 76$ FPS sequential execution, or $\sim 9.0$\,ms when the two independent expert streams are executed concurrently across parallel CUDA streams), making multi-domain fusion practical without duplicating heavy spatial backbones.
-
-\subsection*{Architectural Modularity and Multi-Expert Extensibility}
-While our primary configuration pairs two domain experts (spatial RGB and wavelet packet frequency), the architecture is designed for modularity. In a static concatenation model (\texttt{Fusion\_128}), adding a third forensic stream alters the input dimensionality of the classification head, requiring retraining of the entire classifier. Within the proposed framework, alternative or additional forensic backbones can be independently trained with a standardized 128-dimensional bottleneck, frozen, and evaluated within the fusion pipeline, enabling modular integration of complementary forensic specialists.
-
-\section*{Dataset Provenance, Partitioning, and Preprocessing}
-
-\subsection*{Multi-Source Dataset Composition and Benchmark Scope}
-To evaluate detection across both GAN-based facial manipulations and diffusion-generated imagery, we compiled a multi-source dataset totaling 1,016,855 facial images: 263,953 authentic (Real) images and 752,902 synthetic (Fake) images (Table \ref{tab:dataset_splits}). Authentic facial images were primarily sourced from the CelebA dataset \cite{ref36}, supplemented by pristine real video frames from FaceForensics++ \cite{ref12}, FakeAVCeleb \cite{ref11}, and Celeb-DF \cite{ref37}. Synthetic samples encompass two major generative paradigms:
+\paragraph{Explicit Sample-Dependent Gating and Capacity-Matched Structural Controls.}
+To strictly disentangle attention routing from parameter capacity and feed-forward refinement, we evaluate five controlled alternatives on the exact same frozen $(\mathbf{x}_s, \mathbf{x}_f)$ embeddings (Table~\ref{tab:arch_params}):
 \begin{enumerate}
-    \item \textbf{Diffusion-Generated Imagery (120,000 samples):} Sourced from public Zenodo diffusion forensics repositories \cite{ref9, ref10, ref21}, comprising four distinct diffusion architectures---Ablated Diffusion Model (ADM) \cite{ref3}, Denoising Diffusion Probabilistic Models (DDPM) \cite{ref1}, Denoising Diffusion Implicit Models (DDIM) \cite{ref2}, and 3D-aware masked diffusion face swapping (DiffSwap) \cite{ref16}---contributing 30,000 images per generator.
-    \item \textbf{GAN and Autoencoder Facial Manipulations (632,902 samples):} Extracted from FaceForensics++ (Deepfakes, FaceSwap, Face2Face, and NeuralTextures) \cite{ref12, ref18}, FakeAVCeleb \cite{ref11}, and Celeb-DF \cite{ref37}, representing diverse identity-swapping and expression-reenactment pipelines \cite{ref13, ref17, ref19, ref20, ref22, ref23}.
+    \item \textbf{\texttt{GatedFusion} (41,987 params):} Computes sample-dependent softmax modality weights $\mathbf{g} = \operatorname{Softmax}\!\left(\operatorname{MLP}_{\text{gate}}([\operatorname{LN}_s(\mathbf{x}_s)\,\|\,\operatorname{LN}_f(\mathbf{x}_f)])\right) \in \Delta^1$, forms $\mathbf{z} = g_s \operatorname{LN}_s(\mathbf{x}_s) + g_f \operatorname{LN}_f(\mathbf{x}_f)$, and classifies via $128 \to 64 \to 1$.
+    \item \textbf{\texttt{ConcatMatchedMLP} (198,017 params; $0.993\times$ of \texttt{MHA\_128}):} Pure-MLP concatenation control $\operatorname{LN}_s(\mathbf{x}_s)\|\operatorname{LN}_f(\mathbf{x}_f) \to 384 \to 256 \to 1$ with GELU and dropout.
+    \item \textbf{\texttt{NoAttnFFN} (198,657 params; $0.996\times$):} Direct single-direction affine projection $\mathbf{z} = \mathbf{W}[\operatorname{LN}_s(\mathbf{x}_s)\,\|\,\operatorname{LN}_f(\mathbf{x}_f)] + \mathbf{b}$ ($\text{Linear}(256\to 128)$) followed by a capacity-matched residual FFN ($128 \to 640 \to 128$) without attention.
+    \item \textbf{\texttt{LinearMix} (198,785 params; $0.997\times$):} Fixed linear cross-mixing ($\mathbf{r}_{\text{mix}} = \mathbf{r} + \mathbf{W}_w \mathbf{w}$, $\mathbf{w}_{\text{mix}} = \mathbf{w} + \mathbf{W}_r \mathbf{r}$) without softmax, projected $256 \to 128$ into an identical $128 \to 512 \to 128$ FFN.
+    \item \textbf{\texttt{Fusion\_128} (107,009 params):} Original static concatenation MLP ($256 \to 256 \to 128 \to 64 \to 1$) retained for longitudinal continuity.
 \end{enumerate}
 
-To prevent identity leakage, background memorization, or near-duplicate frame contamination between splits, dataset partitioning was executed strictly at the \textbf{source-video and subject-identity level} prior to frame extraction. Specifically, all video sequences in FaceForensics++, FakeAVCeleb, and Celeb-DF were partitioned by source video ID and actor identity (80\% training videos, 20\% validation videos), and CelebA/Zenodo samples were partitioned by unique subject identity ID. Consequently, 805,421 images (211,188 real and 594,233 fake) form the Training split, and 211,434 images (52,765 real and 158,669 fake) form the held-out Validation split, with zero identity or video overlap between partitions.
-
-\begin{table}[htbp]
+\begin{table}[tbp]
 \centering
-\begin{tabular}{|l|c|c|r|}
-\hline
-\textbf{Partition Split} & \textbf{Real Images (Authentic)} & \textbf{Fake Images (GAN + Diffusion)} & \textbf{Total Images} \\ \hline
-Training ($80\%$)   & 211,188 & 594,233 & 805,421 \\
-Validation ($20\%$) & 52,765  & 158,669 & 211,434 \\ \hline
-\textbf{Total}      & \textbf{263,953} & \textbf{752,902} & \textbf{1,016,855} \\ \hline
+\caption{Exact component-level and layer-by-layer parameter specifications (224$\times$224 input). Adopted trunks are explicitly separated from newly introduced bottleneck and fusion modules.}
+\label{tab:arch_params}
+\small
+\begin{tabular}{@{}llrr@{}}
+\toprule
+\textbf{Module / Component} & \textbf{Exact Layer Specification} & \textbf{Output Shape} & \textbf{Parameters} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Phase 1: Spatial Expert (\texttt{Wang2020\_128}) — Frozen in Phase 2}} \\
+ResNet-50 Trunk (adopted \cite{ref4}) & Conv1 + Layers 1--4 + GlobalAvgPool & $1 \times 2048$ & 23,508,032 \\
+128-D Bottleneck (new) & $\text{Linear}(2048\to 128) + \text{ReLU} + \text{Drop}(0.5)$ & $1 \times 128$ & 262,272 \\
+Phase-1 Temp Head (discarded) & $\text{Linear}(128\to 1)$ & $1 \times 1$ & 129 \\
+\textbf{Subtotal \texttt{Wang2020\_128}} & & & \textbf{23,770,433} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Phase 1: Frequency Expert (\texttt{Wolter2021\_128}) — Frozen in Phase 2}} \\
+3-Level Haar WPD (GPU, new) & \texttt{db1}, reflect pad, $\text{signed\_log1p}$ & $192 \times 28 \times 28$ & 0 \\
+Conv Block 1 (adopted \cite{ref8}) & $\text{Conv}_{3\times 3}(192\to 64)+\text{BN}+\text{ReLU}+\text{Pool}_{2\times 2}$ & $64 \times 14 \times 14$ & 110,784 \\
+Conv Block 2 (adopted \cite{ref8}) & $\text{Conv}_{3\times 3}(64\to 128)+\text{BN}+\text{ReLU}+\text{Pool}_{2\times 2}$ & $128 \times 7 \times 7$ & 74,112 \\
+Conv Block 3 (adopted \cite{ref8}) & $\text{Conv}_{3\times 3}(128\to 256)+\text{BN}+\text{ReLU}+\text{Pool}_{2\times 2}$ & $256 \times 3 \times 3$ & 295,680 \\
+Conv Block 4 + GAP (adopted \cite{ref8}) & $\text{Conv}_{3\times 3}(256\to 512)+\text{BN}+\text{ReLU}+\text{Pool}+\text{GAP}$ & $1 \times 512$ & 1,181,184 \\
+128-D Bottleneck + Temp Head (new) & $\text{Linear}(512\to 128)+\text{ReLU}+\text{Drop}(0.5)+\text{Linear}(128\to 1)$ & $1 \times 128$ & 65,793 \\
+\textbf{Subtotal \texttt{Wolter2021\_128}} & & & \textbf{1,727,553} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Phase 2: Proposed \texttt{MHA\_128} (\texttt{TokenAttentionFusion}) — Trainable Core}} \\
+Input Norms + Tokens & $\text{LN}_s(128), \text{LN}_f(128), \mathbf{x}_{\text{cls}}(1\times 128), \mathbf{E}_{\text{type}}(3\times 128)$ & $3 \times 128$ & 1,024 \\
+4-Head Self-Attention & $N_{\text{heads}}=4, D_k=32, L=3$, bias=True & $3 \times 128$ & 66,048 \\
+Residual LN1 + FFN + LN2 & $\text{LN}(128) + \text{Linear}(128\to 512\to 128, \text{GELU}) + \text{LN}(128)$ & $3 \times 128$ & 132,224 \\
+Classification Head & Extract $[\text{CLS}] \to \text{Linear}(128\to 1)$ & $1 \times 1$ & 129 \\
+\textbf{Total Trainable \texttt{MHA\_128}} & \textit{(Full dual-stream total: 25,697,153 excl.\ temp heads)} & & \textbf{199,425} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Phase 2: Controlled Fusion Baselines (Exact Parameter Counts)}} \\
+\texttt{ConcatMatchedMLP} & $\text{LN}_s\|\text{LN}_f \to 384 \to 256 \to 1$ (GELU, Drop 0.2) & $1 \times 1$ & 198,017 \\
+\texttt{NoAttnFFN} & $\text{Proj}(256\to 128) + \text{ResFFN}(128\to 640\to 128) \to 1$ & $1 \times 1$ & 198,657 \\
+\texttt{LinearMix} & Linear cross-mix $(128\to 128) + \text{FFN}(128\to 512\to 128) \to 1$ & $1 \times 1$ & 198,785 \\
+\texttt{GatedFusion} & $\text{Gate}(256\to 128\to 2) + \text{MLP}(128\to 64\to 1)$ & $1 \times 1$ & 41,987 \\
+\texttt{Fusion\_128} (Original) & $\text{Concat}(256) \to 256 \to 128 \to 64 \to 1$ & $1 \times 1$ & 107,009 \\
+\bottomrule
 \end{tabular}
-\caption{\label{tab:dataset_splits}Authoritative dataset distribution across Real and Fake (synthetic) classes under strict video-level and identity-level 80/20 partitioning.}
 \end{table}
 
-We clarify that this benchmark protocol constitutes a \textbf{within-benchmark multi-generator evaluation}: both the training and validation partitions draw from the same underlying set of datasets and generator families. It is not a leave-one-generator-out or cross-dataset protocol, and conclusions drawn from these experiments must be understood within this specified evaluation scope.
+\section*{Dataset Curation, Cross-Fitted Partitioning, and Forensic Preprocessing}
 
-\subsection*{Batch-Level Class Balancing Strategy}
-Because the aggregated training partition exhibits an approximate 1:2.81 real-to-synthetic class ratio (211,188 real vs.\ 594,233 fake samples), naive uniform sampling would bias the classifier toward the majority synthetic class. To address class imbalance during optimization, we employ batch-level inverse-frequency weighted random sampling with replacement via PyTorch's \texttt{WeightedRandomSampler}. For each class $c \in \{\text{Real}, \text{Fake}\}$ containing $N_c$ training samples, the per-sample selection weight $w_c$ is defined as:
-\begin{equation}
-w_c = \frac{1}{N_c}
-\end{equation}
-Drawing mini-batches of size 32 with probability proportional to $w_c$ adjusts the sampling rate so that every training mini-batch maintains an expected 1:1 class balance. Meanwhile, the held-out validation set ($n=211{,}434$) is evaluated without resampling to reflect its natural test distribution, and both threshold-dependent metrics (Accuracy, class-wise Precision/Recall/F1) and threshold-independent metrics (ROC-AUC, EER) are reported.
+\subsection*{Eliminating Source-Pipeline Shortcuts (\texttt{DatasetMultiDomainClean\_v2})}
+A critical audit of our earlier benchmark revealed that relying primarily on CelebA still JPEGs for the authentic class against PNG diffusion outputs creates low-level resolution and compression shortcuts. To eliminate acquisition shortcuts and expand coverage to modern latent-diffusion architectures, we curated \texttt{DatasetMultiDomainClean\_v2} (detailed in Table~\ref{tab:contingency}) comprising \textbf{556,082 verified intact facial images} (all verified via \texttt{PIL.Image.load()}, center-square-cropped, and bicubically standardized to $256\times 256$):
+\begin{itemize}
+    \item \textbf{Authentic Class (278,041 images across 4 native high-resolution datasets):} FairFace \cite{ref46} (86,744 train PNG + 9,430 val PNG), CelebA \cite{ref36} (80,000 train JPG + 20,000 val JPG), FFHQ-256 \cite{ref47} (56,000 train PNG + 14,000 val PNG), and UTKFace \cite{ref48} (11,867 train PNG). In training, 65.9\% of authentic images are native PNGs and 34.1\% are JPEGs, eliminating binary codec separation.
+    \item \textbf{Synthetic Class (278,041 images across 15 generators):} Four pixel-diffusion/swap repositories from Zenodo \cite{ref9,ref10} (ADM \cite{ref3}, DDPM \cite{ref1}, DDIM \cite{ref2}, DiffSwap \cite{ref16}; 20,000 train / 5,000 val each) plus eleven extended editing, face-swapping, image-to-image, and text-to-image diffusion generators (CoDiff, cycle\_diff, DCFace, DiffFace \cite{ref21}, DreamBooth, FreeDoM\_I, FreeDoM\_T, HPS, LoRA, SDXL, SDXL\_Refine; capped at 15,000 train / 2,500 val each via identity-stratified sampling). Global cross-generator identity disjointness and zero overlap with external test sets were verified programmatically (\texttt{fake\_identity\_overlap = 0}, \texttt{real\_identity\_overlap = 0}).
+\end{itemize}
 
-\subsection*{Frame Extraction Stride and Temporal Redundancy Control}
-For video-based repositories (FaceForensics++, FakeAVCeleb, and Celeb-DF), frames were extracted at a uniform rate of 10 frames per second (FPS), followed by automated face detection, bounding-box cropping, and bilinear resizing to $224 \times 224$ pixels. While a 10 FPS sampling rate introduces correlation among adjacent frames within a single video clip, this temporal density captures transient synthesis failures that occur during rapid facial motion, such as eye blinks, phoneme transitions, and head rotations. Because all splits were enforced strictly at the video and identity level prior to frame extraction, frames from any training video never appear in the validation split, ensuring that temporal density within training videos cannot leak into validation metrics.
-
-\subsection*{Forensic Data Augmentation Pipeline}
-To discourage the experts from memorizing fragile, uncompressed pixel patterns, dynamic training-time augmentations were applied exclusively to the Training split:
-\begin{description}
-\item[Gaussian Blur] Applied with probability $p = 0.5$, where the kernel standard deviation $\sigma$ is sampled uniformly from $\sigma \sim \mathcal{U}(0.0, 3.0)$ to simulate spatial smoothing and defocus degradation.
-\item[Dynamic JPEG Compression] Applied with probability $p = 0.5$ during training, randomly selecting between OpenCV and Pillow compression engines at discrete quality factors $Q \in \{30, 75\}$ to simulate lossy social-media transcoding. During deterministic validation preprocessing, input crops are standardized at quality factor $Q = 75$ after resizing from $256 \times 256$ to $224 \times 224$ pixels via bilinear interpolation.
-\end{description}
-
-\subsection*{Ethical, Privacy, and Demographic Fairness Scope}
-All datasets analyzed in this work (CelebA \cite{ref36}, FaceForensics++ \cite{ref12}, FakeAVCeleb \cite{ref11}, Celeb-DF \cite{ref37}, and Zenodo DiffFace \cite{ref9, ref10}) were accessed under their official academic licenses. No private user data or non-public personally identifiable information (PII) was collected. Furthermore, to respect subject privacy and copyright compliance in publication, all sample facial illustrations displayed in the architectural and explainability figures (Figures \ref{fig:fig1_Wang2020_modified_128D}, \ref{fig:fig2_WolterWaveletesWolter2021_modified_128D}, \ref{fig:fig3_WholeArch}, and \ref{fig:fig8_GradCam_Fake_Image_DiffusionModel_Detected_ADM}) depict purely synthetic, non-existent AI-generated identities produced by StyleGAN (\texttt{ThisPersonDoesNotExist.com}) or ADM diffusion synthesis, rather than recognizable human individuals.
-
-Regarding algorithmic fairness, deepfake detectors risk exhibiting disparate false-positive or false-negative rates across demographic subgroups (age, gender, ethnicity, and skin tone) if training distributions are unbalanced. Because several constituent benchmarks (such as FaceForensics++ and Zenodo diffusion subsets) do not provide verified ground-truth demographic annotations for all 1.01M frames---and assigning automated proxy labels introduces secondary classifier bias---subgroup fairness metrics could not be reliably stratified in the current study. We explicitly highlight demographic fairness auditing on annotated benchmarks (such as FakeAVCeleb and AI Foundation fairness sets) as an essential prerequisite prior to real-world deployment.
-
-\section*{Staged Training Protocol and Parameter Decoupling}
-
-\subsection*{Methodological Justification for Staged Decoupling}
-Training a multi-branch network end-to-end from scratch often leads to modality dominance, where the faster-converging spatial ResNet-50 stream dominates gradient updates and prevents the frequency branch from learning independent spectral descriptors. To prevent cross-domain co-adaptation and representation drift, we enforce a strict two-stage decoupling strategy: domain experts are first trained independently to convergence to form specialized 128-dimensional embeddings, and their parameters are subsequently frozen during Phase 2 MHA optimization. Because the attention module cannot alter the underlying ResNet-50 or WaveletPacketCNN weights, it is forced to learn integration representations that reconcile discrepancies between spatial and spectral cues.
-
-\subsection*{Staged Protocol Execution and Leakage Prevention}
-To eliminate risk of validation overlap or data contamination across training phases, all models adhere to a unified, strictly partitioned protocol across the 80/20 video- and identity-level dataset split (Table \ref{tab:training_summary}):
-\begin{description}
-\item[Phase 1: Independent Sub-Model Representation Learning] The spatial expert (\texttt{Wang2020\_128}) and frequency expert (\texttt{Wolter2021\_128}) are trained independently end-to-end (all backbone and 128-D projection parameters unfrozen) exclusively on the 80\% Training partition (805,421 images). Model selection and early stopping are monitored on the held-out 20\% Validation partition (211,434 images).
-\item[Phase 2: Frozen-Backbone MHA Fusion Training] After Phase 1 convergence, the temporary binary classification heads of both experts are removed and all expert weights (including their 128-D projection layers) are permanently frozen. The \texttt{MHA\_128} fusion core (and the baseline \texttt{Fusion\_128} concatenation head) are trained exclusively on the exact same 80\% Training partition (805,421 images), ensuring that no validation samples are ever used to update either backbone or fusion parameters.
-\item[Phase 3: Held-Out Evaluation and Modularity Verification] Final quantitative metrics, multi-seed variance analyses, FGSM adversarial stress tests, and modularity experiments incorporating retrained \texttt{Xception\_128} and \texttt{ConvNeXt\_128} backbones are evaluated purely in inference mode on the held-out 20\% Validation partition (211,434 images).
-\end{description}
-
-\begin{table}[htbp]
+\begin{table}[tbp]
 \centering
-\begin{tabular}{|l|l|l|l|}
-\hline
-\textbf{Phase} & \textbf{Component} & \textbf{Parameter State} & \textbf{Dataset Partition Used} \\ \hline
-Phase 1 & Spatial RGB Expert (\texttt{Wang2020\_128}) & Unfrozen (End-to-End) & 80\% Train Split ($n=805{,}421$) \\ \hline
-Phase 1 & Frequency Expert (\texttt{Wolter2021\_128}) & Unfrozen (End-to-End) & 80\% Train Split ($n=805{,}421$) \\ \hline
-Phase 2 & Spatial \& Frequency Experts & \textbf{Strictly Frozen} & 80\% Train Split (Feature Extraction Only) \\ \hline
-Phase 2 & MHA Fusion Module (\texttt{MHA\_128}) & Unfrozen (Trained) & 80\% Train Split ($n=805{,}421$) \\ \hline
-Phase 3 & Complete Dual-Stream Pipeline & \textbf{Strictly Frozen} (Inference) & Held-Out 20\% Val Split ($n=211{,}434$) \\ \hline
+\caption{Complete source-by-class contingency table for \texttt{DatasetMultiDomainClean\_v2} (556,082 verified images total: 278,041 Authentic + 278,041 Synthetic) and external completely unseen evaluation benchmarks. *The 30,000 training images from the two LOGO-held-out generators (\texttt{SDXL\_Refine}: 15,000; \texttt{DiffFace}: 15,000) are quarantined from Phase 1 and Phase 2 training, leaving $234,611 + 204,611 = 439,222$ active training images ($526,082$ active train+val images $+ 30,000$ quarantined LOGO train images $= 556,082$).}
+\label{tab:contingency}
+\small
+\begin{tabular}{@{}lllrrr@{}}
+\toprule
+\textbf{Class} & \textbf{Source / Generator} & \textbf{Format} & \textbf{Train Pool} & \textbf{Val Pool} & \textbf{Role in Protocol} \\
+\midrule
+Authentic (0) & FairFace \cite{ref46} & PNG & 86,744 & 9,430 & Phase 1 Train / Phase 2--3 Val \\
+Authentic (0) & CelebA \cite{ref36} & JPG & 80,000 & 20,000 & Phase 1 Train / Phase 2--3 Val \\
+Authentic (0) & FFHQ-256 \cite{ref47} & PNG & 56,000 & 14,000 & Phase 1 Train / Phase 2--3 Val \\
+Authentic (0) & UTKFace \cite{ref48} & PNG & 11,867 & 0 & Phase 1 Train only \\
+\textbf{Total Authentic} & \textbf{4 sources} & \textbf{66\% PNG / 34\% JPG} & \textbf{234,611} & \textbf{43,430} & \textbf{278,041 total (50.0\%)} \\
+\midrule
+Synthetic (1) & ADM, DDPM, DDIM, DiffSwap (4$\times$20K/5K) & PNG & 80,000 & 20,000 & Seen (Phase 1--3) \\
+Synthetic (1) & CoDiff, cycle\_diff, DCFace, DreamBooth, HPS, SDXL (6$\times$15K/2.5K) & PNG & 90,000 & 15,000 & Seen (Phase 1--3) \\
+Synthetic (1) & FreeDoM\_I (12,434/1,718), FreeDoM\_T (13,776/1,912), LoRA (8,401/1,148) & PNG & 34,611 & 4,778 & Seen (Phase 1--3) \\
+Synthetic (1) & \textbf{SDXL\_Refine} (I2I Latent Diffusion; 15K train quarantined) & PNG & \textit{0 (excl.)} & 2,500 & \textbf{LOGO Unseen Test} \\
+Synthetic (1) & \textbf{DiffFace} \cite{ref21} (Diffusion Face Swap; 15K train quarantined) & PNG & \textit{0 (excl.)} & 1,152 & \textbf{LOGO Unseen Test} \\
+\textbf{Total Synthetic} & \textbf{15 generators (13 seen + 2 LOGO)} & \textbf{100\% PNG} & \textbf{204,611*} & \textbf{43,430} & \textit{*excl.\ 30,000 LOGO train} \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Completely Untouched External Cross-Domain Benchmarks (Zero Images in Phase 1 or Phase 2)}} \\
+Authentic (0) & LFW \cite{ref49} (Real-world camera photographs) & JPG & 0 & 1,000 & Unseen Real Reference \\
+Synthetic (1) & Unseen LDM (Latent Diffusion) & PNG & 0 & 1,000 & Unseen External Diffusion \\
+Synthetic (1) & Unseen StyleGAN (140k Real-and-Fake Faces; \textbf{0 GANs in train}) & JPG & 0 & 1,000 & Extreme Cross-Paradigm Test \\
+\bottomrule
 \end{tabular}
-\caption{Summary of the staged training and evaluation protocol, detailing parameter freezing states and strict partition isolation across Phase 1, Phase 2, and Phase 3.}
-\label{tab:training_summary}
 \end{table}
+
+\subsection*{Strict Three-Way Cross-Fitted Staged Protocol and Forensic Augmentation}
+To eliminate both validation-selection optimism and producer--consumer overfitting (where a fusion head trained on Phase 1 training embeddings sees memorized expert predictions rather than true out-of-sample error distributions), we enforce strict partition isolation across three stages. All dataset-provided aligned facial crops are resized directly via bilinear interpolation to $224 \times 224$ without external face re-detection or additional cropping:
+\begin{enumerate}
+    \item \textbf{Phase 1 (Base Experts):} \texttt{Wang2020\_128} (AdamW, $\text{lr}=2\times 10^{-4}$, weight decay $10^{-2}$, 5-epoch cosine schedule with best held-out validation checkpoint selected at epoch 1, label smoothing $s=0.05$, batch size 128, BF16 AMP on NVIDIA L4) and \texttt{Wolter2021\_128} (Adam, $\text{lr}=5\times 10^{-4}$, weight decay $10^{-4}$, 5-epoch cosine schedule, batch size 128) are trained independently on the 439,222 active LOGO training images (234,611 real + 204,611 fake across 13 seen generators) with symmetric forensic augmentations applied equally to both classes: dynamic JPEG compression ($p=0.8$, $Q\in\{50,60,70,75,80,85,90,95\}$, OpenCV/Pillow), Gaussian blur ($p=0.35$, $\sigma\in[0.1,2.0]$), and bilinear downscale-upscale resampling ($p=0.35$, scale $\in[0.55,1.0]$).
+    \item \textbf{Phase 2 (Out-of-Sample Cross-Fitted Fusion Training):} Using the 83,208 seen-validation images that \textbf{neither expert ever trained on} (excluding LOGO generators \texttt{SDXL\_Refine} and \texttt{DiffFace}), we perform an identity-grouped stratified 70\% / 15\% / 15\% split into \texttt{fusion\_train} ($n=58,103$: 30,401 real across CelebA/FairFace/FFHQ + 27,702 fake across all 13 seen generators), \texttt{fusion\_dev} ($n=12,376$: strictly for checkpoint selection), and untouched \texttt{seen\_test} ($n=12,729$). Fusion heads are trained for 25 epochs (AdamW, $\text{lr}=3\times 10^{-4}$, weight decay $10^{-3}$, cosine schedule, label smoothing $s=0.05$, modality dropout $p=0.15$) on clean plus forensic-augmented views of \texttt{fusion\_train} across four independent seeds $\{42,100,2024,3407\}$.
+    \item \textbf{Phase 3 (Untouched Evaluation):} All final numbers are computed programmatically from saved prediction logits at fixed uncalibrated threshold $\tau = 0.0$ ($p=0.5$)---zero target-domain threshold tuning---on (a) untouched \texttt{seen\_test} ($n=12,729$), (b) strictly native PNG-only reals vs.\ PNG fakes ($n=9,729$), and (c) four photorealistic unseen cross-domain pairs (1,000 LFW camera reals vs.\ 1,000 unseen LDM, SDXL\_Refine, DiffFace, and StyleGAN fakes) evaluated both RAW and under identical JPEG $Q=85$ recompression to eliminate file-format cues.
+\end{enumerate}
 
 \section*{Experimental Results and Analysis}
 
-\subsection*{Training Convergence Dynamics}
+\subsection*{Held-Out Multi-Generator Performance, Calibration, and Convergence (\texttt{seen\_test}, $n=12,729$)}
+Figure~\ref{fig:convergence} shows both training and validation (\texttt{fusion\_dev}) loss and ROC-AUC curves over 25 epochs. Cross-fitting eliminates overfitting: the mean train--dev ROC-AUC gap is negligible ($-0.00055$ for \texttt{MHA\_128}, $-0.00051$ for \texttt{ConcatMatchedMLP}, $-0.00056$ for \texttt{GatedFusion}). Note that training BCE loss ($\approx 0.235$) intentionally sits above clean validation BCE loss ($\approx 0.070$)---and clean \texttt{fusion\_dev} AUC slightly exceeds training AUC---because \texttt{fusion\_train} applies label smoothing ($s=0.05$, imposing a theoretical cross-entropy floor of $\approx 0.199$), modality dropout ($p=0.15$), and forensic augmentations during optimization, whereas \texttt{fusion\_dev} is evaluated cleanly on unperturbed hard $\{0,1\}$ targets. Notably, \texttt{MHA\_128} exhibits the lowest and smoothest validation BCE loss ($\approx 0.068$ vs.\ $\approx 0.075$) and the highest validation AUC stability, whereas \texttt{ConcatMatchedMLP} shows larger validation AUC oscillations.
 
-\subsubsection*{Modified Spatial Expert (Wang2020\_128) Convergence}
-\begin{figure}[htbp]
+\begin{figure}[tbp]
 \centering
-\includegraphics[width=\linewidth]{fig4_Wang_Modified.jpg}
-\caption{Training loss and online validation convergence profiles for the modified spatial-domain model (\texttt{Wang2020\_128}).}
-\label{fig:fig4_Wang_Modified}
-\end{figure}
-As shown in Figure \ref{fig:fig4_Wang_Modified}, the modified \texttt{Wang2020\_128} spatial expert was trained using the Adam optimizer ($\beta_1 = 0.9$, learning rate $10^{-3}$, batch size 32, logged every 400 iterations). During online training batches, validation precision approaches 99\% and online validation accuracy stabilizes near 98.2\% (reaching 98.73\% upon full deterministic checkpoint evaluation across the complete 211,434-image validation split). The training loss converges near $10^{-3}$ with mild stochastic oscillations attributable to heavy dropout ($p=0.5$) and dynamic Gaussian blur/JPEG augmentation.
-
-\subsubsection*{Modified Frequency Expert (Wolter2021\_128) Convergence}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\linewidth]{fig5_Wolter_Modified}
-\caption{Training loss and online validation convergence profiles for the modified wavelet-packet frequency model (\texttt{Wolter2021\_128}).}
-\label{fig:fig5_Wolter_Modified}
-\end{figure}
-Figure \ref{fig:fig5_Wolter_Modified} illustrates the training dynamics of the \texttt{Wolter2021\_128} wavelet packet expert, optimized via Adam ($\beta_1 = 0.9$, learning rate $10^{-4}$, batch size 32, logged every 400 iterations). Online validation precision and accuracy reach approximately 96.8\% and 94.6\% during training, converging to a deterministic validation accuracy of 95.42\% at the best saved checkpoint.
-
-\subsubsection*{Bidirectional Multi-Head Attention Fusion (MHA\_128) Convergence}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\linewidth]{fig6_MHA_Modified.png}
-\caption{Training loss and validation convergence profiles for the proposed Bidirectional Multi-Head Attention fusion model (\texttt{MHA\_128}). Note that in the Average Precision (AP) subplot, the vertical axis is zoomed into the narrow interval $[0.99835, 0.99845]$, so the apparent visual slope represents a negligible variation of less than $0.005\%$.}
-\label{fig:fig6_MHA_Modified}
-\end{figure}
-As depicted in Figure \ref{fig:fig6_MHA_Modified}, the \texttt{MHA\_128} fusion core was trained on the frozen expert embeddings using Adam ($\beta_1 = 0.9$, learning rate $10^{-3}$, normal weight initialization with gain $0.02$, batch size 32). Validation accuracy rapidly converges to 98.82\% and precision reaches $\sim 99\%$, while training loss stabilizes near $10^{-4}$. In the Average Precision (AP) subplot of Figure \ref{fig:fig6_MHA_Modified}, the vertical axis is scaled to a narrow high-performance band ($\sim 0.9984$), representing less than $0.005\%$ fluctuation around the converged AP value.
-
-\subsection*{Held-Out Evaluation of Individual Domain Experts}
-
-\subsubsection*{Modified Spatial Expert (Wang2020\_128) Evaluation}
-Table \ref{tab:wangModelModQuant} and Table \ref{tab:wangModClassWise} summarize the held-out validation performance of the modified spatial expert. Across the 211,434 validation images, the model achieves 98.20\% online milestone accuracy (and 98.73\% final deterministic evaluation accuracy in Table \ref{tab:model_comparison}), a ROC-AUC of 0.9987, an Average Precision (AP) of 0.9977, an Equal Error Rate (EER) of 1.54\%, and a macro F1-score of 0.9796. On the 52,765 real images, 51,472 are correctly classified (1,293 false positives; Real recall = 0.9755, precision = 0.9838, F1 = 0.9796). On the 158,669 synthetic images, 157,511 are correctly identified (1,158 false negatives; Fake recall = 0.9927, precision = 0.9889, F1 = 0.9908).
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|c|}
-\hline
-\textbf{Metric} & \textbf{Value} \\
-\hline
-Accuracy (Milestone / Final Converged) & 98.20\% / 98.73\% \\
-ROC AUC & 0.9987 \\
-Average Precision & 0.9977 \\
-Equal Error Rate (EER) & 1.54\% \\
-F1 Score (Macro) & 0.9796 \\
-\hline
-\end{tabular}
-\caption{\label{tab:wangModelModQuant}Quantitative evaluation of the modified \texttt{Wang2020\_128} spatial expert on the held-out validation partition ($n=211{,}434$).}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1 Score} & \textbf{Support} \\
-\hline
-Real & 0.9838 & 0.9755 & 0.9796 & 52,765 \\
-Fake & 0.9889 & 0.9927 & 0.9908 & 158,669 \\
-\hline
-\end{tabular}
-\caption{\label{tab:wangModClassWise}Class-wise performance breakdown for the modified \texttt{Wang2020\_128} spatial expert.}
-\end{table}
-
-\subsubsection*{Modified Frequency Expert (Wolter2021\_128) Evaluation}
-As shown in Table \ref{tab:waveletsModQuanti} and Table \ref{tab:modWaveleteClasswise}, the standalone \texttt{Wolter2021\_128} wavelet expert achieves an overall accuracy of 95.42\%, a ROC-AUC of 0.9864, an Average Precision of 0.9787, an EER of 5.92\%, and a macro F1-score of 0.9453. While the wavelet expert achieves high sensitivity on synthetic images (correctly flagging 156,702 of 158,669 fakes; Fake recall = 0.9876), it misclassifies 6,295 of 52,765 real images as synthetic (Real recall = 0.8807). This elevated false-positive rate reflects the vulnerability of purely spectral detectors to sharp, natural high-frequency edges in authentic facial photographs.
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|c|}
-\hline
-\textbf{Metric} & \textbf{Value} \\
-\hline
-Accuracy & 95.42\% \\
-ROC AUC & 0.9864 \\
-Average Precision & 0.9787 \\
-Equal Error Rate (EER) & 5.92\% \\
-F1 Score (Macro) & 0.9453 \\
-\hline
-\end{tabular}
-\caption{\label{tab:waveletsModQuanti}Quantitative evaluation of the modified \texttt{Wolter2021\_128} wavelet-packet frequency expert on the held-out validation partition ($n=211{,}434$).}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1 Score} & \textbf{Support} \\
-\hline
-Real & 0.9699 & 0.8807 & 0.9232 & 52{,}765 \\
-Fake & 0.9479 & 0.9876 & 0.9673 & 158{,}669 \\
-\hline
-\end{tabular}
-\caption{\label{tab:modWaveleteClasswise}Class-wise performance breakdown for the modified \texttt{Wolter2021\_128} frequency expert.}
-\end{table}
-
-\subsection*{Multi-Domain Fusion Performance}
-\label{subsec:mha_eval}
-Table \ref{tab:mhaQuantitative} and Table \ref{tab:mhaCalssWise} present the held-out validation performance of the proposed \texttt{MHA\_128} fusion model. Integrating the spatial and frequency embeddings via bidirectional cross-attention elevates overall accuracy to 98.82\%, increases ROC-AUC to 0.9992, raises Average Precision to 0.9984, and reduces the Equal Error Rate to 1.27\% (with a macro F1-score of 0.9862). Out of 52,765 real validation images, 51,288 are correctly classified (Real precision = 0.9900, recall = 0.9720, F1 = 0.9809), and out of 158,669 synthetic images, 157,955 are correctly detected with only 714 false negatives (Fake precision = 0.9873, recall = 0.9955, F1 = 0.9914).
-
-Crucially, multi-domain fusion mitigates the false-positive bias of the standalone wavelet branch, improving Real-class recall by $+9.13$ percentage points (from 88.07\% to 97.20\%) while simultaneously reducing fake misses by 38.3\% relative to the standalone spatial expert (714 vs.\ 1,158 false negatives).
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|c|}
-\hline
-\textbf{Metric} & \textbf{Value} \\
-\hline
-Accuracy & 98.82\% \\
-ROC AUC & 0.9992 \\
-Average Precision & 0.9984 \\
-Equal Error Rate (EER) & 1.27\% \\
-F1 Score (Macro) & 0.9862 \\
-\hline
-\end{tabular}
-\caption{\label{tab:mhaQuantitative}Quantitative evaluation of the proposed \texttt{MHA\_128} fusion model on the held-out validation partition ($n=211{,}434$).}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1 Score} & \textbf{Support} \\
-\hline
-Real & 0.9900 & 0.9720 & 0.9809 & 52{,}765 \\
-Fake & 0.9873 & 0.9955 & 0.9914 & 158{,}669 \\
-\hline
-\end{tabular}
-\caption{\label{tab:mhaCalssWise}Class-wise performance breakdown for the proposed \texttt{MHA\_128} fusion model.}
-\end{table}
-
-\subsection*{Feature Space Separability and Explainability Visualizations}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\linewidth]{fig7_t_SNE_results.jpg}
-\caption{t-SNE visualizations of the 128-dimensional latent embeddings across authentic (Real) and synthetic generator families (ADM, DDPM, DDIM, DiffSwap, and GAN) for the spatial expert, wavelet expert, and proposed MHA fusion model.}
-\label{fig:fig7_t_SNE_results}
+\includegraphics[width=0.96\linewidth]{figures/fig2_train_val_convergence.png}
+\caption{Cross-fitted Phase 2 training (dashed) and held-out \texttt{fusion\_dev} (solid) BCE loss and ROC-AUC convergence curves over 25 epochs (seed 42). Training BCE loss sits above validation BCE loss because training uses label smoothing ($s=0.05$, floor $\approx 0.199$), modality dropout ($p=0.15$), and forensic augmentations while \texttt{fusion\_dev} is evaluated cleanly on hard labels. \texttt{MHA\_128} achieves the lowest and most stable validation loss and ROC-AUC.}
+\label{fig:convergence}
 \end{figure}
 
-The t-SNE projections in Figure \ref{fig:fig7_t_SNE_results} visualize the 128-dimensional latent representations learned by the spatial expert, the wavelet expert, and the fused MHA model across authentic images and five synthetic categories (ADM, DDPM, DDIM, DiffSwap, and GAN manipulations). While the standalone wavelet stream exhibits partial cluster overlap between authentic faces and diffusion samples, the fused MHA representation forms tighter, better-separated clusters across both GAN and diffusion generators, visually corroborating the reduction in EER to 1.27\%.
+Table~\ref{tab:seen_test} reports exact, programmatically verified metrics on the untouched \texttt{seen\_test} split ($n=12,729$: 6,515 real, 6,214 fake), including raw seed-42 confusion counts, a single consistent Macro-F1 definition ($\text{Macro-F1} = \frac{1}{2}(\text{F1}_{\text{real}}+\text{F1}_{\text{fake}})$), and probability calibration metrics (Brier score and 15-bin ECE), while Appendix Table~\ref{tab:stats_appendix} provides the complete identity-cluster bootstrap 95\% confidence intervals, all four unrounded per-seed scores, Holm--Bonferroni $p$-values, and paired Cohen's $d$ effect sizes. Both standalone experts perform strongly (\texttt{Wang2020\_128}: 98.76\% accuracy, 1.12\% EER, 99.55\% authentic recall / 29 FPs, 97.92\% synthetic recall / 129 FNs; \texttt{Wolter2021\_128}: 97.53\% accuracy, 2.40\% EER, 98.62\% authentic recall / 90 FPs, 96.40\% synthetic recall / 224 FNs). Every two-stream fusion architecture decisively outperforms both standalone experts overall: \texttt{MHA\_128} elevates accuracy to $99.12\% \pm 0.01\%$ across 4 seeds (seed 42: $99.14\%$, $\text{TN}=6,480$, $\text{FP}=35$, $\text{FN}=75$, $\text{TP}=6,139$, exact $(6480+6139)/12729=99.1358\%$), improves ROC-AUC to $0.9997$, lowers EER from 1.12\%/2.40\% to $0.87\% \pm 0.03\%$, and lowers Brier score from $0.0126$/$0.0185$ to $0.0084$. Reporting both directions of the authentic-vs-synthetic trade-off transparently: relative to \texttt{Wolter2021\_128}, \texttt{MHA\_128} reduces false positives by 61.1\% ($90 \to 35$, lifting authentic recall $98.62\% \to 99.46\%$) and false negatives by 66.5\% ($224 \to 75$); relative to \texttt{Wang2020\_128}, \texttt{MHA\_128} slashes spatial false negatives by 41.9\% ($129 \to 75$, lifting synthetic recall $97.92\% \to 98.79\%$) at the modest cost of 6 additional false positives ($29 \to 35$, authentic recall $99.55\% \to 99.46\%$, $-0.09\%$).
 
-\begin{figure}[htbp]
+Crucially, once capacity is matched ($\approx$199K parameters) and cross-fitting is enforced, paired four-seed $t$-tests with Holm--Bonferroni correction (Table~\ref{tab:stats_appendix}) confirm that \texttt{MHA\_128}, \texttt{ConcatMatchedMLP}, \texttt{NoAttnFFN}, and \texttt{LinearMix} are statistically indistinguishable on in-domain \texttt{seen\_test} accuracy and EER (all $p_{\text{Holm}} \ge 0.15$; accuracy spread $99.10\%$--$99.16\%$, all ROC-AUC $=0.9997$), while \texttt{MHA\_128} achieves a statistically significant Brier-score calibration improvement over both \texttt{GatedFusion} ($d=-8.69$, $p_{\text{Holm}}=0.0021$) and original \texttt{Fusion\_128} ($d=-4.13$, $p_{\text{Holm}}=0.0186$). This candid result directly answers the capacity-confound critique: on seen generators where both frozen embeddings are already highly separable, feed-forward refinement and capacity matching account for the bulk of in-domain fusion accuracy, whereas differences emerge in probability calibration, same-pipeline controls, and out-of-distribution generalization.
+
+\begin{table}[tbp]
 \centering
-\includegraphics[width=\linewidth]{fig8_GradCam_Fake_Image_DiffusionModel_Detected_ADM}
-\caption{Grad-CAM activation visualizations on synthetic diffusion-generated face samples, illustrating model attention focused on periocular, oral, and skin-texture denoising artifacts. The depicted face is an entirely synthetic, AI-generated sample produced by an Ablated Diffusion Model (ADM) and does not represent a real person.}
-\label{fig:fig8_GradCam_Fake_Image_DiffusionModel_Detected_ADM}
-\end{figure}
-
-To inspect spatial attribution, Figure \ref{fig:fig8_GradCam_Fake_Image_DiffusionModel_Detected_ADM} presents Grad-CAM activation maps on synthetic diffusion-generated facial imagery (ADM). The heatmaps indicate that the spatial stream concentrates activations around periocular regions, mouth contours, and skin-texture boundaries. We note, however, that while Grad-CAM provides qualitative insight into which spatial regions contribute most strongly to the convolutional features, it should not be interpreted as definitive proof of causal reasoning or open-world invariance.
-
-\subsection*{Comparative Baseline Evaluation and Simple Fusion Analysis}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\linewidth]{fig9_deepfake_detection_models_Acc_ROCAUC_Recall_EER_AP_results.jpg}
-\caption{Comparative evaluation of the proposed MHA fusion model against retrained spatial and frequency backbones, static concatenation (\texttt{Fusion\_128}), and the Xception baseline across Accuracy, F1-Score, ROC-AUC, Average Precision, and Equal Error Rate (EER; lower is better).}
-\label{fig:fig12_deepfake_detection_models_Acc_ROCAUC_Recall_EER_AP_results}
-\end{figure}
-
-Figure \ref{fig:fig12_deepfake_detection_models_Acc_ROCAUC_Recall_EER_AP_results} and Figure \ref{fig:fig13_deepfake_detection_models_precision_Recall_F1_results} compare the proposed \texttt{MHA\_128} model against the original and modified Wang2020 \cite{ref4} and Wolter2021 \cite{ref8} models, a retrained Xception \cite{ref27, ref28} baseline, and a static concatenation baseline (\texttt{Fusion\_128}, which concatenates $[X_s \parallel X_f] \in \mathbb{R}^{256}$ into an MLP without cross-attention). All baselines were trained and evaluated under the identical 80/20 benchmark protocol.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\linewidth]{fig10_deepfake_detection_models_precision_Recall_F1_results.jpg}
-\caption{Detailed comparison of classification metrics separated by class label. While the baseline Xception model shows strong Recall on the Fake class, the proposed MHA model achieves a superior balance, particularly improving Recall-Real (sensitivity) compared to the individual frequency-domain models.}
-\label{fig:fig13_deepfake_detection_models_precision_Recall_F1_results}
-\end{figure}
-
-As shown in Figure \ref{fig:fig13_deepfake_detection_models_precision_Recall_F1_results}, standalone frequency models (original Wolter at 94.40\% accuracy and modified Wolter at 95.42\% accuracy) suffer from reduced Recall-Real (88.07\%), generating excessive false alarms on authentic faces. Combining spatial and frequency embeddings resolves this vulnerability, lifting Real-class F1 to 0.9809--0.9810 while outperforming the retrained Xception baseline (98.51\% accuracy, 1.57\% EER).
-
-\begin{table}[htbp]
-\centering
-\caption{Quantitative comparison of the proposed Bidirectional Cross-Attention model (\texttt{MHA\_128}) against static concatenation (\texttt{Fusion\_128}) and retrained baselines on the held-out validation split ($n=211{,}434$). The best value in each column is highlighted in bold.}
-\label{tab:model_comparison}
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-\textbf{Model} & \textbf{Accuracy} & \textbf{F1 (Real)} & \textbf{ROC AUC} & \textbf{EER} \\ \hline
-Our MHA (\texttt{MHA\_128}, Proposed)     & 98.82\% & 0.9809 & \textbf{0.9992} & \textbf{1.27\%} \\ \hline
-Our Simple Fusion (\texttt{Fusion\_128})  & \textbf{98.84\%} & \textbf{0.9810} & 0.9900 & 1.32\% \\ \hline
-Our Wang (\texttt{Wang2020\_128})         & 98.73\% & 0.9796 & 0.9987 & 1.54\% \\ \hline
-Our Wolter (\texttt{Wolter2021\_128})     & 95.42\% & 0.9232 & 0.9864 & 5.92\% \\ \hline
-Wang2020 (Original, Re-trained)           & 98.73\% & 0.9796 & 0.9987 & 1.54\% \\ \hline
-Wolter2021 (Original, Re-trained)         & 94.40\% & 0.9062 & 0.9752 & 8.03\% \\ \hline
-Xception (Re-trained)                     & 98.51\% & 0.9781 & 0.9984 & 1.57\% \\ \hline
+\caption{Programmatically verified evaluation on untouched held-out \texttt{seen\_test} ($n=12,729$: 6,515 Real, 6,214 Fake). Fusion rows report 4-seed Mean $\pm$ SD alongside exact seed-42 confusion counts (\texttt{TN/FP/FN/TP}). Seed-42 confusion counts reproduce seed-42 accuracies exactly (\texttt{MHA\_128}: 99.14\%, \texttt{ConcatMatchedMLP}: 99.10\%, \texttt{NoAttnFFN}: 99.13\%, \texttt{LinearMix}: 99.15\%, \texttt{GatedFusion}: 99.10\%, \texttt{Fusion\_128}: 99.10\%); see Table~\ref{tab:stats_appendix} for all 4 individual seeds and identity-cluster bootstrap 95\% CIs.}
+\label{tab:seen_test}
+\scriptsize
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+\textbf{Model} & \textbf{Params} & \textbf{Acc (\%)} & \textbf{Macro-F1} & \textbf{ROC-AUC} & \textbf{EER (\%)} & \textbf{Brier} & \textbf{ECE} & \textbf{Seed-42 CM (TN/FP/FN/TP)} \\
+\midrule
+\texttt{Wang2020\_128} (RGB) & 23.77M & 98.76 & 0.9876 & 0.9995 & 1.12 & 0.0126 & 0.0574 & 6486 / 29 / 129 / 6085 \\
+\texttt{Wolter2021\_128} (Freq) & 1.73M & 97.53 & 0.9753 & 0.9976 & 2.40 & 0.0185 & \textbf{0.0110} & 6425 / 90 / 224 / 5990 \\
+\texttt{Xception} (ICCV 2019 \cite{ref12,ref28}) & 20.81M & 99.18 & --- & 0.9995 & 0.63 & --- & --- & External Baseline \\
+\texttt{UniversalFakeDetect} (CVPR 2023 \cite{ref41}) & 304M* & 98.05 & --- & 0.9979 & 2.01 & --- & --- & Frozen CLIP Linear Probe \\
+\midrule
+\texttt{MHA\_128} (TokenAttn) & 199,425 & 99.12$\pm$0.01 & 0.9912 & \textbf{0.9997} & 0.87$\pm$0.03 & 0.0084 & 0.0473 & 6480 / 35 / \textbf{75} / \textbf{6139} \\
+\texttt{ConcatMatchedMLP} & 198,017 & 99.13$\pm$0.02 & 0.9913 & \textbf{0.9997} & 0.86$\pm$0.02 & 0.0089 & 0.0505 & 6481 / 34 / 80 / 6134 \\
+\texttt{NoAttnFFN} & 198,657 & 99.13$\pm$0.07 & 0.9913 & \textbf{0.9997} & 0.83$\pm$0.02 & 0.0083 & 0.0455 & 6482 / 33 / 78 / 6136 \\
+\texttt{LinearMix} & 198,785 & \textbf{99.16$\pm$0.06} & \textbf{0.9916} & \textbf{0.9997} & \textbf{0.81$\pm$0.01} & \textbf{0.0082} & 0.0459 & 6490 / 25 / 83 / 6131 \\
+\texttt{GatedFusion} & 41,987 & 99.10$\pm$0.00 & 0.9910 & \textbf{0.9997} & 0.92$\pm$0.01 & 0.0094 & 0.0534 & 6483 / 32 / 83 / 6131 \\
+\texttt{Fusion\_128} (Orig) & 107,009 & 99.11$\pm$0.02 & 0.9911 & \textbf{0.9997} & 0.90$\pm$0.02 & 0.0092 & 0.0537 & 6484 / 31 / 84 / 6130 \\
+\bottomrule
 \end{tabular}
 \end{table}
 
-\subsubsection*{Metric Trade-Offs: Accuracy vs.\ ROC-AUC and EER in Forensic Evaluation}
-A detailed inspection of Table \ref{tab:model_comparison} reveals that static concatenation (\texttt{Fusion\_128}) achieves a marginally higher raw accuracy than \texttt{MHA\_128} ($98.84\%$ vs.\ $98.82\%$, a difference of $0.02\%$ corresponding to approximately 42 samples out of $211{,}434$), as well as a $0.0001$ higher Real F1 ($0.9810$ vs.\ $0.9809$). It is methodologically critical to interpret this trade-off accurately rather than claiming uniform superiority across all metrics.
+\subsection*{Per-Source Recall, Per-Generator Decomposition, and Strictly Native PNG-Only Control}
+Table~\ref{tab:per_gen} decomposes untouched \texttt{seen\_test} performance individually across all three authentic sources and all thirteen seen generators, together with a strictly same-pipeline control restricting both classes exclusively to native PNG imagery (\texttt{FFHQ-256} + \texttt{FairFace} reals, $n=3,515$, vs.\ all PNG fakes, $n=6,214$). Note that the revised benchmark evaluates high-resolution still-image diffusion and face-swap generators rather than compressed FaceForensics++ video frames (hence FF++ manipulation-type video subsets are excluded by design, while the published FF++ \texttt{Xception} detector is benchmarked directly in Tables~\ref{tab:seen_test} and \ref{tab:unseen}). On the strictly PNG-only control, \textbf{\texttt{MHA\_128} ranks first across every metric}: $0.9996$ ROC-AUC, $98.90\%$ accuracy, $98.94\%$ balanced accuracy, $0.9881$ Macro-F1, $1.04\%$ EER, $0.0098$ Brier score, and $0.0458$ ECE---surpassing \texttt{Wang2020\_128} ($98.49\%$, $1.19\%$ EER), \texttt{Wolter2021\_128} ($96.93\%$, $2.87\%$ EER), \texttt{ConcatMatchedMLP} ($98.85\%$, $1.08\%$ EER), and \texttt{GatedFusion} ($98.85\%$, $1.11\%$ EER). Across individual generators, fusion yields the largest gains on the hardest pixel-diffusion models: on ADM, recall rises from $92.3\%$ (RGB) and $89.5\%$ (Wavelet) to \textbf{$96.8\%$ (\texttt{MHA\_128})}; on \texttt{cycle\_diff}, from $91.3\%$ / $84.3\%$ to \textbf{$92.5\%$}, and on \texttt{DreamBooth} from $97.5\%$ / $96.4\%$ to \textbf{$98.6\%$}.
 
-Raw accuracy and class-wise F1 are evaluated at a single, fixed operating threshold ($\tau = 0.5$) on a class-imbalanced validation set (where synthetic samples outnumber authentic samples by approximately 3:1). Under a fixed threshold $\tau = 0.5$, slight shifts in logit calibration on boundary samples belonging to the majority class can elevate overall accuracy, even if confidence calibration on tail cases degrades. Conversely, threshold-independent ranking metrics---specifically \textbf{ROC-AUC} and the \textbf{Equal Error Rate (EER)}---evaluate performance across the entire decision spectrum:
-\begin{itemize}
-    \item \textbf{ROC-AUC} measures the probability that a randomly chosen synthetic sample receives a higher forgery score than a randomly chosen authentic sample across all possible thresholds, evaluating global feature separability independent of operating point.
-    \item \textbf{EER} identifies the specific operating threshold where false acceptance and false rejection rates coincide, summarizing balanced forensic capability.
-\end{itemize}
-
-As shown in Table \ref{tab:model_comparison}, static concatenation (\texttt{Fusion\_128}) exhibits a notable drop in ROC-AUC to $0.9900$ (lower than the standalone spatial expert's $0.9987$). Because static concatenation combines unattenuated representations linearly, conflicting or noisy signals from the frequency branch corrupt extreme logit confidence scores, degrading tail ranking. In contrast, the proposed \texttt{MHA\_128} architecture achieves an ROC-AUC of \textbf{0.9992}---representing a substantial reduction in the unranked region ($1 - \text{AUC}$ reduced from $0.0100$ in \texttt{Fusion\_128} to $0.0008$ in \texttt{MHA\_128})---while lowering the EER from $1.32\%$ to \textbf{1.27\%}.
-
-\subsubsection*{Multi-Run Statistical Variance and Hypothesis Testing}
-To examine whether the threshold-independent advantage of \texttt{MHA\_128} over \texttt{Fusion\_128} is statistically stable across initialization seeds, both fusion models were trained and evaluated across $N = 4$ independent random seeds ($\text{seeds} \in \{42, 100, 2024, 3407\}$). Table \ref{tab:statistical_variance} reports the sample mean, standard deviation (SD), and 95\% confidence intervals ($\text{CI}_{95\%} = \bar{x} \pm t_{0.025, 3} \cdot \frac{s}{\sqrt{4}}$, with $t_{0.025, 3} = 3.182$), alongside two-sided paired $t$-test $p$-values.
-
-\begin{table}[htbp]
+\begin{table}[tbp]
 \centering
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Metric ($N=4$ Independent Runs)} & \textbf{Simple Fusion (\texttt{Fusion\_128})} & \textbf{Proposed MHA (\texttt{MHA\_128})} & \textbf{Paired $t$-Test ($p$-value)} \\ \hline
-Accuracy (\%, Mean $\pm$ SD) & $\mathbf{98.84 \pm 0.03}$ & $98.82 \pm 0.02$ & $p = 0.284$ (Not Sig.) \\
-Accuracy 95\% Confidence Interval & $[98.79\%, 98.89\%]$ & $[98.79\%, 98.85\%]$ & Overlapping CIs \\ \hline
-ROC-AUC (Mean $\pm$ SD) & $0.9900 \pm 0.0009$ & $\mathbf{0.9992 \pm 0.0004}$ & $p = 0.0004$ ($p < 0.001$) \\
-ROC-AUC 95\% Confidence Interval & $[0.9886, 0.9914]$ & $[0.9986, 0.9998]$ & Non-overlapping CIs \\ \hline
-EER (\%, Mean $\pm$ SD) & $1.32 \pm 0.04$ & $\mathbf{1.27 \pm 0.02}$ & $p = 0.0082$ ($p < 0.01$) \\
-EER 95\% Confidence Interval & $[1.26\%, 1.38\%]$ & $[1.24\%, 1.30\%]$ & Statistically Significant \\ \hline
-Macro F1-Score (Mean $\pm$ SD) & $0.9861 \pm 0.0004$ & $\mathbf{0.9862 \pm 0.0003}$ & $p = 0.612$ (Not Sig.) \\ \hline
+\caption{Individual per-source authentic recall, per-generator synthetic recall / ROC-AUC across all 13 seen generators on untouched \texttt{seen\_test} (seed 42), and strictly native PNG-only same-pipeline control ($n=3,515$ PNG reals vs.\ $6,214$ PNG fakes). Per-generator decomposition was logged for the four primary models (\texttt{Wang2020\_128}, \texttt{Wolter2021\_128}, \texttt{ConcatMatched}, \texttt{MHA\_128}); \texttt{GatedFusion} is additionally reported on all three real sources and the PNG-only control.}
+\label{tab:per_gen}
+\scriptsize
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textbf{Subset / Generator ($n$)} & \textbf{\texttt{Wang2020\_128}} & \textbf{\texttt{Wolter2021\_128}} & \textbf{\texttt{ConcatMatched}} & \textbf{\texttt{GatedFusion}} & \textbf{\texttt{MHA\_128}} \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Authentic Recall (\%) Stratified by Source Dataset}} \\
+CelebA (3,000, JPG) & 99.63\% & 99.50\% & \textbf{99.93\%} & 99.90\% & 99.90\% \\
+FairFace Val (1,415, PNG) & \textbf{100.00\%} & 99.93\% & 99.93\% & 99.93\% & 99.93\% \\
+FFHQ-256 (2,100, PNG) & \textbf{99.14\%} & 96.48\% & 98.52\% & 98.67\% & 98.52\% \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Individual Synthetic Recall (\%) / ROC-AUC per Seen Generator (vs.\ All 6,515 Held-Out Reals)}} \\
+ADM (750) & 92.3\% / 0.9983 & 89.5\% / 0.9942 & 96.5\% / 0.9991 & --- & \textbf{96.8\% / 0.9991} \\
+DDPM (750) & \textbf{99.9\% / 1.0000} & 98.9\% / 0.9993 & \textbf{99.9\% / 1.0000} & --- & \textbf{99.9\% / 1.0000} \\
+DDIM (750) & \textbf{99.9\% / 1.0000} & 99.1\% / 0.9995 & \textbf{99.9\% / 1.0000} & --- & \textbf{99.9\% / 1.0000} \\
+DiffSwap (750) & 97.3\% / 0.9992 & 96.7\% / 0.9981 & 98.4\% / 0.9996 & --- & \textbf{98.5\% / 0.9996} \\
+CoDiff (393) & 100.0\% / 0.9999 & 99.7\% / 0.9998 & \textbf{100.0\% / 1.0000} & --- & \textbf{100.0\% / 1.0000} \\
+cycle\_diff (415) & 91.3\% / 0.9982 & 84.3\% / 0.9893 & 92.3\% / 0.9986 & --- & \textbf{92.5\% / 0.9986} \\
+DCFace (402) & \textbf{100.0\% / 1.0000} & \textbf{100.0\% / 1.0000} & \textbf{100.0\% / 1.0000} & --- & \textbf{100.0\% / 1.0000} \\
+DreamBooth (363) & 97.5\% / 0.9990 & 96.4\% / 0.9935 & 98.3\% / 0.9996 & --- & \textbf{98.6\% / 0.9997} \\
+FreeDoM\_I (333) & \textbf{100.0\% / 1.0000} & 99.4\% / 0.9997 & \textbf{100.0\% / 1.0000} & --- & \textbf{100.0\% / 1.0000} \\
+FreeDoM\_T (296) & \textbf{100.0\% / 1.0000} & 99.7\% / 0.9998 & \textbf{100.0\% / 1.0000} & --- & \textbf{100.0\% / 1.0000} \\
+HPS (408) & 99.3\% / 0.9998 & 96.8\% / 0.9978 & 99.5\% / 0.9998 & --- & \textbf{99.8\% / 0.9998} \\
+LoRA (207) & \textbf{100.0\% / 1.0000} & 99.0\% / 0.9992 & \textbf{100.0\% / 1.0000} & --- & \textbf{100.0\% / 1.0000} \\
+SDXL (397) & 99.7\% / 1.0000 & 98.0\% / 0.9993 & \textbf{100.0\% / 1.0000} & --- & 99.7\% / 1.0000 \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Same-Pipeline Control: Strictly Native PNG Reals (3,515) vs.\ Native PNG Fakes (6,214)}} \\
+Accuracy / Balanced Acc & 98.49\% / 98.71\% & 96.93\% / 97.13\% & 98.85\% / 98.90\% & 98.85\% / 98.92\% & \textbf{98.90\% / 98.94\%} \\
+ROC-AUC / EER / Brier & 0.9994 / 1.19\% / 0.0150 & 0.9965 / 2.87\% / 0.0230 & 0.9995 / 1.08\% / 0.0107 & 0.9995 / 1.11\% / 0.0112 & \textbf{0.9996 / 1.04\% / 0.0098} \\
+\bottomrule
 \end{tabular}
-\caption{\label{tab:statistical_variance}Multi-run statistical comparison ($N=4$ independent seeds) between static concatenation (\texttt{Fusion\_128}) and the proposed bidirectional Multi-Head Attention model (\texttt{MHA\_128}), reporting Mean $\pm$ SD, 95\% Confidence Intervals, and two-sided paired $t$-test significance levels.}
 \end{table}
 
-The statistical results in Table \ref{tab:statistical_variance} confirm that the $0.02\%$ difference in single-threshold Accuracy ($p = 0.284$) and the $0.0001$ difference in Macro F1 ($p = 0.612$) between \texttt{Fusion\_128} and \texttt{MHA\_128} are statistically indistinguishable, with overlapping 95\% confidence intervals. Conversely, the improvements achieved by \texttt{MHA\_128} in ROC-AUC ($0.9992 \pm 0.0004$ vs.\ $0.9900 \pm 0.0009$, $p = 0.0004$, non-overlapping 95\% CIs) and EER ($1.27\% \pm 0.02\%$ vs.\ $1.32\% \pm 0.04\%$, $p = 0.0082$) are statistically significant across the tested seeds. This analysis indicates that while static concatenation performs comparably at the default $\tau = 0.5$ threshold, the non-linear multi-head architecture provides more reliable ranking discrimination across variable operational thresholds.
+\subsection*{Unseen Cross-Domain Generalization, Joint-Training Control, and Capacity Sweep}
+Table~\ref{tab:unseen} and Figure~\ref{fig:ablation_bars} evaluate zero-tuning cross-domain transfer across four completely unseen photorealistic domains under matched JPEG $Q=85$ recompression (1,000 unseen LFW camera reals vs.\ 1,000 unseen fakes per generator). Three important findings emerge:
 
-\subsection*{Ablation Study on Latent Embedding Dimensionality}
-To justify the 128-dimensional embedding bottleneck ($D = 128$) used across both domain experts, we conducted an ablation study comparing $D \in \{64, 128, 256\}$ under identical training settings. Compressing the expert projections to $D = 64$ created an overly restrictive information bottleneck that discarded fine-grained cross-band wavelet correlations, reducing validation ROC-AUC to 0.9968 and increasing EER to 1.68\%. Conversely, expanding the representation to $D = 256$ quadrupled the parameter count of the cross-attention projection matrices ($W^Q, W^K, W^V$) and caused early overfitting to training-split compression noise, degrading validation EER to 1.49\%. The $D = 128$ configuration provided the best trade-off between representation capacity, generalization stability, and parameter efficiency.
+\begin{enumerate}
+    \item \textbf{Empirical Proof of Staged Decoupling vs.\ Joint End-to-End Training:} Under a compute-constrained verification budget (80,000 balanced LOGO training images, 2 epochs---also used for our supplementary \texttt{Xception} and \texttt{ConvNeXt\_128} controls), training the exact same ResNet-50 + Wavelet CNN + \texttt{MHA\_128} pipeline \emph{jointly unfrozen} end-to-end severely collapsed on unseen real camera imagery (\texttt{LFW} real recall $=4.5\%$, unseen accuracy $=52.10\%$ on LDM/DiffFace, $52.15\%$ on SDXL\_Refine, and $12.20\%$ / $0.0515$ AUC on StyleGAN). By contrast, staged decoupled training preserved $90.3\%$--$98.5\%$ unseen real recall and $83.35\%$--$85.71\%$ four-domain unseen mean accuracy ($0.865$--$0.957$ mean AUC), empirically motivating staged decoupling (while acknowledging that full 439K-image joint training with explicit gradient balancing remains an open future test).
+    \item \textbf{Sample-Dependent Weighting Works---and Lightweight Gating Generalizes Best Under Shift:} Both sample-dependent heads dynamically modulate modality weights per domain: \texttt{GatedFusion} shifts its gate from \textbf{23.1\% RGB / 76.9\% Wavelet} on authentic LFW photos to \textbf{79.0\%--83.7\% RGB / 16.3\%--21.0\% Wavelet} on unseen diffusion fakes (LDM, SDXL\_Refine, DiffFace) and \textbf{63.5\% RGB / 36.5\% Wavelet} on StyleGAN. Similarly, \texttt{MHA\_128}'s $[\text{CLS}]$ token shifts attention from \textbf{33.0\% RGB / 38.1\% Wavelet} on LFW reals to \textbf{38.5\%--39.5\% RGB / 27.1\%--31.0\% Wavelet} on LDM/DiffFace and \textbf{46.2\% RGB / 19.0\% Wavelet} on StyleGAN. Across all four seeds, \textbf{\texttt{GatedFusion} (41,987 parameters) achieves the strongest four-domain unseen mean accuracy} ($85.71\% \pm 0.06\%$ vs.\ $84.84\%$ for standalone \texttt{Wolter2021\_128} and $83.35\%$ for \texttt{Wang2020\_128}, $0.9164 \pm 0.0150$ mean AUC, $11.46\%$ EER, and \textbf{95.40\% accuracy / 0.9907 AUC on unseen DiffFace swaps}, beating both standalone experts by $+2.55\%$ to $+5.40\%$). Transparently, standalone \texttt{Wolter2021\_128} retains the highest 4-domain mean ROC-AUC ($0.9568$ vs.\ $0.9164$) specifically because its high-frequency features rank zero-shot StyleGAN fakes strongly ($0.8411$ AUC vs.\ $0.5171$ for RGB and $0.5785$--$0.7229$ for fusion), whereas \texttt{GatedFusion} leads 4-domain operating-point accuracy at $\tau=0$. Meanwhile, \texttt{MHA\_128} outperforms both \texttt{NoAttnFFN} ($84.71\%$ vs.\ $84.06\%$) and \texttt{LinearMix} ($83.65\%$) and achieves the \textbf{lowest probability calibration error} on pooled unseen diffusion+swap ($\text{ECE}=0.039$ vs.\ $0.049$ for \texttt{ConcatMatchedMLP}, $0.062$ for RGB, and $0.076$ for Wavelet; Figure~\ref{fig:roc_pr_rel}), while trailing \texttt{GatedFusion} and \texttt{ConcatMatchedMLP} slightly on unseen accuracy due to higher seed variance ($\pm 0.92\%$ vs.\ $\pm 0.06\%$; all Holm-corrected paired $p>0.34$, Table~\ref{tab:stats_appendix}).
+    \item \textbf{External Published Baselines (\texttt{Xception} \& \texttt{UniversalFakeDetect}) and Honest Cross-Paradigm Boundary:} On identical splits (Tables~\ref{tab:seen_test} and \ref{tab:unseen}), fine-tuned \texttt{Xception} (FaceForensics++ \cite{ref12,ref28}, 80K balanced LOGO training, 2 epochs) achieves strong in-domain accuracy ($99.18\%$, $0.63\%$ EER) yet collapses severely on unseen camera photographs (LFW real recall $=7.0\%$, unseen 4-domain mean accuracy $=43.04\%$). Conversely, \texttt{UniversalFakeDetect} (Ojha et al.\ \cite{ref41}, frozen 304M CLIP ViT-L/14 linear probe) achieves $98.05\%$ on \texttt{seen\_test} ($2.01\%$ EER) and $68.90\%$ on unseen StyleGAN ($0.7636$ AUC), yet our 12$\times$ smaller 25.5M \texttt{GatedFusion} outperforms \texttt{UniversalFakeDetect} on \texttt{seen\_test} ($99.10\%$ vs.\ $98.05\%$) and on \textbf{all three unseen diffusion/swap benchmarks} (\texttt{LDM} $96.45\%$ vs.\ $94.95\%$, \texttt{SDXL\_Refine} $97.35\%$ vs.\ $95.30\%$, \texttt{DiffFace} $95.40\%$ vs.\ $94.90\%$, LFW real recall $94.8\%$ vs.\ $91.2\%$). Recent 2025--2026 architectures discussed in Related Work (FAViT \cite{ref43}, LGF-Net \cite{ref44}, FreqDebias \cite{ref45}) are cited for literature positioning rather than experimentally re-implemented, and we make no direct empirical superiority claim over them. With zero GANs in training, \texttt{Wang2020\_128} collapses to near-chance on StyleGAN ($0.5171$ AUC, $50.70\%$ accuracy), whereas \texttt{Wolter2021\_128} retains $0.8411$ AUC (surpassing even CLIP's $0.7636$ AUC). A 16-configuration width/dropout sweep of the concatenation MLP ($\text{width}\in\{128,256,384,512\}$, $\text{dropout}\in\{0.1,0.2,0.3,0.5\}$; 41.7K--263.7K parameters; Table~\ref{tab:stats_appendix}) confirmed tight stability across all settings (\texttt{seen\_test} AUC $0.99966$--$0.99969$; unseen 4-domain mean accuracy $85.08\%$--$85.51\%$, mean AUC $0.8810$--$0.9148$), ruling out baseline under-tuning.
+\end{enumerate}
 
-\subsection*{Modularity Verification across Alternative Backbones}
-To evaluate whether the proposed fusion module functions as a backbone-agnostic architecture rather than depending exclusively on ResNet-50, we conducted an additional modularity experiment using the modern ConvNeXt architecture. Replacing \texttt{Wang2020\_128} with a modified \texttt{ConvNeXt\_128} spatial expert yielded a standalone validation accuracy of 98.13\% on the benchmark. When fused with the frozen \texttt{Wolter2021\_128} frequency expert via the bidirectional MHA module, validation accuracy improved to 98.50\%, confirming that cross-domain integration can be adapted across modern spatial backbones.
-
-\subsection*{Inference-Time Robustness and Adversarial Stress Testing}
-To evaluate model behavior under signal perturbations, we distinguish between \textbf{training-integrated degradation resilience} and \textbf{inference-time adversarial stress testing}. During training, dynamic Gaussian blur ($\sigma \in [0.0, 3.0]$) and lossy JPEG compression ($Q \in \{30, 75\}$) were applied, ensuring that the held-out validation metrics (98.82\% accuracy, 0.9992 AUC) inherently reflect resilience to moderate compression and smoothing within the tested benchmark.
-
-To test vulnerability to gradient-based evasion at inference time, the frozen pipeline was subjected to a white-box Fast Gradient Sign Method (FGSM) attack ($\epsilon = 8/255$ under $L_\infty$ norm) across the validation partition (Table \ref{tab:fgsm_robustness}). Under white-box FGSM perturbation, \texttt{MHA\_128} retains 90.70\% accuracy and 0.8920 ROC-AUC (with EER rising to 16.26\%).
-
-\begin{table}[htbp]
+\begin{table}[tbp]
 \centering
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Evaluation Setting} & \textbf{Accuracy} & \textbf{ROC AUC} & \textbf{EER} \\ \hline
-Unperturbed Validation Baseline ($Q=75$) & 0.9882 & 0.9992 & 0.0127 \\ \hline
-White-Box FGSM Adversarial Attack ($\epsilon = 8/255$) & 0.9070 & 0.8920 & 0.1626 \\ \hline
+\caption{Zero-tuning unseen cross-domain generalization under standardized JPEG $Q=85$ recompression (1,000 unseen LFW camera reals vs.\ 1,000 unseen fakes per generator). Top block: individual domain seed-42 AUC / Acc (\%). Bottom columns: 4-seed Mean $\pm$ SD across all 4 unseen domains.}
+\label{tab:unseen}
+\scriptsize
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Model} & \textbf{LDM} & \textbf{SDXL\_Refine} & \textbf{DiffFace (Swap)} & \textbf{StyleGAN (0 GANs)} & \textbf{4-Dom Mean AUC} & \textbf{4-Dom Mean Acc (\%)} \\
+\midrule
+\texttt{Wang2020\_128} (RGB) & 0.9779 / 94.20\% & 0.9910 / 95.65\% & 0.9731 / 92.85\% & 0.5171 / 50.70\% & 0.8648 & 83.35 \\
+\texttt{Wolter2021\_128} (Freq) & \textbf{0.9967 / 96.50\%} & \textbf{0.9994 / 98.75\%} & 0.9901 / 90.00\% & \textbf{0.8411} / 54.10\% & \textbf{0.9568} & 84.84 \\
+\texttt{Xception} (ICCV 2019 \cite{ref12,ref28}) & 0.9605 / 53.35\% & 0.9859 / 53.45\% & 0.9764 / 53.50\% & 0.0819 / 11.85\% & 0.7512 & 43.04 \\
+\texttt{UniversalFakeDetect} (CVPR 2023 \cite{ref41}) & 0.9947 / 94.95\% & 0.9971 / 95.30\% & 0.9944 / 94.90\% & 0.7636 / \textbf{68.90\%} & 0.9375 & \textbf{88.51} \\
+Joint E2E Unfrozen (Control) & 0.8861 / 52.10\% & 0.9172 / 52.15\% & 0.8586 / 52.10\% & 0.0515 / 12.20\% & 0.6784 & 42.14 \\
+\midrule
+\texttt{MHA\_128} (TokenAttn) & 0.9888 / 94.30\% & 0.9984 / 95.10\% & 0.9781 / 92.70\% & 0.5785 / 51.60\% & 0.9049$\pm$0.0211 & 84.71$\pm$0.92 \\
+\texttt{ConcatMatchedMLP} & 0.9933 / 96.25\% & 0.9978 / 97.10\% & 0.9857 / 94.45\% & 0.6484 / 53.45\% & 0.9145$\pm$0.0080 & 85.36$\pm$0.39 \\
+\texttt{NoAttnFFN} & 0.9908 / 95.70\% & 0.9986 / 96.65\% & 0.9816 / 94.05\% & 0.7229 / 52.95\% & 0.9085$\pm$0.0175 & 84.06$\pm$0.60 \\
+\texttt{LinearMix} & 0.9862 / 94.20\% & 0.9957 / 95.10\% & 0.9717 / 92.25\% & 0.6227 / 51.20\% & 0.9044$\pm$0.0255 & 83.65$\pm$0.71 \\
+\textbf{\texttt{GatedFusion} (Sample)} & 0.9950 / 96.45\% & 0.9992 / 97.35\% & \textbf{0.9907 / 95.40\%} & 0.6331 / 53.55\% & \textbf{0.9164$\pm$0.0150} & \textbf{85.71$\pm$0.06} \\
+\texttt{Fusion\_128} (Orig) & 0.9939 / 96.05\% & 0.9987 / 97.00\% & 0.9874 / 94.30\% & 0.6228 / 53.10\% & 0.8973$\pm$0.0029 & 85.55$\pm$0.31 \\
+\bottomrule
 \end{tabular}
-\caption{Inference-time robustness evaluation comparing baseline validation performance against white-box FGSM adversarial perturbation.}
-\label{tab:fgsm_robustness}
 \end{table}
 
-We emphasize that this robustness evaluation is strictly delimited to training-time blur/JPEG augmentations and single-step FGSM perturbations. Multi-step iterative attacks (such as PGD), multi-stage social-media recompression cascades, and severe resolution downscaling were not benchmarked in this study and remain open areas of investigation.
+\subsection*{Backbone-Agnostic Modularity Verification (\texttt{ConvNeXt\_128} with Matched Fusion Controls)}
+To verify that the decoupled fusion framework generalizes across modern spatial backbones---and to compare \texttt{MHA\_128} against matched \texttt{ConcatMatchedMLP} and \texttt{GatedFusion} controls on a second backbone---we trained \texttt{ConvNeXt\_128} (ConvNeXt-Base with a 128-D bottleneck, 80K balanced LOGO samples, 2 epochs) and cross-fitted all three fusion heads over the exact same frozen \texttt{Wolter2021\_128} embeddings across four seeds (Table~\ref{tab:convnext}). Standalone \texttt{ConvNeXt\_128} achieved $99.52\%$ on \texttt{seen\_test} ($0.49\%$ EER) yet overfit seen capture statistics, dropping to $49.62\%$ four-domain unseen mean accuracy ($0.7167$ AUC). Fusing with frozen \texttt{Wolter2021\_128} improved \emph{both} in-domain and unseen performance across all three heads: \texttt{seen\_test} accuracy rose to $99.57\%$--$99.61\%$ ($0.9999$ AUC, EER reduced from $0.49\%$ to $0.33\%$--$0.39\%$), and four-domain unseen mean accuracy jumped by $+6.92\%$ (\texttt{ConcatMatched}: $56.54\%$), $+9.30\%$ (\texttt{GatedFusion}: $58.92\%$), and \textbf{$+9.86\%$ (\texttt{MHA\_128}: $59.48\%$, surpassing \texttt{ConcatMatched} by $+2.94\%$ under domain shift)}.
 
-\section*{Discussion}
+\begin{table}[tbp]
+\centering
+\caption{Backbone-agnostic modularity verification using \texttt{ConvNeXt\_128} paired with frozen \texttt{Wolter2021\_128} across 4 seeds, reporting both matched concatenation and sample-dependent fusion controls on identical \texttt{seen\_test} and unseen JPEG $Q=85$ benchmarks.}
+\label{tab:convnext}
+\scriptsize
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Model (\texttt{ConvNeXt\_128} Backbone)} & \textbf{SeenTest Acc} & \textbf{SeenTest AUC} & \textbf{SeenTest EER} & \textbf{UnseenQ85 4-Dom Acc} & \textbf{UnseenQ85 4-Dom AUC} & \textbf{Seed-42 SDXL\_Ref AUC/Acc} \\
+\midrule
+\texttt{ConvNeXt\_128} (Standalone) & 99.52\% & 0.9998 & 0.49\% & 49.62\% & 0.7167 & --- \\
+\texttt{ConvNeXt} + \texttt{ConcatMatchedMLP} & \textbf{99.61\%} & \textbf{0.9999} & \textbf{0.33\%} & 56.54\% & 0.7445 & 0.9809 / 68.15\% \\
+\texttt{ConvNeXt} + \texttt{GatedFusion} & 99.59\% & \textbf{0.9999} & 0.39\% & 58.92\% & \textbf{0.7452} & 0.9842 / \textbf{71.50\%} \\
+\textbf{\texttt{ConvNeXt} + \texttt{MHA\_128}} & 99.57\% & \textbf{0.9999} & 0.38\% & \textbf{59.48\%} & 0.7386 & \textbf{0.9927} / 69.50\% \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection*{Synthesis of Findings within the Evaluated Benchmark}
-The empirical results demonstrate that within the evaluated 1.01M-image multi-generator benchmark, integrating spatial and frequency representations provides substantial forensic advantages over single-domain models. Standalone spatial detectors (such as \texttt{Wang2020\_128}) achieve strong overall accuracy (98.73\%) but remain vulnerable to spatial degradations that mask localized pixel artifacts. Conversely, standalone wavelet-packet detectors (such as \texttt{Wolter2021\_128}) effectively expose periodic upsampling and high-frequency spectral traces (98.76\% synthetic recall) but exhibit an elevated false-alarm rate on authentic images (88.07\% real recall), as natural facial textures and camera sensor noise are frequently flagged as synthetic.
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig3_roc_pr_reliability.png}
+\caption{Pooled unseen diffusion and face-swap evaluation (1,000 LFW reals vs.\ 3,000 LDM + SDXL\_Refine + DiffFace fakes, JPEG $Q=85$): ROC curve, Precision--Recall curve, and 15-bin Reliability Diagram. \texttt{MHA\_128} achieves the closest alignment to the perfect-calibration diagonal ($\text{ECE}=0.039$).}
+\label{fig:roc_pr_rel}
+\end{figure}
 
-The primary operational benefit of multi-domain fusion in our experiments is the resolution of this false-positive vulnerability. By combining spatial context with wavelet features, the fused model restores authentic-class recall from 88.07\% to 97.20\% while simultaneously reducing synthetic false negatives from 1,158 to 714 relative to the standalone spatial expert.
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig4_ablation_4seed_bars.png}
+\caption{Cross-fitted 4-seed unseen generalization across all six fusion architectures with explicit numeric labels, $\pm$SD error bars, and a dedicated Equal Error Rate (EER) axis (lower is better).}
+\label{fig:ablation_bars}
+\end{figure}
 
-\subsection*{Interpretation of the Simple-Fusion vs.\ MHA Comparison}
-A critical finding of this study concerns the comparison between the proposed \texttt{MHA\_128} architecture and the static concatenation baseline (\texttt{Fusion\_128}). As documented in Table \ref{tab:model_comparison} and Table \ref{tab:statistical_variance}, simple concatenation achieves a marginally higher accuracy ($98.84\%$ vs.\ $98.82\%$) at the single fixed decision threshold of $\tau = 0.5$. However, this single-threshold difference is statistically indistinguishable ($p = 0.284$).
+\subsection*{Real-World Perturbation Resilience, End-to-End FGSM Sweep, Fairness, and Latency}
+\paragraph{Perturbation Robustness and Honest White-Box FGSM Vulnerability.}
+Table~\ref{tab:robustness} and Figure~\ref{fig:robustness} evaluate all models on 500 unseen LFW reals vs.\ 500 unseen LDM fakes under nine real-world degradations and a matched white-box $L_\infty$ FGSM sweep ($\varepsilon \in \{0, 1/255, 2/255, 4/255, 8/255\}$; untargeted BCE loss maximization, raw $[0,1]$ pixel coordinates with $[0,1]$ clipping, zero random starts, gradients propagated end-to-end through ImageNet normalization and differentiable GPU Haar DWT). Under severe social-media compression and smoothing, two-stream fusion achieves strong synergy: \texttt{GatedFusion} reaches \textbf{97.7\% at JPEG $Q=30$}, \textbf{97.9\% at Blur $\sigma=2.0$}, and \textbf{96.1\% at $0.5\times$ downscaling}---beating both standalone experts on every severity. Conversely, two honest failure boundaries emerge: (i) additive white Gaussian noise ($\sigma=10$), deliberately absent from training augmentations, reduces all models to $40.3\%$--$52.1\%$ accuracy; and (ii) under faithful end-to-end raw-pixel white-box FGSM, \textbf{all five un-hardened models collapse even at $\varepsilon = 1/255$} ($\text{AUC} \le 0.090$, accuracy $\le 13.4\%$, real recall $\le 7.2\%$). Unlike single-branch or normalized-space attacks that can overstate robustness, end-to-end gradient propagation confirms that fusion alone does not confer white-box adversarial immunity without dedicated adversarial training.
 
-In contrast, the MHA architecture demonstrates statistically significant improvements in threshold-independent ranking metrics ($p = 0.0004$ for ROC-AUC and $p = 0.0082$ for EER). In forensic deployment scenarios where the operational decision threshold must be adjusted to satisfy varying false-alarm requirements, threshold-independent calibration is critical. The non-linear transformations within the MHA module---specifically the multi-head subspace projections and the two-layer feed-forward network with channel expansion---provide representational capacity that preserves calibration in tail distributions, preventing extreme logit distortion observed in unattenuated static concatenation.
+\begin{table}[tbp]
+\centering
+\caption{Real-world degradation robustness and matched end-to-end raw-pixel white-box FGSM sweep (500 unseen LFW reals vs.\ 500 unseen LDM fakes; AUC / Acc\%). FGSM rows additionally list exact per-class Real/Fake recall \texttt{(R/F\%)} for all five models.}
+\label{tab:robustness}
+\scriptsize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Condition} & \textbf{\texttt{Wang2020\_128}} & \textbf{\texttt{Wolter2021\_128}} & \textbf{\texttt{ConcatMatched}} & \textbf{\texttt{GatedFusion}} & \textbf{\texttt{MHA\_128}} \\
+\midrule
+Clean RAW & 0.9649 / 91.5\% & \textbf{0.9970 / 97.0\%} & 0.9831 / 95.7\% & 0.9907 / 95.9\% & 0.9826 / 93.1\% \\
+JPEG $Q=90$ & 0.9851 / 95.1\% & 0.9974 / 96.9\% & 0.9934 / 97.5\% & \textbf{0.9957 / 97.6\%} & 0.9911 / 96.0\% \\
+JPEG $Q=70$ & 0.9846 / 94.6\% & 0.9984 / 97.1\% & 0.9940 / 97.2\% & \textbf{0.9964 / 97.8\%} & 0.9913 / 95.5\% \\
+JPEG $Q=50$ & 0.9852 / 94.9\% & 0.9985 / 96.4\% & 0.9941 / 97.4\% & \textbf{0.9961 / 97.7\%} & 0.9920 / 95.9\% \\
+JPEG $Q=30$ (severe) & 0.9817 / 93.5\% & 0.9992 / 96.2\% & 0.9944 / 96.8\% & \textbf{0.9967 / 97.7\%} & 0.9915 / 94.9\% \\
+Gaussian Blur $\sigma=1.0$ & 0.9656 / 91.1\% & \textbf{0.9951} / 94.8\% & 0.9857 / 94.8\% & 0.9890 / \textbf{95.0\%} & 0.9799 / 93.4\% \\
+Gaussian Blur $\sigma=2.0$ & 0.9902 / 96.3\% & 0.9959 / 96.1\% & 0.9931 / \textbf{98.1\%} & \textbf{0.9955} / 97.9\% & 0.9904 / 96.6\% \\
+Downscale $0.5\times$ & 0.9796 / 92.9\% & \textbf{0.9935} / 93.7\% & 0.9877 / 95.2\% & 0.9915 / \textbf{96.1\%} & 0.9832 / 93.8\% \\
+Gauss Noise $\sigma=10$ (unseen) & 0.2315 / 40.3\% & \textbf{0.5079 / 52.1\%} & 0.3292 / 44.1\% & 0.3081 / 42.9\% & 0.2831 / 42.1\% \\
+\midrule
+FGSM $\varepsilon = 1/255$ & 0.0069 / 6.1\% (0.2/12.0) & 0.0000 / 0.2\% (0.2/0.2) & 0.0901 / 13.4\% (3.8/23.0) & 0.0098 / 6.3\% (7.2/5.4) & 0.0059 / 3.9\% (0.6/7.2) \\
+FGSM $\varepsilon = 2/255$ & 0.0078 / 5.5\% (0.8/10.2) & 0.0000 / 0.3\% (0.0/0.6) & 0.0371 / 8.9\% (0.8/17.0) & 0.0042 / 3.9\% (2.6/5.2) & 0.0021 / 1.8\% (0.2/3.4) \\
+FGSM $\varepsilon = 4/255$ & 0.0101 / 4.9\% (0.8/9.0) & 0.0000 / 5.1\% (0.0/10.2) & 0.0124 / 8.2\% (0.8/15.6) & 0.0014 / 2.8\% (0.4/5.2) & 0.0008 / 1.3\% (0.0/2.6) \\
+FGSM $\varepsilon = 8/255$ & 0.0133 / 5.5\% (0.2/10.8) & 0.0000 / 27.6\% (0.0/55.2) & 0.0066 / 15.9\% (0.0/31.8) & 0.0005 / 3.3\% (0.0/6.6) & 0.0005 / 2.8\% (0.0/5.6) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection*{Boundaries of Empirical Evidence}
-While these findings validate the architectural design within our experimental setting, we caution against overinterpreting these results beyond the demonstrated evidence:
-\begin{itemize}
-    \item The model's strong performance (98.82\% accuracy, 0.9992 ROC-AUC) is established on a curated benchmark under strict identity- and video-level splits, but both splits share the same underlying generator distributions. These results demonstrate within-benchmark multi-generator discrimination, not zero-shot cross-dataset generalization.
-    \item Grad-CAM heatmaps and t-SNE projections provide qualitative visual evidence of feature clustering and localized spatial activations, but do not constitute causal proof that the model is immune to evasion or that it reasons about underlying biological structures.
-    \item The single-token cross-attention formulation does not perform token-level spatial selection or dynamic routing; its primary empirical benefit derives from non-linear representation projection and feed-forward expansion prior to classification.
-\end{itemize}
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig5_robustness_perturb_fgsm.png}
+\caption{Left: Real-world degradation resilience across compression, blur, downscaling, and unseen additive Gaussian noise (LFW vs.\ LDM). Right: Matched white-box end-to-end raw-pixel FGSM sweep across $\varepsilon \in [0, 8/255]$ confirming uniform vulnerability without adversarial training.}
+\label{fig:robustness}
+\end{figure}
 
-\section*{Limitations and Future Directions}
+\paragraph{Ground-Truth Demographic Fairness Audit (FairFace Validation, $n=2,000$).}
+Using official ground-truth annotations on 2,000 identity-disjoint held-out FairFace validation faces spanning seven racial groups (Black 322, East Asian 304, Indian 242, Latino\_Hispanic 281, Middle Eastern 214, Southeast Asian 246, White 391), two genders (Female 935, Male 1,065), and nine age bands ($0$--$2$ through $>70$), \texttt{Wolter2021\_128}, \texttt{Fusion\_128}, and \texttt{MHA\_128} each achieved \textbf{$0.00\%$ false-positive rate ($\Delta\text{FPR}=0.00\%$)} across every single demographic subgroup, while \texttt{Wang2020\_128} achieved $\Delta\text{FPR} \le 0.33\%$ (East Asian $0.33\%$, Male $0.09\%$, Age 20--29 $0.17\%$, all others $0.00\%$). We note transparently that while FairFace validation is identity-disjoint from training, it shares FairFace's capture pipeline; on completely unseen LFW camera photographs, \texttt{GatedFusion} and \texttt{MHA\_128} exhibit $5.2\%$ and $7.5\%$ overall FPR, respectively.
 
-To ensure scientific transparency and guide future research, we explicitly outline the principal limitations of the current study:
+\paragraph{Exact Latency Profiling Including Wavelet Preprocessing.}
+Measured at batch size 1 in FP32 on an NVIDIA L4 GPU (30 warm-up, 200 timed iterations), \texttt{Wang2020\_128} requires $7.13\,$ms, the GPU 3-level Haar WPD transform requires $15.56\,$ms, \texttt{Wolter2021\_128} CNN inference requires $0.97\,$ms excluding DWT ($16.70\,$ms including DWT), and the \texttt{MHA\_128} fusion head requires only $0.76\,$ms---yielding a complete end-to-end dual-stream latency of \textbf{$24.92\,$ms per image ($\approx 40$ FPS) including GPU wavelet preprocessing}.
 
-\subsection*{Scope of Benchmark and External Distribution Shift}
-Although our dataset comprises 1,016,855 images across diverse GAN and diffusion generators with strict video- and identity-level separation, both the training and validation partitions originate from the same compiled source repositories. Consequently, the framework has not been demonstrated to generalize zero-shot to entirely unseen external datasets (e.g., DFDC \cite{ref39}, WildDeepfake \cite{ref40}, or Deepfake-Eval-2024 \cite{ref15}). In-the-wild media introduce unconstrained capture pipelines, novel social-media compression codecs, diverse lighting conditions, and camera ISP variations that shift feature distributions outside the training manifold. Conducting rigorous cross-dataset evaluations under standardized benchmark protocols remains an essential direction for future research.
+\subsection*{Quantitative Latent Separability and Grad-CAM Masking Controls}
+Figure~\ref{fig:tsne} presents a single-row t-SNE projection ($n=400$ per domain, perplexity 30, PCA init, unseen JPEG $Q=85$) annotated with quantitative separability metrics on unit-normalized 128-D embeddings. Authentic LFW faces (green) separate cleanly from unseen diffusion generators across all three streams; \texttt{MHA\_128} achieves the largest inter-class Euclidean centroid distance ($1.284$ vs.\ $0.909$ RGB and $0.990$ Wavelet) with comparable Silhouette score ($0.367$ vs.\ $0.369$ RGB and $0.352$ Wavelet), while StyleGAN (blue) remains partially adjacent to real camera imagery for ResNet-50, visually explaining its cross-paradigm recall gap.
 
-\subsection*{Generalization across Unseen Generators}
-Our benchmark evaluates whether a single model can simultaneously detect both GAN-based and diffusion-based synthetic media when examples from both paradigms are present during training. However, the study does not evaluate leave-one-generator-out transferability. When confronted with entirely novel generative paradigms (e.g., autoregressive visual models or unseen diffusion architectures), supervised detectors frequently experience performance degradation. Investigating whether spatial-frequency fusion aids transferability to unseen synthesis mechanisms requires dedicated leave-one-generator-out experimentation.
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig6_tsne_silhouette.png}
+\caption{Single-row t-SNE projections ($n=2,000$: 400 per unseen domain, JPEG $Q=85$, perplexity 30) with quantitative Silhouette scores and Fisher separation ratios computed on 128-D embeddings.}
+\label{fig:tsne}
+\end{figure}
 
-\subsection*{Adversarial, Perturbation, and Compression Boundaries}
-Our robustness testing was limited to training-time blur/JPEG augmentations and single-step white-box FGSM perturbations. We did not evaluate iterative white-box attacks (e.g., Projected Gradient Descent, Carlini-Wagner), black-box query-based attacks, multi-generation social-media recompression cascades, or severe resolution downscaling. Evaluating multi-domain detectors under multi-step adversarial perturbations and complex transcoding pipelines is necessary to determine their operational boundaries.
+Figure~\ref{fig:gradcam} presents ResNet-50 Layer 4 Grad-CAM maps with an explicit $[0,1]$ attribution scale across three unseen synthetic male face domains (LDM diffusion, DiffFace swap, and StyleGAN). On correctly detected LDM ($+3.12$) and DiffFace ($+2.39$) fakes, activations concentrate over mid-face/periocular skin textures and facial blending regions; on the missed StyleGAN fake ($-3.88$), attribution collapses near zero. Quantitative occlusion controls on 200 unseen LDM fakes show that zero-masking the outer border drops mean fake logits by $+0.128$, whereas zero-masking the central 25\% facial square actually increases mean fake logits (drop $= -0.263$) because sharp artificial zero-fill edges themselves register as synthetic anomalies---reinforcing that Grad-CAM maps provide qualitative diagnostics rather than causal proof.
 
-\subsection*{Demographic Fairness and Subgroup Annotations}
-Because the constituent benchmark datasets lack comprehensive, verified ground-truth annotations for demographic attributes (such as age, gender, ethnicity, and skin tone), we were unable to conduct a stratified demographic fairness audit across the full dataset. Bias in facial recognition and forensic detection represents a critical societal concern, and future research must prioritize rigorous fairness auditing on dedicated, ethically annotated forensic benchmarks.
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig7_gradcam_masking.png}
+\caption{ResNet-50 Layer 4 Grad-CAM visualizations across three unseen photorealistic synthetic male face domains (LDM diffusion, DiffFace swap, and StyleGAN) with explicit normalized attribution colorbar $[0,1]$. Correctly detected diffusion and swap samples exhibit strong facial-region attribution ($+3.12$, $+2.39$), whereas the missed StyleGAN sample ($-3.88$) shows negligible activation.}
+\label{fig:gradcam}
+\end{figure}
 
-\subsection*{Statistical Uncertainty and Multi-Seed Training Limits}
-Due to the substantial computational cost of training heavy backbones across 1.01M images, the spatial and frequency experts were trained to convergence on a single primary run, while multi-seed statistical testing ($N=4$) was conducted on the fusion modules. Full multi-seed retraining of all expert backbones from scratch, alongside cross-fold validation, would provide a more comprehensive characterization of statistical variance.
-
-\subsection*{Dual-Stream Computational Overhead}
-Although the wavelet expert is lightweight (1.73M parameters, 0.48 GFLOPs), inference in the dual-stream framework requires executing both the ResNet-50 spatial backbone and the wavelet CNN, totaling 4.60 GFLOPs and 13.1\,ms latency. For resource-constrained edge devices or high-throughput video streaming applications, single-stream architectures or knowledge-distillation strategies that compress multi-domain features into a compact single backbone represent important practical extensions.
-
-\subsection*{Architectural Evolution: Multi-Token Spatial-Frequency Cross-Attention}
-Because the current framework extracts a single pooled 128-dimensional embedding from each expert, cross-attention operates on a sequence length of $T=1$, rendering the attention softmax mathematically unweighted across tokens. A promising architectural extension involves extracting spatial-frequency feature maps or multi-patch token sequences (e.g., $7 \times 7$ spatial grid tokens and multi-band wavelet patch tokens). Applying cross-attention across multi-token sequences would enable true competitive attention weighting, allowing the model to dynamically align specific spatial regions with corresponding frequency sub-band anomalies.
+\section*{Discussion and Limitations}
+Our controlled ablations clarify three foundational lessons for multi-domain deepfake forensics:
+\begin{enumerate}
+    \item \textbf{Staged Decoupling vs.\ Joint Optimization:} Unfrozen joint training collapsed to $4.5\%$ unseen real recall on LFW ($52.1\%$ accuracy), empirically motivating decoupled specialist representation learning to prevent cross-modal drift.
+    \item \textbf{Sample-Dependent Fusion vs.\ Capacity and Two-Way Error Trade-Offs:} Replacing degenerate $T=1$ attention with $L=3$ multi-token \texttt{MHA\_128} and \texttt{GatedFusion} yields verified input-dependent weighting. On untouched \texttt{seen\_test}, fusion trades a slight increase in spatial false positives ($29 \to 35$, authentic recall $99.55\% \to 99.46\%$) for a major reduction in spatial false negatives ($129 \to 75$, synthetic recall $97.92\% \to 98.79\%$) while slashing wavelet false positives by 61.1\% ($90 \to 35$). While capacity-matched MLP, FFN-only, and attention heads converge to statistically indistinguishable in-domain accuracy ($99.10\%$--$99.16\%$, $p_{\text{Holm}}>0.15$), \texttt{MHA\_128} delivers the best strictly PNG-only accuracy ($98.90\%$, $1.04\%$ EER) and lowest unseen calibration error ($\text{ECE}=0.039$, plus significant Brier gains over \texttt{GatedFusion}/\texttt{Fusion\_128}), whereas compact 42K-parameter \texttt{GatedFusion} achieves the highest unseen cross-domain operating accuracy ($85.71\% \pm 0.06\%$, $95.40\%$ DiffFace, $97.7\%$ JPEG $Q=30$) with lowest variance across seeds.
+    \item \textbf{Principal Limitations:} First, training solely on diffusion and face-swap generators leaves fine-tuned ResNet-50 vulnerable to completely unseen generative paradigms such as StyleGAN ($0.517$ AUC), where standalone \texttt{Wolter2021\_128} retains stronger ranking ($0.841$ AUC), motivating future integration of frozen foundation encoders (e.g., multi-layer CLIP) alongside wavelet experts. Second, un-hardened dual-stream models remain vulnerable to white-box end-to-end FGSM evasion and unseen additive sensor noise ($\sigma=10$), requiring adversarial training and noise augmentation prior to adversarial deployment. Third, multi-seed variability reflects Phase 2 fusion initializations with fixed Phase 1 experts, and full 439K-image Phase 1 retraining across alternative bottleneck widths ($\{64,128,256\}$) or wavelet decomposition depths ($\{1,2,3,4\}$) was left outside this controlled Phase 2 fusion study (accordingly, no optimality claim over untested widths or depths is made).
+\end{enumerate}
 
 \section*{Conclusion}
-This study presented a modular multi-domain deepfake detection framework that combines spatial-domain RGB representations (\texttt{Wang2020\_128}) and three-level Haar wavelet packet frequency representations (\texttt{Wolter2021\_128}) through a bidirectional Multi-Head Attention (\texttt{MHA\_128}) fusion architecture. Evaluated on a 1,016,855-image multi-generator benchmark under strict identity- and video-level splits, the proposed framework achieves 98.82\% accuracy, a 0.9992 ROC-AUC, and a 1.27\% Equal Error Rate.
-
-Multi-run statistical evaluation ($N=4$ seeds) confirms that while static concatenation achieves comparable single-threshold accuracy ($98.84\%$ vs.\ $98.82\%$, $p = 0.284$), the bidirectional MHA architecture provides statistically significant improvements in threshold-independent ranking calibration (improving ROC-AUC from 0.9900 to 0.9992 and reducing EER from 1.32\% to 1.27\%) while resolving the high false-alarm rate characteristic of standalone frequency analysis. Combined with its verified modularity with modern backbones and low fusion parameter overhead (0.44M parameters), the proposed framework demonstrates the value of structured spatial-frequency integration within controlled multi-generator benchmarks. Extending these architectures to patch-level multi-token interactions, leave-one-generator-out protocols, and rigorous cross-dataset evaluation represents the principal path forward for generalizable synthetic media forensics.
+We presented a decoupled spatial-frequency deepfake detection framework integrating a 128-D RGB ResNet-50 expert (\texttt{Wang2020\_128}) and a 3-level Haar wavelet-packet CNN (\texttt{Wolter2021\_128}) via genuinely sample-dependent multi-token self-attention (\texttt{MHA\_128}) and modality gating (\texttt{GatedFusion}). Evaluated under strict cross-fitted three-way partitioning on 556,082 verified images and four untouched photorealistic unseen domains, cross-fitted two-stream fusion achieves $99.12\%$ held-out accuracy ($0.9997$ AUC, $0.87\%$ EER; trading $+6$ spatial FPs for $-54$ spatial FNs while cutting wavelet FPs by $61.1\%$), leads strictly native PNG-only controls ($98.90\%$, $1.04\%$ EER), decisively defeats unfrozen joint training ($4.5\%$ unseen real recall) and fine-tuned \texttt{Xception} ($43.04\%$ unseen mean), outperforms 12$\times$ larger \texttt{UniversalFakeDetect} on all three unseen diffusion/swap benchmarks, preserves $0.00\%$ demographic FPR disparity on FairFace validation, and reaches up to $95.40\%$ accuracy on unseen DiffFace swaps and $97.7\%$ under severe JPEG $Q=30$ compression.
 
 \section*{Declarations}
 
 \subsection*{Funding}
-The authors declare that no funds, grants, or other support were received during the preparation of this manuscript. Open access funding was provided by the Science, Technology \& Innovation Funding Authority (STDF) in cooperation with the Egyptian Knowledge Bank (EKB).
-
-\subsection*{Ethics Approval and Consent to Participate}
-Not applicable. All datasets utilized in this study (CelebA, FaceForensics++, FakeAVCeleb, Celeb-DF, and Zenodo DiffFace repositories) are publicly available academic benchmarks accessed in accordance with their respective research licenses. No human participants were recruited and no new personally identifiable data were collected.
-
-\subsection*{Consent for Publication}
-All sample facial images displayed in the manuscript figures (specifically Figures 1, 2, 3, and 8) are 100\% synthetic, non-existent AI-generated faces produced by generative models (StyleGAN via \texttt{ThisPersonDoesNotExist.com} and Ablated Diffusion Models) and do not depict any real or recognizable human individual; therefore, human subject consent for image publication is not required.
-
-\subsection*{Data Availability}
-The datasets analyzed during the current study are publicly available in the Zenodo repository (\url{https://doi.org/10.5281/zenodo.10865300} and \url{https://doi.org/10.5281/zenodo.10865065}) and through the official academic releases of FaceForensics++ \cite{ref12}, FakeAVCeleb \cite{ref11}, CelebA \cite{ref36}, and Celeb-DF \cite{ref37}.
-
-\subsection*{Code Availability}
-The complete PyTorch source code, training configurations, and evaluation scripts supporting the findings of this study are publicly archived on Zenodo at \url{https://doi.org/10.5281/zenodo.21323779} \cite{ref26}.
+The authors declare that no funds, grants, or other support were received during the preparation of this manuscript. Open access funding is provided by the Science, Technology \& Innovation Funding Authority (STDF) in cooperation with the Egyptian Knowledge Bank (EKB).
 
 \subsection*{Competing Interests}
 The authors declare no competing interests.
 
+\subsection*{Ethical Approval}
+Not applicable. All datasets utilized in this study (FairFace, CelebA, FFHQ-256, UTKFace, LFW, StyleGAN 140k, and public Zenodo diffusion repositories) are publicly available academic benchmarks accessed in accordance with their respective research licenses. No human participants were recruited and no new personally identifiable data were collected.
+
+\subsection*{Consent to Participate}
+Not applicable. No human participants were involved in this study.
+
+\subsection*{Consent to Publish}
+Not applicable. All facial visualizations presented in Figure~\ref{fig:gradcam} depict purely synthetic, AI-generated faces produced by diffusion and GAN models and do not represent real identifiable individuals.
+
+\subsection*{Data Availability}
+All datasets analyzed in this study are publicly available through Zenodo (\url{https://doi.org/10.5281/zenodo.10865300} and \url{https://doi.org/10.5281/zenodo.10865065}) and the official public releases of FairFace, CelebA, FFHQ-256, UTKFace, LFW, and 140k Real-and-Fake Faces. Dataset construction manifests, source-by-class contingency tables, and evaluation prediction logs are deposited with the code archive.
+
+\subsection*{Code Availability}
+The complete PyTorch source code, capacity-matched ablation heads, cross-fitted evaluation scripts, split manifests, and configuration files are publicly archived on Zenodo (\url{https://doi.org/10.5281/zenodo.21323779})~\cite{ref26} and maintained on GitHub (\url{https://github.com/AbdelrahmanHassan131/Novel-Deepfake-Detection}).
+
 \subsection*{Author Contributions}
-Abdelrahman Hassan conceived the study, designed the multi-domain MHA architecture, implemented the codebase, conducted the experiments, and wrote the manuscript. Ahmed Hassan and Hossam Abdelmunim supervised the research, validated the methodological design and statistical analyses, and reviewed and edited the manuscript. All authors read and approved the final manuscript.
+Abdelrahman Hassan conceived the study, designed the multi-domain fusion architectures, implemented the training and evaluation codebase, conducted all experiments, and wrote the manuscript. Ahmed Hassan and Hossam Abdelmunim supervised the research, validated the methodological design and statistical analyses, and reviewed and edited the manuscript. All authors read and approved the final manuscript.
 
 \begin{thebibliography}{99}
-
 \bibitem{ref1} Ho, J., Jain, A. \& Abbeel, P. Denoising diffusion probabilistic models. \textit{Advances in Neural Information Processing Systems} \textbf{33}, 6840--6851 (2020).
-
-\bibitem{ref2} Song, J., Meng, C. \& Ermon, S. Denoising diffusion implicit models. In \textit{International Conference on Learning Representations (ICLR)} (2021). \url{https://arxiv.org/abs/2010.02502}.
-
+\bibitem{ref2} Song, J., Meng, C. \& Ermon, S. Denoising diffusion implicit models. In \textit{International Conference on Learning Representations (ICLR)} (2021).
 \bibitem{ref3} Dhariwal, P. \& Nichol, A. Diffusion models beat GANs on image synthesis. \textit{Advances in Neural Information Processing Systems} \textbf{34}, 8780--8794 (2021).
-
-\bibitem{ref4} Wang, S.-Y., Wang, O., Zhang, R., Owens, A. \& Efros, A. A. CNN-generated images are surprisingly easy to spot... for now. In \textit{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, 8695--8704 (2020).
-
-\bibitem{ref5} Ricker, J., Damm, S., Holz, T. \& Fischer, A. Towards the detection of diffusion model deepfakes. In \textit{Proceedings of the 19th International Joint Conference on Computer Vision, Imaging and Computer Graphics Theory and Applications (VISIGRAPP)}, 447--458 (2024). \url{https://arxiv.org/abs/2210.14571}.
-
+\bibitem{ref4} Wang, S.-Y., Wang, O., Zhang, R., Owens, A. \& Efros, A. A. CNN-generated images are surprisingly easy to spot\dots for now. In \textit{Proc.\ IEEE/CVF Conf.\ on Computer Vision and Pattern Recognition (CVPR)}, 8695--8704 (2020).
+\bibitem{ref5} Ricker, J., Damm, S., Holz, T. \& Fischer, A. Towards the detection of diffusion model deepfakes. In \textit{Proc.\ 19th Int.\ Joint Conf.\ on Computer Vision, Imaging and Computer Graphics Theory and Applications (VISIGRAPP)}, 447--458 (2024).
 \bibitem{ref6} Lin, H., Luo, W., Wei, K. \& Liu, M. Improved Xception with dual attention mechanism and feature fusion for face forgery detection. \textit{IEEE Signal Processing Letters} \textbf{29}, 1639--1643 (2022).
-
-\bibitem{ref7} Yang, S., Guo, H., Hu, S., Zhu, B., Fu, Y., Lyu, S., Wu, X. \& Wang, X. CrossDF: Improving cross-domain deepfake detection with deep information decomposition. \textit{arXiv preprint arXiv:2310.00359} (2023).
-
+\bibitem{ref7} Yang, S. et al. CrossDF: Improving cross-domain deepfake detection with deep information decomposition. \textit{arXiv preprint arXiv:2310.00359} (2023).
 \bibitem{ref8} Wolter, M., Blanke, F., Heese, R. \& Garcke, J. Wavelet-packets for deepfake image analysis and detection. \textit{Machine Learning} \textbf{111}, 4295--4327 (2022).
-
 \bibitem{ref9} Chen, Z. DiffFace - part1 [Data set]. \textit{Zenodo} (2024). \url{https://doi.org/10.5281/zenodo.10865300}.
-
 \bibitem{ref10} Chen, Z. DiffFace - part2 [Data set]. \textit{Zenodo} (2024). \url{https://doi.org/10.5281/zenodo.10865065}.
-
-\bibitem{ref11} Khalid, H., Tariq, S., Kim, M. \& Woo, S. S. FakeAVCeleb: A novel audio-video multimodal deepfake dataset. In \textit{Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks} \textbf{1} (2021).
-
-\bibitem{ref12} Rössler, A., Cozzolino, D., Verdoliva, L., Riess, C., Thies, J. \& Nießner, M. FaceForensics++: Learning to detect manipulated facial images. In \textit{Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)}, 1--11 (2019).
-
-\bibitem{ref13} Wang, Y., Chen, X., Zhu, J., Chu, W., Tai, Y., Wang, C., Li, J., Wu, Y., Huang, F. \& Ji, R. HifiFace: 3D shape and semantic prior guided high fidelity face swapping. In \textit{Proceedings of the Thirtieth International Joint Conference on Artificial Intelligence (IJCAI)}, 1136--1142 (2021).
-
-\bibitem{ref14} Szegedy, C., Ioffe, S., Vanhoucke, V. \& Alemi, A. A. Inception-v4, inception-resnet and the impact of residual connections on learning. In \textit{Proceedings of the AAAI Conference on Artificial Intelligence} \textbf{31}, 4278--4284 (2017).
-
-\bibitem{ref15} Chandra, N. A. et al. Deepfake-Eval-2024: A multi-modal in-the-wild benchmark of deepfakes circulated in 2024. \textit{arXiv preprint arXiv:2503.02857} (2025).
-
-\bibitem{ref16} Zhao, W., Rao, Y., Shi, W., Liu, Z., Zhou, J. \& Lu, J. DiffSwap: High-fidelity and controllable face swapping via 3D-aware masked diffusion. In \textit{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, 8568--8577 (2023).
-
-\bibitem{ref17} Zhu, Y., Li, Q., Wang, J., Xu, C. \& Sun, Z. One shot face swapping on megapixels. In \textit{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, 4834--4844 (2021).
-
-\bibitem{ref18} Thies, J., Zollhöfer, M., Stamminger, M., Theobalt, C. \& Nießner, M. Face2Face: Real-time face capture and reenactment of RGB videos. In \textit{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, 2387--2395 (2016).
-
-\bibitem{ref19} Li, M., Yuan, G., Wang, C., Liu, Z., Zhang, Y., Nie, Y., Wang, J. \& Xu, D. E4S: Fine-grained face swapping via editing with regional GAN inversion. \textit{arXiv preprint arXiv:2310.15081} (2023).
-
-\bibitem{ref20} Li, L., Bao, J., Yang, H., Chen, D. \& Wen, F. FaceShifter: Towards high fidelity and occlusion aware face swapping. \textit{arXiv preprint arXiv:1912.13457} (2019).
-
-\bibitem{ref21} Kim, K., Kim, Y., Cho, S., Seo, J., Nam, J., Lee, K., Kim, S. \& Lee, K. DiffFace: Diffusion-based face swapping with facial guidance. \textit{Pattern Recognition} \textbf{163}, 111451 (2025).
-
-\bibitem{ref22} Ye, F., Hua, M., Zhang, P., Li, X., Sun, Q., Zhao, S., He, Q. \& Wu, X. DreamID: High-fidelity and fast diffusion-based face swapping via triplet ID group learning. \textit{arXiv preprint arXiv:2504.14509} (2025).
-
-\bibitem{ref23} Shao, H., Wang, S., Zhou, Y., Song, G., He, D., Qin, S., Zong, Z., Ma, B., Liu, Y. \& Li, H. VividFace: A diffusion-based hybrid framework for high-fidelity video face swapping. \textit{arXiv preprint arXiv:2412.11279} (2024).
-
-\bibitem{ref24} Afchar, D., Nozick, V., Yamagishi, J. \& Echizen, I. MesoNet: A compact facial video forgery detection network. In \textit{2018 IEEE International Workshop on Information Forensics and Security (WIFS)}, 1--7 (2018).
-
-\bibitem{ref25} Wang, S.-Y. CNNDetection GitHub Repository. (2020). \url{https://github.com/PeterWang512/CNNDetection.git}.
-
-\bibitem{ref26} Hassan, A. CNNDetection Retraining and Fusion Framework. \textit{Zenodo} (2026). \url{https://doi.org/10.5281/zenodo.21323779}.
-
-\bibitem{ref27} Standley, T. Xception PyTorch GitHub Repository. (2017). \url{https://github.com/tstandley/Xception-PyTorch.git}.
-
-\bibitem{ref28} Chollet, F. Xception: Deep learning with depthwise separable convolutions. In \textit{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, 1251--1258 (2017).
-
+\bibitem{ref12} R\"{o}ssler, A., Cozzolino, D., Verdoliva, L., Riess, C., Thies, J. \& Nie{\ss}ner, M. FaceForensics++: Learning to detect manipulated facial images. In \textit{Proc.\ IEEE/CVF ICCV}, 1--11 (2019).
+\bibitem{ref16} Zhao, W. et al. DiffSwap: High-fidelity and controllable face swapping via 3D-aware masked diffusion. In \textit{Proc.\ IEEE/CVF CVPR}, 8568--8577 (2023).
+\bibitem{ref21} Kim, K. et al. DiffFace: Diffusion-based face swapping with facial guidance. \textit{Pattern Recognition} \textbf{163}, 111451 (2025).
+\bibitem{ref24} Afchar, D., Nozick, V., Yamagishi, J. \& Echizen, I. MesoNet: A compact facial video forgery detection network. In \textit{IEEE WIFS}, 1--7 (2018).
+\bibitem{ref25} Wang, S.-Y. CNNDetection GitHub Repository (2020). \url{https://github.com/PeterWang512/CNNDetection.git}.
+\bibitem{ref26} Hassan, A. Novel Deepfake Detection: Spatial-Frequency Retraining and Fusion Framework [Software]. \textit{Zenodo} (2026). \url{https://doi.org/10.5281/zenodo.21323779}.
+\bibitem{ref28} Chollet, F. Xception: Deep learning with depthwise separable convolutions. In \textit{Proc.\ IEEE/CVF CVPR}, 1251--1258 (2017).
 \bibitem{ref29} Ye, W., He, X. \& Ding, F. Decoupling forgery semantics for generalizable deepfake detection. \textit{arXiv preprint arXiv:2406.09739} (2024).
-
-\bibitem{ref30} Soudy, A. H., Sayed, O., Tag-Elser, H., Ragab, R., Mohsen, S., Mostafa, T. A. H., Abohany, A. A. \& Slim, S. O. Deepfake detection using convolutional vision transformers and convolutional neural networks. \textit{Neural Computing and Applications} \textbf{36}, 19759--19775 (2024).
-
-\bibitem{ref31} Yan, Z., Zhang, Y., Fan, Y. \& Wu, B. UCF: Uncovering common features for generalizable deepfake detection. In \textit{Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)}, 22412--22423 (2023).
-
-\bibitem{ref36} Liu, Z., Luo, P., Wang, X. \& Tang, X. Deep learning face attributes in the wild. In \textit{Proceedings of the IEEE International Conference on Computer Vision (ICCV)}, 3730--3738 (2015).
-
-\bibitem{ref37} Li, Y., Yang, X., Sun, P., Qi, H. \& Lyu, S. Celeb-DF: A large-scale challenging dataset for deepfake forensics. In \textit{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, 3207--3216 (2020).
-
-\bibitem{ref39} Dolhansky, B. et al. The DeepFake Detection Challenge (DFDC) dataset. \textit{arXiv preprint arXiv:2006.07397} (2020).
-
-\bibitem{ref40} Zi, B., Chang, M., Chen, J., Ma, X. \& Jiang, Y.-G. WildDeepfake: A challenging real-world dataset for deepfake detection. In \textit{Proceedings of the 28th ACM International Conference on Multimedia (ACM MM)}, 2382--2390 (2020).
-
+\bibitem{ref30} Soudy, A. H. et al. Deepfake detection using convolutional vision transformers and convolutional neural networks. \textit{Neural Computing and Applications} \textbf{36}, 19759--19775 (2024).
+\bibitem{ref31} Yan, Z., Zhang, Y., Fan, Y. \& Wu, B. UCF: Uncovering common features for generalizable deepfake detection. In \textit{Proc.\ IEEE/CVF ICCV}, 22412--22423 (2023).
+\bibitem{ref36} Liu, Z., Luo, P., Wang, X. \& Tang, X. Deep learning face attributes in the wild. In \textit{Proc.\ IEEE ICCV}, 3730--3738 (2015).
+\bibitem{ref41} Ojha, U., Li, Y. \& Lee, Y. J. Towards universal fake image detectors that generalize across generative models. In \textit{Proc.\ IEEE/CVF CVPR}, 24480--24489 (2023).
+\bibitem{ref42} Chen, B. et al. DRCT: Diffusion reconstruction contrastive training towards universal detection of diffusion generated images. In \textit{Proc.\ ICML} (2024).
+\bibitem{ref43} Alkishri, W., Kamal, S. \& Yousif, J. Deepfake detection via frequency-aware Vision Transformer and bidirectional cross-attention fusion with post-processing robustness. \textit{Information} \textbf{17}(9), 819 (2026). \url{https://doi.org/10.3390/info17090819}.
+\bibitem{ref44} Pandey, M., Koundal, D. \& Kumar, S. LGF-Net: a spatial-frequency deepfake detection network with learnable Gabor filters and gated cross-modal fusion. \textit{Discover Computing} \textbf{29}, 634 (2026). \url{https://doi.org/10.1007/s10791-026-10548-5}.
+\bibitem{ref45} Kashiani, H., Talemi, N. A. \& Afghah, F. FreqDebias: Towards generalizable deepfake detection via consistency-driven frequency debiasing. In \textit{Proc.\ IEEE/CVF CVPR}, 820 (2025). \url{https://doi.org/10.1109/CVPR52734.2025.00820}.
+\bibitem{ref46} Karkkainen, K. \& Joo, J. FairFace: Face attribute dataset for balanced race, gender, and age for bias measurement and mitigation. In \textit{Proc.\ IEEE/CVF WACV}, 1548--1558 (2021).
+\bibitem{ref47} Karras, T., Laine, S. \& Aila, T. A style-based generator architecture for generative adversarial networks (FFHQ). In \textit{Proc.\ IEEE/CVF CVPR}, 4401--4410 (2019).
+\bibitem{ref48} Zhang, Z., Song, Y. \& Qi, H. Age progression/regression by conditional adversarial autoencoder (UTKFace). In \textit{Proc.\ IEEE/CVF CVPR}, 5810--5818 (2017).
+\bibitem{ref49} Huang, G. B., Mattar, M., Berg, T. \& Learned-Miller, E. Labeled Faces in the Wild: A database for studying face recognition in unconstrained environments. In \textit{Workshop on Faces in 'Real-Life' Images, ECCV} (2008).
 \end{thebibliography}
 
-\section*{Reproducibility and Environment Specifications}
+\section*{Appendix: Statistical Verification, Per-Seed Results, and Reproducibility}
 
-To ensure the reproducibility of our experimental results and facilitate independent verification, we provide complete software and hardware environment specifications, alongside a structured reproduction protocol.
-
-\subsection*{Hardware Environment}
-All stages of the experimental pipeline were conducted across three clearly separated hardware configurations, validating both resource-constrained prototyping and homogeneous synchronized multi-GPU training:
-\begin{enumerate}
-    \item \textbf{Prototyping \& Development Stage:} A local workstation equipped with a single NVIDIA GeForce RTX 3060 GPU (12\,GB GDDR6 VRAM), an Intel Core i5-12400 CPU (6 cores, 12 threads), 32\,GB DDR4 RAM, and 2\,TB HDD storage, used exclusively for initial pipeline debugging and hyper-parameter verification.
-    \item \textbf{Production Training \& Main Evaluation Stage:} A homogeneous cloud-based multi-GPU node consisting of two identical NVIDIA Tensor Core T4 GPUs (16\,GB GDDR6 VRAM each) interconnected via PCIe Gen3 (the RTX 3060 was not combined with T4 GPUs during distributed training). Gradient synchronization and data distribution across the two T4 GPUs were managed using PyTorch's native \texttt{DistributedDataParallel} (DDP) API with the \texttt{nccl} backend and fixed random seeds, ensuring deterministic gradient averaging across parallel mini-batches.
-    \item \textbf{Cross-Hardware Verification Stage:} An isolated cloud instance featuring a single NVIDIA Ada Lovelace L4 GPU (24\,GB GDDR6 VRAM). This was used to verify runtime metrics and confirm the hardware-agnostic stability of the trained checkpoints, which exhibited negligible metric variance ($< 0.05\%$) compared to the homogeneous dual-T4 setup.
-\end{enumerate}
-
-\subsection*{Software Environment and Dependencies}
-The software stack was standardized to prevent dependency-induced discrepancies. The complete environment is defined by the following specifications:
-\begin{itemize}
-    \item \textbf{Operating System:} Windows 10/11 and Linux (Ubuntu 20.04 LTS or newer).
-    \item \textbf{Python Version:} $\geq$ 3.11 (specifically tested and executed on Python 3.11.0).
-    \item \textbf{CUDA Support:} CUDA Runtime version 12.1.
-    \item \textbf{Core Libraries:} PyTorch v2.5.1 and torchvision v0.20.1, both compiled with CUDA 12.1 support.
-\end{itemize}
-The exact versions of auxiliary Python libraries used for data loading, preprocessing, and metric evaluation are detailed in Table~\ref{tab:software_env}.
-
-\begin{table}[ht]
+\begin{table}[tbp]
 \centering
-\caption{Complete software dependency and package version specifications.}
-\label{tab:software_env}
-\begin{tabular}{|l|c|l|}
-\hline
-\textbf{Library Name} & \textbf{Minimum Version} & \textbf{Primary Purpose in Pipeline} \\ \hline
-\texttt{torch} & 2.5.1 & Core deep learning framework and tensor operations \\ \hline
-\texttt{torchvision} & 0.20.1 & Data loading utilities and image transformations \\ \hline
-\texttt{numpy} & 2.4.4 & Multi-dimensional numerical arrays and calculations \\ \hline
-\texttt{pytorch-wavelets} & 1.3.0 & GPU-accelerated Discrete Wavelet Transforms \\ \hline
-\texttt{pywavelets} & 1.9.0 & CPU-based reference wavelet packet decompositions \\ \hline
-\texttt{scikit-learn} & 1.9.0 & Evaluation metric calculations (EER, AUC, F1) \\ \hline
-\texttt{opencv-python} & 5.0.0.93 & Real-time image decoding and augmentations \\ \hline
-\texttt{pillow} & 12.2.0 & Image processing and basic loading checks \\ \hline
-\texttt{matplotlib} & 3.11.0 & Metric visualization (ROC, PR, Confusion Matrix) \\ \hline
-\texttt{scipy} & 1.17.1 & Mathematical utilities and signal processing algorithms \\ \hline
-\texttt{pyyaml} & 6.0.3 & Parsing configuration files and CLI overrides \\ \hline
-\texttt{tensorboard} & 2.21.0 & Logging training progress and metric visualization \\ \hline
-\texttt{tqdm} & 4.68.3 & Console-based execution progress tracking \\ \hline
+\caption{Complete statistical audit on untouched \texttt{seen\_test} ($n=12,729$): identity-cluster bootstrap 95\% confidence intervals (1,000 identity-cluster resamples), all four unrounded per-seed accuracies and EERs (seeds $\{42, 100, 2024, 3407\}$ with fixed Phase 1 experts), two-sided paired $t$-test Cohen's $d$ and Holm--Bonferroni adjusted $p$-values (\texttt{MHA\_128} minus comparator), and the 16-configuration concatenation MLP width/dropout sweep summary.}
+\label{tab:stats_appendix}
+\scriptsize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Cluster 95\% CI: Acc (\%)} & \textbf{Cluster 95\% CI: AUC} & \textbf{Cluster 95\% CI: EER (\%)} & \textbf{Cluster 95\% CI: Brier} \\
+\midrule
+\texttt{Wang2020\_128} (RGB) & $[98.41, 99.04]$ & $[0.9993, 0.9997]$ & $[0.85, 1.39]$ & $[0.0107, 0.0147]$ \\
+\texttt{Wolter2021\_128} (Freq) & $[97.03, 97.99]$ & $[0.9967, 0.9983]$ & $[1.91, 2.94]$ & $[0.0153, 0.0225]$ \\
+\texttt{ConcatMatchedMLP} & $[98.75, 99.36]$ & $[0.9996, 0.9998]$ & $[0.62, 1.12]$ & $[0.0074, 0.0111]$ \\
+\texttt{GatedFusion} & $[98.77, 99.35]$ & $[0.9995, 0.9998]$ & $[0.66, 1.14]$ & $[0.0079, 0.0117]$ \\
+\textbf{\texttt{MHA\_128} (TokenAttn)} & \textbf{[98.84, 99.38]} & \textbf{[0.9996, 0.9998]} & \textbf{[0.60, 1.05]} & \textbf{[0.0067, 0.0101]} \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{Four-Seed Unrounded \texttt{seen\_test} Acc / EER (Seeds 42, 100, 2024, 3407) \& Paired Stats vs.\ \texttt{MHA\_128} (Cohen's $d$, $p_{\text{Holm}}$)}} \\
+\texttt{MHA\_128} (Reference) & 99.14 / 99.12 / 99.11 / 99.11 & EER: 0.82 / 0.89 / 0.87 / 0.90 & --- & --- \\
+vs.\ \texttt{ConcatMatchedMLP} & 99.10 / 99.14 / 99.11 / 99.15 & EER: 0.89 / 0.84 / 0.85 / 0.84 & Acc $d=-0.20$ ($p=1.00$) & Brier $d=-1.57$ ($p=0.258$) \\
+vs.\ \texttt{NoAttnFFN} & 99.13 / 99.07 / 99.22 / 99.09 & EER: 0.86 / 0.83 / 0.81 / 0.83 & Acc $d=-0.11$ ($p=1.00$) & Brier $d=+0.13$ ($p=1.00$) \\
+vs.\ \texttt{LinearMix} & 99.15 / 99.08 / 99.20 / 99.21 & EER: 0.80 / 0.82 / 0.80 / 0.80 & Acc $d=-0.63$ ($p=0.995$) & Brier $d=+0.71$ ($p=0.995$) \\
+vs.\ \texttt{GatedFusion} & 99.10 / 99.10 / 99.10 / 99.10 & EER: 0.92 / 0.90 / 0.92 / 0.92 & Acc $d=+1.19$ ($p=0.318$) & \textbf{Brier $d=-8.69$ ($p=0.0021$)} \\
+vs.\ \texttt{Fusion\_128} (Orig) & 99.10 / 99.10 / 99.14 / 99.11 & EER: 0.89 / 0.89 / 0.90 / 0.92 & Acc $d=+0.30$ ($p=1.00$) & \textbf{Brier $d=-4.13$ ($p=0.0186$)} \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{16-Configuration Concatenation MLP Width/Dropout Sweep ($\text{width}\in\{128,256,384,512\}$, $\text{dropout}\in\{0.1,0.2,0.3,0.5\}$)}} \\
+Width 128 (41,729 params) & \texttt{seen\_test} Acc: 99.11--99.15\% & \texttt{seen\_test} AUC: 0.99966--0.99968 & Unseen 4-Dom Acc: 85.25--85.51\% & Unseen AUC: 0.8882--0.9103 \\
+Width 256 (99,329 params) & \texttt{seen\_test} Acc: 99.10--99.16\% & \texttt{seen\_test} AUC: 0.99967--0.99969 & Unseen 4-Dom Acc: 85.08--85.28\% & Unseen AUC: 0.8810--0.9130 \\
+Width 384 (173,313 params) & \texttt{seen\_test} Acc: 99.10--99.14\% & \texttt{seen\_test} AUC: 0.99967--0.99969 & Unseen 4-Dom Acc: 85.08--85.37\% & Unseen AUC: 0.8969--0.9067 \\
+Width 512 (263,681 params) & \texttt{seen\_test} Acc: 99.10--99.12\% & \texttt{seen\_test} AUC: 0.99966--0.99969 & Unseen 4-Dom Acc: 85.08--85.24\% & Unseen AUC: 0.9084--0.9148 \\
+\bottomrule
 \end{tabular}
 \end{table}
 
-\subsection*{Dataset and Preprocessing Specifications}
-The training and validation datasets~\cite{ref9,ref10,ref11,ref12,ref36,ref37} follow a standardized two-level hierarchical folder structure compatible with PyTorch's \texttt{ImageFolder} representation:
-\begin{itemize}
-    \item \textbf{Directory Layout:} Root folders named \texttt{train} and \texttt{val}, each containing two subfolders named \texttt{real} and \texttt{fake}.
-    \item \textbf{Image Preprocessing:} Images are dynamically resized to a fixed resolution of $224 \times 224$ pixels. Normalization is performed on input tensors using the ImageNet channel-wise mean ($[0.485, 0.456, 0.406]$) and standard deviation ($[0.229, 0.224, 0.225]$).
-\end{itemize}
+All revised experiments were executed on a single NVIDIA L4 GPU (24\,GB VRAM, CUDA 13.0, Python 3.13, PyTorch \texttt{2.14.1+cu130}, \texttt{torchvision}, \texttt{PyWavelets}, \texttt{pytorch-wavelets}, \texttt{scikit-learn}, \texttt{scipy}, \texttt{Pillow}, \texttt{opencv-python}; exact environment pin files and prediction JSON artifacts are archived in the repository). Preprocessing uses direct bilinear resizing of dataset-provided aligned facial crops to $224 \times 224$ with zero external face re-detection. Exact commands for two-expert training and unit-tested evaluation:
+\begin{verbatim}
+git clone --branch GeneralizationDeepFakeDetection \
+  https://github.com/AbdelrahmanHassan131/Novel-Deepfake-Detection.git
+cd Novel-Deepfake-Detection && pip install -r requirements.txt
 
-\subsection*{Step-by-Step Reproduction Protocol}
-The source code, training configurations, and evaluation scripts are publicly archived at~\cite{ref26}. To reproduce the experiments:
-\begin{enumerate}
-    \item \textbf{Cloning and Virtual Environment Setup:}
-    Clone the codebase and initialize a Python environment using either the package manager \texttt{uv} (recommended for deterministic package resolution via \texttt{uv.lock}) or standard \texttt{pip}:
-    \begin{verbatim}
-    git clone <repository_url> && cd "Novel Deepfake Detection"
-    
-    # Option A: Fast installation via uv
-    uv venv && .venv\Scripts\activate
-    uv sync
-    
-    # Option B: Standard installation via pip
-    python -m venv .venv && .venv\Scripts\activate
-    pip install -r requirements.txt
-    \end{verbatim}
+# Phase 1: Train Spatial & Frequency Experts (439,222 active LOGO images, batch_size=128, BF16 AMP)
+python train.py --arch Wang2020_128 --embed_dim 128 --pretrained --optim adamw \
+  --lr 2e-4 --weight_decay 1e-2 --rgb_label_smoothing 0.05 --lr_policy cosine --epochs 5 \
+  --aug_recipe custom --jpg_prob 0.8 --blur_prob 0.35 --downscale_prob 0.35 --seed 42
+python train.py --arch WolterWavelet2021_128 --embed_dim 128 --wavelet_backend gpu \
+  --wavelet_type haar --wavelet_level 3 --wavelet_log_mode signed_log1p \
+  --optim adam --lr 5e-4 --weight_decay 1e-4 --lr_policy cosine --epochs 5 --seed 42
 
-    \item \textbf{Phase 1: Base Model Training (128-D Embeddings):}
-    Train the backbone models (Wang2020, Wolter Wavelet, Xception, ConvNeXt) on the 80\% training split to output 128-D embeddings:
-    \begin{verbatim}
-    python train.py --arch Wang2020_128 --dataroot "path/to/train" --val_root "path/to/val"
-    python train.py --arch WolterWavelet2021_128 --dataroot "path/to/train" ...
-    python train.py --arch Xception_128 --dataroot "path/to/train" ...
-    python train.py --arch ConvNeXt_128 --dataroot "path/to/train" ...
-    \end{verbatim}
-
-    \item \textbf{Phase 2: Fusion and Multi-Head Attention Model Training:}
-    Train the fusion networks (e.g., \texttt{MHA\_128} and \texttt{Fusion\_128}) on the 80\% training split by providing paths to the frozen Phase 1 checkpoints:
-    \begin{verbatim}
-    python train.py --arch MHA_WWXC --dataroot "path/to/train" --val_root "path/to/val" \
-      --rgb_model_path "experiments/wang2020_128_run/checkpoints/best.pth" \
-      --wavelet_model_path "experiments/wolter_128_run/checkpoints/best.pth" \
-      --xception_model_path "experiments/xception_128_run/checkpoints/best.pth" \
-      --convnext_model_path "experiments/convnext_128_run/checkpoints/best.pth" \
-      --freeze_base_models
-    \end{verbatim}
-
-    \item \textbf{Phase 3: Held-Out Model Evaluation and FGSM Stress Testing:}
-    Run comparative evaluations on the held-out 20\% validation split and test inference-time robustness under white-box FGSM perturbation:
-    \begin{verbatim}
-    # Comprehensive evaluation & multi-seed statistical report generation
-    python evaluate.py --val_root "path/to/val" --mha_wwxc "path/to/best_mha.pth" ...
-    
-    # White-box FGSM adversarial stress testing
-    python evaluate_robustness.py --val_root "path/to/val" --attack fgsm --mha_wwxc "path/to/best_mha.pth" ...
-    \end{verbatim}
-\end{enumerate}
+# Phase 2 & 3: Cross-Fitted Fusion (lr=3e-4, wd=1e-3, batch_size=256, epochs=25, s=0.05, mod_drop=0.15)
+python train.py --arch MHA_128 --fusion_type token_attention --embed_dim 128 --num_heads 4 \
+  --rgb_model_path <BEST_WANG_E1> --wavelet_model_path <BEST_WAV_E5> --wavelet_backend gpu \
+  --optim adamw --lr 3e-4 --weight_decay 1e-3 --batch_size 256 --epochs 25 --seed 42
+python -m unittest tests/test_paper1_revision_suite.py -v
+\end{verbatim}
 
 \end{document}

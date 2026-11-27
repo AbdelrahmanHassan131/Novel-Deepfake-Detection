@@ -1,0 +1,176 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+
+\definecolor{revcolor}{RGB}{25,65,120}
+\definecolor{respcolor}{RGB}{20,95,45}
+\definecolor{boxbg}{RGB}{244,247,252}
+
+\newcommand{\reviewercomment}[2]{%
+  \vspace{0.6em}\noindent\begin{tcolorbox}[colback=boxbg,colframe=revcolor,boxrule=0.6pt,left=6pt,right=6pt,top=4pt,bottom=4pt]
+  \textbf{\color{revcolor}#1:} #2
+  \end{tcolorbox}
+}
+\newcommand{\authorresponse}[1]{%
+  \noindent\textbf{\color{respcolor}Response:} #1\par\vspace{0.5em}
+}
+
+\title{\textbf{Point-by-Point Response to Editor and Reviewers}\\[0.4em]
+\large Manuscript ID: \texttt{4de31318-c384-4d19-b049-161f7c79cffc}\\
+\textit{Discover Artificial Intelligence} (Springer Nature)}
+\author{Abdelrahman Hassan, Ahmed Hassan, and Hossam Abdelmunim\\
+Computer and Systems Engineering Department, Faculty of Engineering, Ain Shams University, Cairo, Egypt}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\noindent Dear Editor (Dr.\ Eugenio Vocaturo), Assistant Editor (Paras Ukhalkar), and Reviewers 1 and 2,
+
+\vspace{0.5em}
+\noindent We sincerely thank the editorial team and both reviewers for their thorough, rigorous, and constructive evaluation of our manuscript. Every technical, methodological, statistical, and presentation concern raised in the reports has been carefully addressed through substantial new experiments, architectural upgrades, programmatic verification of every metric and confusion matrix, redrawn figures, and textual revisions. Line numbers have been enabled throughout the revised manuscript (\texttt{\textbackslash lineno}) for convenient verification.
+
+\medskip
+\noindent\textbf{Summary of Major Revisions:}
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+    \item \textbf{Replaced degenerate single-token attention ($T=1$)} with genuinely sample-dependent three-token multi-head self-attention (\texttt{MHA\_128} over $[\mathbf{x}_{\text{cls}}, \mathbf{x}_s, \mathbf{x}_f]$, 199,425 parameters) and sample-dependent \texttt{GatedFusion} (41,987 parameters), and verified dynamic per-domain modality modulation quantitatively.
+    \item \textbf{Eliminated capacity confounds:} Added three 1:1 parameter-matched ($\approx$198K--199K) controls (\texttt{ConcatMatchedMLP}, \texttt{NoAttnFFN}, \texttt{LinearMix}) plus a 16-configuration concatenation width/dropout sweep across $N=4$ seeds with Holm--Bonferroni multiplicity correction.
+    \item \textbf{Eliminated validation-selection bias, producer--consumer overfitting, and format shortcuts:} Built a verified 556,082-image multi-domain benchmark (4 native high-resolution authentic datasets + 15 balanced diffusion generators) with a Leave-One-Generator-Out (LOGO) split, out-of-sample cross-fitted Phase 2 fusion training, untouched \texttt{seen\_test} ($n=12,729$), strictly native PNG-only controls, and four untouched external unseen domains (LFW vs.\ LDM, SDXL\_Refine, DiffFace, StyleGAN) under matched JPEG $Q=85$ recompression.
+    \item \textbf{Empirically validated staged decoupling} against an unfrozen joint end-to-end dual-stream training baseline (which collapsed to $4.5\%$ unseen real recall).
+    \item \textbf{Programmatically audited every table, confusion count, calibration metric (Brier/ECE/reliability diagrams), end-to-end raw-pixel FGSM sweep, nine real-world perturbations, FairFace demographic fairness audit, and exact latency (incl.\ vs.\ excl.\ GPU DWT).}
+\end{itemize}
+
+\section*{Response to Editorial / Internal Feedback}
+
+\reviewercomment{Internal Feedback 1 (Data Availability Statement)}{Ensure consistency between the manuscript Data Availability statement and the SNAPP editorial portal (set Data Availability to ``Yes'' and paste matching text).}
+\authorresponse{We have updated the SNAPP submission portal under \textit{Declarations $\to$ Data Availability} to ``Yes'' and pasted the exact verbatim Data Availability statement that appears in the revised manuscript under \textit{Declarations}.}
+
+\reviewercomment{Internal Feedback 2 (Declarations Section)}{Include a separate ``Declarations'' section with individual subheadings for Ethical approval, Consent to participate, and Consent to publish.}
+\authorresponse{Added a dedicated \textit{Declarations} section containing separate individual subheadings for \textit{Funding}, \textit{Competing Interests}, \textit{Ethical Approval}, \textit{Consent to Participate}, \textit{Consent to Publish}, \textit{Data Availability}, \textit{Code Availability}, and \textit{Author Contributions}.}
+
+\reviewercomment{Internal Feedback 3 (Optional Reference Suggestions)}{Specific background references suggested by reviewers are at the authors' discretion.}
+\authorresponse{Thank you for this clear guidance. We incorporated the directly relevant spatial-frequency deepfake detection studies---FAViT (Alkishri et al., 2026), LGF-Net (Pandey et al., 2026), and FreqDebias (Kashiani et al., CVPR 2025)---alongside universal foundation/diffusion detection works (Ojha et al., CVPR 2023; Chen et al., DRCT, ICML 2024), while omitting unrelated marketing and non-forensic references.}
+
+\section*{Point-by-Point Response to Reviewer 1}
+
+\reviewercomment{R1 Comment 1 (Single-token attention collapse in Eq.\ 13)}{With sequence length $T=1$, softmax is identically $1.0$, contradicting the adaptive-modulation motivation. Either implement genuinely sample-dependent weighting (e.g., gating or multi-token inputs) or remove the adaptive-modulation claim.}
+\authorresponse{We fully agree and have resolved this contradiction directly in the architecture, title, equations, and experiments. We replaced degenerate $T=1$ cross-attention with \textbf{genuinely sample-dependent three-token multi-head self-attention} (\texttt{MHA\_128} / \texttt{TokenAttentionFusion} over $[\mathbf{x}_{\text{cls}}, \operatorname{LN}(\mathbf{x}_s), \operatorname{LN}(\mathbf{x}_f)]$, $L=3$, Eqs.\ (4)--(9)) and also implemented \textbf{explicit sample-dependent \texttt{GatedFusion}} predicted from the concatenated embeddings. Empirical weights confirm genuine input-dependent modulation: \texttt{GatedFusion} shifts from $23.1\%$ RGB / $76.9\%$ Wavelet on unseen LFW reals to $79.0\%$--$83.7\%$ RGB / $16.3\%$--$21.0\%$ Wavelet on unseen diffusion fakes, and \texttt{MHA\_128} shifts $[\text{CLS}]$ attention from $33.0\%$ RGB / $38.1\%$ Wavelet on LFW reals to $46.2\%$ RGB / $19.0\%$ Wavelet on StyleGAN.}
+
+\reviewercomment{R1 Comment 2 (Unverified gradient starvation / modality dominance claim)}{Add a jointly trained end-to-end multi-branch baseline or remove the assertion.}
+\authorresponse{We added an empirical \textbf{Joint End-to-End Unfrozen Dual-Stream Control} (ResNet-50 + Wavelet CNN + \texttt{MHA\_128} trained jointly unfrozen on 80,000 balanced training images; Table~5). Joint end-to-end training collapsed severely on unseen real photographs (LFW real recall $=4.5\%$, unseen accuracy $=52.10\%$ on LDM/DiffFace, $52.15\%$ on SDXL\_Refine, and $12.20\%$ / $0.0515$ AUC on StyleGAN), whereas staged decoupling maintained $90.3\%$--$98.5\%$ unseen real recall and $84.71\%$--$85.71\%$ four-domain unseen mean accuracy.}
+
+\reviewercomment{R1 Comment 3 (Attribution of new vs.\ adopted components and per-component parameters)}{State explicitly at the start of Section 3 which components are new vs.\ adopted and extend Table 1 with per-component parameter counts.}
+\authorresponse{Added a dedicated subsection \textit{Attribution of Adopted vs.\ Newly Introduced Components} at the start of the Proposed Framework section and expanded Table~1 to list exact parameter counts for every adopted trunk (ResNet-50: 23,508,032; Wolter Conv1--4: 1,661,760) vs.\ every newly introduced bottleneck and fusion head (199,425 for \texttt{MHA\_128}; 41,987 for \texttt{GatedFusion}).}
+
+\reviewercomment{R1 Comment 4 (Fourfold parameter mismatch between MHA and Fusion\_128)}{Add (i) a parameter-matched pure-MLP concatenation head, (ii) an FFN-only ablation without attention, and (iii) a linear-mixing control without softmax.}
+\authorresponse{All three exact 1:1 capacity-matched controls were implemented (\texttt{models/mha/ablation\_heads.py}) and trained across $N=4$ seeds (Tables~1, 3, and 5): \texttt{ConcatMatchedMLP} (198,017 params; $0.993\times$), \texttt{NoAttnFFN} (198,657 params; $0.996\times$), and \texttt{LinearMix} (198,785 params; $0.997\times$) vs.\ \texttt{MHA\_128} (199,425 params). We report the candid finding transparently: on untouched \texttt{seen\_test}, capacity-matched heads are statistically indistinguishable ($99.12\%$--$99.16\%$, all $0.9997$ AUC, $p_{\text{Holm}}>0.15$); on strictly PNG-only controls and unseen calibration, \texttt{MHA\_128} leads ($98.90\%$ PNG accuracy, $\text{ECE}=0.039$), while lightweight \texttt{GatedFusion} (41,987 params) achieves the best 4-domain unseen accuracy ($85.71\% \pm 0.06\%$) and DiffFace transfer ($95.40\%$).}
+
+\reviewercomment{R1 Comment 5 (Same 20\% split used for model selection and final reporting)}{Adopt a strict three-way split with an untouched test subset.}
+\authorresponse{Implemented a strict three-way identity-grouped partition: Phase 1 experts train on 439,222 LOGO training images; Phase 2 fusion heads train on out-of-sample \texttt{fusion\_train} ($n=58,103$) with checkpoint selection strictly on \texttt{fusion\_dev} ($n=12,376$); and final reporting uses untouched \texttt{seen\_test} ($n=12,729$) plus four completely untouched external unseen benchmarks ($n=1,000$ per domain).}
+
+\reviewercomment{R1 Comment 6 (Producer--consumer overfitting when training fusion on the experts' training split)}{Report train/validation gap or adopt a cross-fitted protocol.}
+\authorresponse{We adopted a strict \textbf{out-of-sample cross-fitted stacking protocol}: Phase 2 fusion heads are trained exclusively on held-out images ($n=58,103$) that neither Phase 1 expert ever saw during training. We also report the exact train--dev ROC-AUC gap for every architecture ($-0.00055$ for \texttt{MHA\_128}, $-0.00051$ for \texttt{ConcatMatchedMLP}, $-0.00056$ for \texttt{GatedFusion}) and full train/dev convergence curves (Figure~2).}
+
+\reviewercomment{R1 Comment 7 (Asymmetric residual formulation in Eq.\ 7 and Linear(256$\to$128) control)}{Justify the residual formulation and add a single-direction Linear(256$\to$128) control.}
+\authorresponse{Replaced the old cross-domain residual with standard Transformer self-attention residuals (Eqs.\ (7)--(8)) over $[\mathbf{x}_{\text{cls}}, \mathbf{x}_s, \mathbf{x}_f]$, and added both \texttt{NoAttnFFN} ($\text{Linear}(256\to 128)+\text{FFN}$) and \texttt{LinearMix} controls in Tables~3 and 5.}
+
+\reviewercomment{R1 Comment 8 (No per-generator or per-source decomposition)}{Add per-generator recall/AUC and per-source authentic recall.}
+\authorresponse{Added complete per-source authentic recall (CelebA, FairFace Val, FFHQ-256) and per-generator recall and ROC-AUC across all 13 seen generators in Table~4, plus all 4 unseen domains (LDM, SDXL\_Refine, DiffFace, StyleGAN) in Table~5.}
+
+\reviewercomment{R1 Comment 9 (Exclusion of LDM / Stable Diffusion subsets and undocumented quota)}{Document sampling rules and use excluded generators for leave-one-generator-out evaluation.}
+\authorresponse{Expanded the benchmark to 15 balanced generators explicitly including SDXL, SDXL\_Refine, CoDiff, cycle\_diff, DCFace, DiffFace, DreamBooth, FreeDoM\_I/T, HPS, LoRA, ADM, DDPM, DDIM, and DiffSwap with documented identity-stratified quotas (Table~2), held \texttt{SDXL\_Refine} and \texttt{DiffFace} 100\% out of training as LOGO test sets, and evaluated completely unseen \texttt{LDM} and \texttt{StyleGAN} externally (Table~5).}
+
+\reviewercomment{R1 Comment 10 (CelebA-dominant authentic shortcut risk)}{Provide a full source-by-class contingency table, recall stratified by authentic source, and a same-pipeline control.}
+\authorresponse{Replaced the CelebA-dominated authentic pool with four native high-resolution authentic datasets (FairFace, CelebA, FFHQ-256, UTKFace; 65.9\% native PNG / 34.1\% JPG in training), provided the full source-by-class contingency table (Table~2), stratified real recall by source (Table~4), and added \textbf{two same-pipeline controls}: (a) strictly native PNG-only reals vs.\ PNG fakes (Table~4: \texttt{MHA\_128} ranks \#1 at $98.90\%$, $0.9996$ AUC, $1.04\%$ EER), and (b) identical JPEG $Q=85$ recompression on all unseen domains (Table~5).}
+
+\reviewercomment{R1 Comment 11 (No published external baselines / state-of-the-art positioning)}{Reproduce published baselines or explicitly disclaim global state-of-the-art claims.}
+\authorresponse{We both added \textbf{two published external baselines} evaluated under the identical \texttt{seen\_test} and unseen JPEG $Q=85$ protocol (Tables~3 and 5) \emph{and} explicitly disclaimed global SOTA claims over large foundation detectors: (i) \textbf{\texttt{Xception}} (FaceForensics++, R\"{o}ssler et al., ICCV 2019), which reaches $99.18\%$ on \texttt{seen\_test} ($0.63\%$ EER) yet collapses to $43.04\%$ mean unseen accuracy ($7.0\%$ LFW real recall); and (ii) \textbf{\texttt{UniversalFakeDetect}} (Ojha et al., CVPR 2023; frozen 304M CLIP ViT-L/14 linear probe), which achieves $98.05\%$ on \texttt{seen\_test} ($2.01\%$ EER) and $68.90\%$ on unseen StyleGAN, while our 12$\times$ smaller 25.5M \texttt{GatedFusion} outperforms it on \texttt{seen\_test} ($99.10\%$) and all three unseen diffusion/swap domains (\texttt{LDM} $96.45\%$ vs.\ $94.95\%$, \texttt{SDXL\_Refine} $97.35\%$ vs.\ $95.30\%$, \texttt{DiffFace} $95.40\%$ vs.\ $94.90\%$).}
+
+\reviewercomment{R1 Comment 12 (Unsupported explanation for Fusion\_128 AUC drop; missing curves and sweep)}{Report train/val loss and AUC curves for both heads and a capacity/dropout sweep.}
+\authorresponse{Added full train and validation loss/AUC curves (Figure~2) and a 16-configuration width/dropout sweep ($\text{width}\in\{128,256,384,512\}$, $\text{dropout}\in\{0.1,0.2,0.3,0.5\}$), demonstrating that all 16 concatenation MLP configurations achieve virtually identical \texttt{seen\_test} AUC ($0.99966$--$0.99969$) and unseen 4-domain accuracy ($85.08\%$--$85.51\%$), confirming the baseline is thoroughly tuned.}
+
+\reviewercomment{R1 Comment 13 (FGSM only on MHA\_128 at one epsilon without per-class recall)}{Add concatenation and single-domain experts, report real/fake recall, specify attack details, and sweep epsilon.}
+\authorresponse{Implemented a fully differentiable raw-pixel $[0,1]$ white-box FGSM sweep ($\varepsilon \in \{0, 1/255, 2/255, 4/255, 8/255\}$, untargeted BCE loss, $[0,1]$ clipping, no random start, gradients propagated end-to-end through both ImageNet normalization and GPU Haar DWT) across all five models (Table~7, Figure~5). All un-hardened models collapse under white-box FGSM ($\text{AUC}\le 0.090$ at $\varepsilon=1/255$), reported candidly with exact Real/Fake recall for every model at every $\varepsilon$.}
+
+\reviewercomment{R1 Comment 14 (ConvNeXt evaluated without concatenation counterpart)}{Report both fusion variants per backbone or remove the unverified comparison.}
+\authorresponse{We conducted a complete 4-seed \textbf{Backbone-Agnostic Modularity} experiment replacing ResNet-50 with \texttt{ConvNeXt\_128} paired with frozen \texttt{Wolter2021\_128} across \textbf{all three matched fusion heads} (\texttt{ConcatMatchedMLP}, \texttt{GatedFusion}, and \texttt{MHA\_128}; Table~6). Standalone \texttt{ConvNeXt\_128} achieved $99.52\%$ on \texttt{seen\_test} ($0.49\%$ EER) but dropped to $49.62\%$ unseen 4-domain mean accuracy; fusing with \texttt{Wolter2021\_128} improved both in-domain EER ($0.49\% \to 0.33\%$--$0.39\%$, $0.9999$ AUC) and unseen accuracy by $+6.92\%$ (\texttt{ConcatMatched}: $56.54\%$), $+9.30\%$ (\texttt{GatedFusion}: $58.92\%$), and $+9.86\%$ (\texttt{MHA\_128}: $59.48\%$, outperforming \texttt{ConcatMatched} by $+2.94\%$ under domain shift).}
+
+\reviewercomment{R1 Comment 15 (Biased anchoring of authentic-class recall in Abstract/Section 4.3)}{Anchor comparisons transparently to both experts and report both directions of every trade-off.}
+\authorresponse{Every trade-off in the Results, Discussion, and Conclusion is now anchored explicitly against \emph{both} \texttt{Wang2020\_128} and \texttt{Wolter2021\_128} in both directions---explicitly reporting that \texttt{MHA\_128} trades $+6$ spatial false positives ($29 \to 35$, authentic recall $99.55\% \to 99.46\%$) for $-54$ spatial false negatives ($129 \to 75$, synthetic recall $97.92\% \to 98.79\%$) while slashing wavelet false positives by $61.1\%$ ($90 \to 35$), and acknowledging that standalone \texttt{Wolter2021\_128} retains higher 4-domain mean AUC due to zero-shot StyleGAN ranking.}
+
+\reviewercomment{R1 Comments 16 \& 17 (Sample dependence, per-seed reporting, multiplicity correction, effect sizes)}{Add cluster-bootstrap CIs, report per-seed values, apply multiplicity correction, and report effect sizes.}
+\authorresponse{Added Appendix Table~8 reporting complete identity-cluster bootstrap 95\% CIs on \texttt{seen\_test} (1,000 identity-cluster resamples; e.g., \texttt{MHA\_128} Acc $[98.84\%, 99.38\%]$, ROC-AUC $[0.9996,0.9998]$, EER $[0.60\%,1.05\%]$), all four unrounded per-seed scores, two-sided paired $t$-tests with \textbf{Holm--Bonferroni multiplicity correction} and \textbf{paired Cohen's $d$} (confirming statistically significant Brier-score gains over \texttt{GatedFusion}, $p_{\text{Holm}}=0.0021$, and \texttt{Fusion\_128}, $p_{\text{Holm}}=0.0186$), plus the 16-config MLP sweep summary.}
+
+\reviewercomment{R1 Comments 18, 19 \& 20 (Inconsistent confusion counts vs.\ tables, identical Wang2020 rows, inconsistent F1 definitions)}{Reconcile all confusion counts, verify distinct baseline rows, and adopt one consistent Macro-F1 definition.}
+\authorresponse{Every metric, confusion matrix (\texttt{TN/FP/FN/TP}), precision, recall, and Macro-F1 ($\frac{1}{2}(\text{F1}_{\text{real}}+\text{F1}_{\text{fake}})$) in the revised manuscript is now computed automatically by a single unit-tested script (\texttt{tools/paper1\_revision\_suite.py}) directly from saved prediction logits, guaranteeing 100\% arithmetic consistency (e.g., \texttt{MHA\_128}: $(6480+6139)/12729=99.1358\%$). The duplicated \texttt{Wang2020} row has been removed.}
+
+\reviewercomment{R1 Comment 21 (Nominal vs.\ realized split percentages)}{Report exact realized split counts and proportions.}
+\authorresponse{Exact image counts and realized percentages are reported throughout Table~2 and the Dataset section (50.0\%/50.0\% class balance in \texttt{DatasetMultiDomainClean\_v2}; exact 70/15/15 cross-fitted Phase 2 splits: 58,103 / 12,376 / 12,729).}
+
+\reviewercomment{R1 Comments 22 \& 23 (Broken Zenodo DOI typo, missing hyperparameters, placeholder git clone)}{Fix the Zenodo DOI, supply all missing training settings, and remove placeholders.}
+\authorresponse{Fixed the LaTeX typo where the citation number ``26'' was concatenated onto the Zenodo URL (now cleanly \url{https://doi.org/10.5281/zenodo.21323779}), corrected the Zenodo archive title, documented every optimizer/LR/schedule/weight-decay/augmentation setting in the Protocol section, and replaced the \texttt{<repository\_url>} placeholder with the working GitHub repository URL and exact two-expert CLI commands.}
+
+\reviewercomment{R1 Comment 24 (Missing Wavelet CNN layer widths and bottleneck ablation clarification)}{Provide exact channel widths and pooling positions for the 1,727,553-parameter wavelet CNN.}
+\authorresponse{Exact layer sequence, kernel sizes, padding, pooling, output tensor shapes ($192\times 28\times 28 \to 64\times 14\times 14 \to 128\times 7\times 7 \to 256\times 3\times 3 \to 512\times 1\times 1 \to 128$), and exact parameter counts summing to 1,727,553 are provided in Table~1 and Figure~1. The unverified 64/256 bottleneck narrative was removed.}
+
+\reviewercomment{R1 Comments 25, 26 \& 27 (Figure 3 errors, Figure 7 duplicate panels, Figures 9--10 axis scaling)}{Redraw Figure 3 from Table 1, remove duplicate t-SNE row and add quantitative separability, separate EER axis with value labels and error bars.}
+\authorresponse{Redrew the complete architecture diagram cleanly from Table~1 (Figure~1, fixing the 192-channel label, layer sequence, and removing informal working notes); replaced Figure~7 with a single-row t-SNE annotated with exact Silhouette scores and Fisher separation ratios (Figure~6); and replaced Figures~9--10 with a clean 2-panel 4-seed bar chart featuring a separate EER axis, $\pm$SD error bars, and non-overlapping numeric labels (Figure~4).}
+
+\reviewercomment{R1 Comments 28--34 (Notation consistency, Abstract length, Keywords, Float order, Line numbers, Citations, Related Work)}{Standardize notation, condense Abstract to $\approx$200 words, add keywords and line numbers, delete unused Ref.\ 14, separate dataset vs.\ method citations, expand Related Work.}
+\authorresponse{All notation is standardized across Eqs.\ (1)--(10); the Abstract has been condensed to $\approx$215 words with accurate recall/FPR phrasing; six explicit keywords and \texttt{\textbackslash lineno} line numbers are now rendered; unused Ref.\ 14 (Inception-v4) was deleted and all 30 bibliography entries (including FFHQ, UTKFace, and LFW) are verified cited; Zenodo dataset records (Chen, 2024) are cleanly separated from Kim et al.'s DiffFace method paper (2025); floats are reorganized cleanly; and Related Work is expanded with recent spatial-frequency and universal detectors (Ojha et al., 2023; DRCT, 2024; FreqDebias, 2025; FAViT, 2026; LGF-Net, 2026).}
+
+\section*{Point-by-Point Response to Reviewer 2}
+
+\reviewercomment{R2 Comment 1 (Tables 5--10 conflict with reported counts)}{Regenerate all accuracy, precision, F1, and comparison plots from consistent prediction files.}
+\authorresponse{All metrics, confusion counts, class-wise precision/recall/F1, Macro-F1, ROC-AUC, EER, Brier score, ECE, and all figures were regenerated programmatically from unified saved prediction files via \texttt{tools/paper1\_revision\_suite.py} (unit-tested in \texttt{tests/test\_paper1\_revision\_suite.py}), eliminating every arithmetic discrepancy.}
+
+\reviewercomment{R2 Comment 2 (Validation split used for both model selection and final reporting)}{Introduce an untouched identity-disjoint test set and fix checkpoints/thresholds before final evaluation.}
+\authorresponse{Enforced strict three-way identity-grouped separation (\texttt{fusion\_train} / \texttt{fusion\_dev} for selection / untouched \texttt{seen\_test} $n=12,729$ + four untouched external unseen domains) with fixed uncalibrated operating threshold $\tau=0.0$ ($p=0.5$).}
+
+\reviewercomment{R2 Comment 3 (Identity matching across repositories and DiffFace citation disambiguation)}{Provide split manifests, overlap checks, and distinguish Zenodo datasets from Kim et al.\ (2025).}
+\authorresponse{Implemented automated zero-overlap identity auditing across all real and fake sources (\texttt{fake\_identity\_overlap = 0}, \texttt{real\_identity\_overlap = 0}), documented exact provenance in Table~2, and cleanly distinguished Chen's Zenodo datasets (2024) from Kim et al.'s DiffFace method (2025).}
+
+\reviewercomment{R2 Comment 4 (CelebA real shortcut; need source-by-class counts, matched preprocessing, per-generator and unseen-generator evaluation)}{Report source-by-class counts, matched-preprocessing controls, per-generator performance, and unseen-generator evaluation.}
+\authorresponse{Curated \texttt{DatasetMultiDomainClean\_v2} with 4 native high-resolution authentic datasets (65.9\% PNG / 34.1\% JPG), provided the full contingency table (Table~2), per-source and per-generator breakdown across 13 seen generators plus strictly PNG-only same-pipeline controls (Table~4), and zero-tuning unseen cross-domain evaluation on LFW vs.\ LDM, SDXL\_Refine, DiffFace, and StyleGAN under matched JPEG $Q=85$ (Table~5).}
+
+\reviewercomment{R2 Comment 5 (Single-token unit weights and capacity confound)}{Compare against parameter-matched MLP and affine residual controls.}
+\authorresponse{Replaced degenerate $T=1$ attention with genuinely sample-dependent $L=3$ \texttt{MHA\_128} and \texttt{GatedFusion}, and benchmarked against three 1:1 parameter-matched controls (\texttt{ConcatMatchedMLP}, \texttt{NoAttnFFN}, \texttt{LinearMix}) across 4 seeds (Tables~1, 3, and 5).}
+
+\reviewercomment{R2 Comment 6 (Omission of FAViT 2026, LGF-Net 2026, FreqDebias 2025)}{Add these to Related Work and clearly identify the scope and advance.}
+\authorresponse{Added FAViT (Alkishri et al., 2026), LGF-Net (Pandey et al., 2026), and FreqDebias (Kashiani et al., CVPR 2025) to Related Work, evaluated two published external detectors (\texttt{Xception}, ICCV 2019, and \texttt{UniversalFakeDetect}, Ojha et al., CVPR 2023) under our identical split (Tables~3 and 5), and clearly scoped our controlled decoupled fusion study.}
+
+\reviewercomment{R2 Comment 7 (Statistical uncertainty and correlated frames)}{Release unrounded paired results and statistical code, clarify EER $p$-values, and provide cluster-aware CIs.}
+\authorresponse{Added identity-cluster bootstrap 95\% CIs, paired 4-seed $t$-tests with Holm--Bonferroni correction and Cohen's $d$, and archived the complete statistical code (\texttt{tools/paper1\_revision\_suite.py}) and unrounded JSON outputs.}
+
+\reviewercomment{R2 Comment 8 (Misuse of ROC-AUC/EER as probability calibration)}{Replace calibration terminology or provide reliability diagrams and Brier/ECE metrics.}
+\authorresponse{Corrected all discrimination vs.\ calibration terminology throughout the manuscript and added true probability calibration metrics---\textbf{Brier Score, 15-bin ECE, and Reliability Diagrams} (Table~3 and Figure~3)---demonstrating that \texttt{MHA\_128} attains the lowest unseen calibration error ($\text{ECE}=0.039$).}
+
+\reviewercomment{R2 Comment 9 (Unsubstantiated gradient starvation and ablation explanations)}{Compare staged vs.\ joint training and remove unsupported mechanism claims.}
+\authorresponse{Added the empirical \textbf{Joint End-to-End Unfrozen Control} (Table~5, collapsing to $4.5\%$ unseen real recall vs.\ $90.3\%$--$94.8\%$ for staged fusion) and pruned unsupported 64/256 bottleneck claims.}
+
+\reviewercomment{R2 Comment 10 (Figures 2--3 dimension contradictions and missing wavelet channel sequence)}{Correct diagrams and provide exact layer-by-layer specification.}
+\authorresponse{Redrew Figure~1 cleanly showing exact $192 \times 28 \times 28 \to 64 \to 128 \to 256 \to 512 \to 128$ channel progression and exact parameter counts matching Table~1.}
+
+\reviewercomment{R2 Comment 11 (Figures 4--6 showed training loss only)}{Supply missing validation curves, ROC/PR curves, and consistent confusion matrices.}
+\authorresponse{Added paired Training + Validation Loss and ROC-AUC curves (Figure~2), ROC + PR + Reliability curves (Figure~3), and exact confusion counts in Table~3.}
+
+\reviewercomment{R2 Comment 12 (Figure 8 Grad-CAM background activations and t-SNE validation limits)}{Correct interpretation, add attribution colorbar, representative cases, and masking controls.}
+\authorresponse{Generated multi-sample ResNet-50 Layer 4 Grad-CAM visualizations across three unseen photorealistic synthetic domains (LDM, DiffFace, and StyleGAN) with an explicit $[0,1]$ colorbar (Figure~7), performed quantitative center-vs-border masking controls ($n=200$ unseen LDM fakes), and framed Grad-CAM honestly as a qualitative diagnostic.}
+
+\reviewercomment{R2 Comment 13 (Perturbation severities and end-to-end FGSM specification)}{Evaluate held-out corruption severities and matched baseline attacks with explicit FGSM coordinates, clipping, and gradient propagation.}
+\authorresponse{Evaluated nine held-out real-world corruptions (JPEG $Q=90,70,50,30$, Blur $\sigma=1,2$, $0.5\times$ downscale, Noise $\sigma=10$) and matched end-to-end raw-pixel $[0,1]$ FGSM sweeps ($\varepsilon=0,1/255,2/255,4/255,8/255$) across all five models (Table~7, Figure~5), explicitly specifying objective, clipping, and full gradient flow through GPU wavelets.}
+
+\reviewercomment{R2 Comment 14 (Appendix MHA\_WWXC mismatch and latency preprocessing clarification)}{Provide working two-expert commands, repository link, and clarify whether latency includes wavelet preprocessing.}
+\authorresponse{Replaced \texttt{MHA\_WWXC} commands in the Appendix with exact two-expert \texttt{MHA\_128} commands and the working GitHub/Zenodo links, and explicitly profiled FP32 batch-1 latency on NVIDIA L4 both excluding and including GPU Level-3 DWT ($15.56\,$ms DWT, $0.97\,$ms CNN excl.\ DWT, $16.70\,$ms incl.\ DWT, $7.13\,$ms ResNet-50, $0.76\,$ms \texttt{MHA\_128} head, $24.92\,$ms complete end-to-end pipeline incl.\ DWT).}
+
+\reviewercomment{R2 Comment 15 (Optional Related Work suggestions [A--E])}{Consider [A--D] if relevant; omit [E] unless concrete methodological connection exists.}
+\authorresponse{Following the Editor's guidance (Internal Feedback 3), we prioritized the directly relevant spatial-frequency deepfake comparison studies [F--H] (FAViT, LGF-Net, and FreqDebias) and omitted unrelated marketing and non-forensic studies [A--E].}
+
+\end{document}

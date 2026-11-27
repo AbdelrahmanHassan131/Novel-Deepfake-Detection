@@ -1,0 +1,17 @@
+{
+  "Wang2020_128": {
+    "silhouette_score": 0.3689515292644501,
+    "centroid_distance": 0.9088516235351562,
+    "fisher_separation_ratio": 2.3381036584717205
+  },
+  "WolterWavelet": {
+    "silhouette_score": 0.3522499203681946,
+    "centroid_distance": 0.989984929561615,
+    "fisher_separation_ratio": 2.763230470666598
+  },
+  "MHA_128": {
+    "silhouette_score": 0.3665868043899536,
+    "centroid_distance": 1.284186601638794,
+    "fisher_separation_ratio": 2.2082217663841317
+  }
+}

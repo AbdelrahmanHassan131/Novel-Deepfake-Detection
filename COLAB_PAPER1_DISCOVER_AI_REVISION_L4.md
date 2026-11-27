@@ -114,7 +114,9 @@ with open(src_manifest, newline='', encoding='utf-8') as f:
         contingency[(split, lbl, src, gen)] += 1
         if split != 'train':
             abs_p = str((DATA_ROOT / r['relative_path']).resolve())
-            rec = {'path': abs_p, 'label': lbl, 'source': src, 'generator': gen, 'identity_id': r.get('identity_id', r['sample_id'])}
+            raw_id = (r.get('identity_id') or '').strip()
+            ident = r['sample_id'] if (not raw_id or raw_id.lower() in ('unknown', 'none', 'na', 'null')) else raw_id
+            rec = {'path': abs_p, 'label': lbl, 'source': src, 'generator': gen, 'identity_id': ident}
             if lbl == 1 and gen.lower() == 'sdxl_refine':
                 logo_unseen_rows['SDXL_Refine'].append(rec)
             elif lbl == 1 and gen.lower() == 'diffface':
@@ -158,6 +160,12 @@ print(f'Cross-fitted Phase-2 splits (100% disjoint from Phase-1 training!):')
 print(f'  fusion_train : {len(fusion_train_rows):,} (Real={sum(r["label"]==0 for r in fusion_train_rows):,}, Fake={sum(r["label"]==1 for r in fusion_train_rows):,})')
 print(f'  fusion_dev   : {len(fusion_dev_rows):,} (Real={sum(r["label"]==0 for r in fusion_dev_rows):,}, Fake={sum(r["label"]==1 for r in fusion_dev_rows):,})')
 print(f'  seen_test    : {len(seen_test_rows):,} (Real={sum(r["label"]==0 for r in seen_test_rows):,}, Fake={sum(r["label"]==1 for r in seen_test_rows):,})')
+# Sanity check: verify EVERY real source and seen generator appears in fusion_train, fusion_dev, and seen_test
+for sp_name, sp_rows in [('fusion_train', fusion_train_rows), ('fusion_dev', fusion_dev_rows), ('seen_test', seen_test_rows)]:
+    r_cnts = Counter(r['source'] for r in sp_rows if r['label'] == 0)
+    f_cnts = Counter(r['generator'] for r in sp_rows if r['label'] == 1)
+    print(f'  [{sp_name}] Real sources={dict(r_cnts)} | Fake gens={len(f_cnts)}')
+    assert len(r_cnts) >= 3 and len(f_cnts) >= 13, f'Missing source/generator in {sp_name}!'
 
 # 3. Load exact 1,000 images per completely unseen photorealistic domain
 lfw = fetch_lfw_people(color=True, resize=1.0, slice_=(slice(0, 250), slice(0, 250)))
@@ -194,7 +202,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from evaluation.checkpoint_loader import CheckpointLoader
 
-CACHE_FILE = OUT_DIR / 'cache/paper1_frozen_embeddings_v2.pt'
+CACHE_FILE = OUT_DIR / 'cache/paper1_frozen_embeddings_v3.pt'
 
 wang_trainer = CheckpointLoader(str(BEST_WANG), device='cuda:0').load()
 wav_trainer  = CheckpointLoader(str(BEST_WAV),  device='cuda:0').load()
@@ -368,6 +376,9 @@ HEAD_LIST = [
 ]
 
 tr = cache['fusion_train']
+# Shuffle fusion_train deterministically so train_auc logging sees both classes cleanly
+_perm_shuf = torch.randperm(len(tr['y']), generator=torch.Generator().manual_seed(42))
+tr = {k: v[_perm_shuf] for k, v in tr.items()}
 dv = cache['fusion_dev']
 st = cache['seen_test']
 
@@ -545,6 +556,7 @@ print('Saved complete 4-seed report ->', OUT_DIR / 'metrics/paper1_ablation_4see
 
 ```python
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 
 mha_s42   = trained_seed42_heads['mha_128'].cuda().eval()
 match_s42 = trained_seed42_heads['concat_matched'].cuda().eval()
