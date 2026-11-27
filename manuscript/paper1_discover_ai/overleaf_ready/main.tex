@@ -120,7 +120,9 @@ y &= \mathbf{w}_{\text{cls}}^\top \mathbf{H}_{2,\text{cls}}^\top + b_{\text{cls}
 \paragraph{Explicit Sample-Dependent Gating and Capacity-Matched Structural Controls.}
 To strictly disentangle attention routing from parameter capacity and feed-forward refinement, we evaluate five controlled alternatives on the exact same frozen $(\mathbf{x}_s, \mathbf{x}_f)$ embeddings (Table~\ref{tab:arch_params}):
 \begin{enumerate}
-    \item \textbf{\texttt{GatedFusion} (41,987 params):} Computes sample-dependent softmax modality weights $\mathbf{g} = \operatorname{Softmax}\!\left(\operatorname{MLP}_{\text{gate}}([\operatorname{LN}_s(\mathbf{x}_s)\,\|\,\operatorname{LN}_f(\mathbf{x}_f)])\right) \in \Delta^1$, forms $\mathbf{z} = g_s \operatorname{LN}_s(\mathbf{x}_s) + g_f \operatorname{LN}_f(\mathbf{x}_f)$, and classifies via $128 \to 64 \to 1$.
+    \item \textbf{\texttt{GatedFusion} (41,987 params):} Computes sample-dependent softmax modality weights and gated sum
+    \[\mathbf{g} = \operatorname{Softmax}\!\left(\operatorname{MLP}_{\text{gate}}\!\left([\operatorname{LN}_s(\mathbf{x}_s)\,\|\,\operatorname{LN}_f(\mathbf{x}_f)]\right)\right) \in \Delta^1, \qquad \mathbf{z} = g_s \operatorname{LN}_s(\mathbf{x}_s) + g_f \operatorname{LN}_f(\mathbf{x}_f),\]
+    followed by a lightweight classifier $\text{MLP}(128 \to 64 \to 1)$.
     \item \textbf{\texttt{ConcatMatchedMLP} (198,017 params; $0.993\times$ of \texttt{MHA\_128}):} Pure-MLP concatenation control $\operatorname{LN}_s(\mathbf{x}_s)\|\operatorname{LN}_f(\mathbf{x}_f) \to 384 \to 256 \to 1$ with GELU and dropout.
     \item \textbf{\texttt{NoAttnFFN} (198,657 params; $0.996\times$):} Direct single-direction affine projection $\mathbf{z} = \mathbf{W}[\operatorname{LN}_s(\mathbf{x}_s)\,\|\,\operatorname{LN}_f(\mathbf{x}_f)] + \mathbf{b}$ ($\text{Linear}(256\to 128)$) followed by a capacity-matched residual FFN ($128 \to 640 \to 128$) without attention.
     \item \textbf{\texttt{LinearMix} (198,785 params; $0.997\times$):} Fixed linear cross-mixing ($\mathbf{r}_{\text{mix}} = \mathbf{r} + \mathbf{W}_w \mathbf{w}$, $\mathbf{w}_{\text{mix}} = \mathbf{w} + \mathbf{W}_r \mathbf{r}$) without softmax, projected $256 \to 128$ into an identical $128 \to 512 \to 128$ FFN.
@@ -495,13 +497,14 @@ Abdelrahman Hassan conceived the study, designed the multi-domain fusion archite
 \bibitem{ref49} Huang, G. B., Mattar, M., Berg, T. \& Learned-Miller, E. Labeled Faces in the Wild: A database for studying face recognition in unconstrained environments. In \textit{Workshop on Faces in 'Real-Life' Images, ECCV} (2008).
 \end{thebibliography}
 
+\clearpage
 \section*{Appendix: Statistical Verification, Per-Seed Results, and Reproducibility}
 
-\begin{table}[tbp]
+\begin{table}[H]
 \centering
 \caption{Complete statistical audit on untouched \texttt{seen\_test} ($n=12,729$): identity-cluster bootstrap 95\% confidence intervals (1,000 identity-cluster resamples), all four unrounded per-seed accuracies and EERs (seeds $\{42, 100, 2024, 3407\}$ with fixed Phase 1 experts), two-sided paired $t$-test Cohen's $d$ and Holm--Bonferroni adjusted $p$-values (\texttt{MHA\_128} minus comparator), and the 16-configuration concatenation MLP width/dropout sweep summary.}
 \label{tab:stats_appendix}
-\scriptsize
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 \textbf{Model} & \textbf{Cluster 95\% CI: Acc (\%)} & \textbf{Cluster 95\% CI: AUC} & \textbf{Cluster 95\% CI: EER (\%)} & \textbf{Cluster 95\% CI: Brier} \\
@@ -526,28 +529,34 @@ Width 256 (99,329 params) & \texttt{seen\_test} Acc: 99.10--99.16\% & \texttt{se
 Width 384 (173,313 params) & \texttt{seen\_test} Acc: 99.10--99.14\% & \texttt{seen\_test} AUC: 0.99967--0.99969 & Unseen 4-Dom Acc: 85.08--85.37\% & Unseen AUC: 0.8969--0.9067 \\
 Width 512 (263,681 params) & \texttt{seen\_test} Acc: 99.10--99.12\% & \texttt{seen\_test} AUC: 0.99966--0.99969 & Unseen 4-Dom Acc: 85.08--85.24\% & Unseen AUC: 0.9084--0.9148 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 All revised experiments were executed on a single NVIDIA L4 GPU (24\,GB VRAM, CUDA 13.0, Python 3.13, PyTorch \texttt{2.14.1+cu130}, \texttt{torchvision}, \texttt{PyWavelets}, \texttt{pytorch-wavelets}, \texttt{scikit-learn}, \texttt{scipy}, \texttt{Pillow}, \texttt{opencv-python}; exact environment pin files and prediction JSON artifacts are archived in the repository). Preprocessing uses direct bilinear resizing of dataset-provided aligned facial crops to $224 \times 224$ with zero external face re-detection. Exact commands for two-expert training and unit-tested evaluation:
+{\scriptsize
 \begin{verbatim}
 git clone --branch GeneralizationDeepFakeDetection \
   https://github.com/AbdelrahmanHassan131/Novel-Deepfake-Detection.git
 cd Novel-Deepfake-Detection && pip install -r requirements.txt
 
-# Phase 1: Train Spatial & Frequency Experts (439,222 active LOGO images, batch_size=128, BF16 AMP)
+# Phase 1: Train Spatial & Frequency Experts (439,222 LOGO images, BS=128, BF16)
 python train.py --arch Wang2020_128 --embed_dim 128 --pretrained --optim adamw \
-  --lr 2e-4 --weight_decay 1e-2 --rgb_label_smoothing 0.05 --lr_policy cosine --epochs 5 \
-  --aug_recipe custom --jpg_prob 0.8 --blur_prob 0.35 --downscale_prob 0.35 --seed 42
-python train.py --arch WolterWavelet2021_128 --embed_dim 128 --wavelet_backend gpu \
-  --wavelet_type haar --wavelet_level 3 --wavelet_log_mode signed_log1p \
-  --optim adam --lr 5e-4 --weight_decay 1e-4 --lr_policy cosine --epochs 5 --seed 42
+  --lr 2e-4 --weight_decay 1e-2 --rgb_label_smoothing 0.05 --lr_policy cosine \
+  --epochs 5 --aug_recipe custom --jpg_prob 0.8 --blur_prob 0.35 \
+  --downscale_prob 0.35 --seed 42
+python train.py --arch WolterWavelet2021_128 --embed_dim 128 \
+  --wavelet_backend gpu --wavelet_type haar --wavelet_level 3 \
+  --wavelet_log_mode signed_log1p --optim adam --lr 5e-4 --weight_decay 1e-4 \
+  --lr_policy cosine --epochs 5 --seed 42
 
-# Phase 2 & 3: Cross-Fitted Fusion (lr=3e-4, wd=1e-3, batch_size=256, epochs=25, s=0.05, mod_drop=0.15)
-python train.py --arch MHA_128 --fusion_type token_attention --embed_dim 128 --num_heads 4 \
-  --rgb_model_path <BEST_WANG_E1> --wavelet_model_path <BEST_WAV_E5> --wavelet_backend gpu \
-  --optim adamw --lr 3e-4 --weight_decay 1e-3 --batch_size 256 --epochs 25 --seed 42
+# Phase 2 & 3: Cross-Fitted Fusion (lr=3e-4, wd=1e-3, BS=256, 25 ep, s=0.05)
+python train.py --arch MHA_128 --fusion_type token_attention --embed_dim 128 \
+  --num_heads 4 --rgb_model_path <BEST_WANG_E1> \
+  --wavelet_model_path <BEST_WAV_E5> --wavelet_backend gpu --optim adamw \
+  --lr 3e-4 --weight_decay 1e-3 --batch_size 256 --epochs 25 --seed 42
 python -m unittest tests/test_paper1_revision_suite.py -v
 \end{verbatim}
+}
 
 \end{document}

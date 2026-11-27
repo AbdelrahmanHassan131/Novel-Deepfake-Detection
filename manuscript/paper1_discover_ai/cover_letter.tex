@@ -1,0 +1,107 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=2.0cm,top=1.8cm,bottom=2.0cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage{amsmath,amssymb}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{hyperref}
+
+\emergencystretch=2em
+
+\definecolor{navy}{RGB}{22,58,108}
+\definecolor{muted}{RGB}{100,116,139}
+
+\hypersetup{
+    colorlinks=true,
+    urlcolor=navy,
+    linkcolor=navy
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\footnotesize\color{muted}Major Revision Submission to \textit{Discover Artificial Intelligence} (Springer Nature) --- ID: \texttt{4de31318-c384-4d19-b049-161f7c79cffc}}
+\fancyfoot[R]{\footnotesize\color{muted}Page \thepage\ of \pageref{LastPage}}
+
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+\sloppy
+
+% --- Letterhead ---
+\noindent
+\begin{minipage}[t]{0.58\textwidth}
+    {\Large\bfseries\color{navy}Ain Shams University}\\[2pt]
+    {\small\bfseries Computer and Systems Engineering Department}\\
+    {\small Faculty of Engineering, Cairo, Egypt}
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.40\textwidth}
+    \raggedleft
+    {\small\today}\\[2pt]
+    {\small\bfseries\color{navy}Corresponding Author:}\\
+    {\small Abdelrahman Hassan}\\
+    {\small \texttt{2201662@eng.asu.edu.eg}}
+\end{minipage}
+
+\vspace{4pt}
+\noindent{\color{navy}\rule{\textwidth}{1.2pt}}
+\vspace{6pt}
+
+\noindent\textbf{To:} Dr.\ Eugenio Vocaturo (Editor), Paras Ukhalkar (Assistant Editor), and the Editorial Board\\
+\textbf{Journal:} \textit{Discover Artificial Intelligence} (Springer Nature)\\
+\textbf{Manuscript ID:} \texttt{4de31318-c384-4d19-b049-161f7c79cffc}\\
+\textbf{Revised Title:} ``\textit{Multi-Domain Deepfake Detection via Decoupled Spatial-Frequency Feature Learning and Sample-Dependent Multi-Token Attention Fusion}''\\
+\textbf{Submission Type:} Major Revision (Original Research Article)
+
+\vspace{4pt}
+\noindent Dear Dr.\ Vocaturo, Mr.\ Ukhalkar, and Members of the Editorial Board,
+
+We are pleased to submit the thoroughly revised version of our manuscript (Submission ID: {\small\texttt{4de31318-c384-4d19-b049-161f7c79cffc}}), now entitled ``\textbf{Multi-Domain Deepfake Detection via Decoupled Spatial-Frequency Feature Learning and Sample-Dependent Multi-Token Attention Fusion},'' by \textbf{Abdelrahman Hassan}, \textbf{Ahmed Hassan}, and \textbf{Hossam Abdelmunim}, for re-consideration in \textit{Discover Artificial Intelligence}.
+
+We sincerely thank the editorial team and Reviewers 1 and 2 for their rigorous, deeply constructive critiques. We treated this Major Revision as a comprehensive methodological and architectural overhaul. Every editorial requirement and every single technical, statistical, experimental, and visual concern raised by both reviewers has been fully addressed, accompanied by a complete standalone \textbf{Point-by-Point Response to Editor and Reviewers}.
+
+\vspace{2pt}
+\noindent{\large\bfseries\color{navy}1.\ Summary of Major Revisions and Verified Scientific Findings}
+
+\begin{itemize}[leftmargin=1.4em,itemsep=3pt,topsep=3pt]
+    \item \textbf{Replaced Degenerate Single-Token Attention ($T=1$) with Genuinely Sample-Dependent Multi-Token Attention (\texttt{MHA\_128}) and Gating (\texttt{GatedFusion}):} Directly resolving Reviewer 1's core critique, we replaced $T=1$ cross-attention with three-token multi-head self-attention (\texttt{MHA\_128} / \texttt{TokenAttentionFusion} over $[\mathbf{x}_{\text{cls}}, \operatorname{LN}(\mathbf{x}_s), \operatorname{LN}(\mathbf{x}_f)]$, $L=3$, 199,425 trainable parameters) and explicit sample-dependent \texttt{GatedFusion} (41,987 parameters). Quantitative weight logging confirms genuine per-domain modulation (e.g., \texttt{GatedFusion} shifts from $23.1\%$ RGB / $76.9\%$ Wavelet on unseen LFW reals to $79.0\%$--$83.7\%$ RGB / $16.3\%$--$21.0\%$ Wavelet on unseen diffusion fakes).
+    \item \textbf{Eliminated Capacity Confounds, Validation Leakage, and Format Shortcuts:} We curated a verified \textbf{556,082-image} balanced benchmark (\texttt{DatasetMultiDomain\allowbreak Clean\_v2}: 4 native high-resolution authentic datasets with 66\% PNG / 34\% JPG + 15 diffusion/swap generators under a Leave-One-Generator-Out split), enforced out-of-sample cross-fitted Phase 2 fusion training (\texttt{fusion\_train}: 58,103; \texttt{fusion\_dev}: 12,376; untouched \texttt{seen\_test}: 12,729), and benchmarked three 1:1 parameter-matched controls (\texttt{ConcatMatchedMLP}, \texttt{NoAttnFFN}, \texttt{LinearMix}) plus a 16-configuration MLP sweep across four seeds with identity-cluster bootstrap 95\% CIs, paired Cohen's $d$, and Holm--Bonferroni correction (Table~8).
+    \item \textbf{Programmatically Audited Performance, External Baselines, and Honest Limitations:} Every confusion matrix, Macro-F1, ROC-AUC, EER, Brier score, and 15-bin ECE was recomputed via a single unit-tested script (\texttt{tools/paper1\_\allowbreak revision\_\allowbreak suite.py}). On untouched \texttt{seen\_test}, \texttt{MHA\_128} achieves \textbf{99.12\% $\pm$ 0.01\% accuracy} (0.9997 AUC, 0.87\% EER, significantly lower Brier score than \texttt{GatedFusion} at $p_{\text{Holm}}=0.0021$) and ranks \#1 on strictly native PNG-only controls (\textbf{98.90\%}, 1.04\% EER), while explicitly reporting two-way authentic-vs-synthetic trade-offs ($+6$ spatial FPs traded for $-54$ spatial FNs, while cutting wavelet FPs by 61.1\%). On four untouched unseen domains under matched JPEG $Q=85$ (LFW vs.\ LDM, SDXL\_Refine, DiffFace, StyleGAN), staged decoupled fusion decisively defeats unfrozen joint end-to-end training ($4.5\%$ LFW real recall) and fine-tuned \texttt{Xception} ($43.04\%$ mean unseen accuracy), while our $12\times$ smaller 25.5M \texttt{GatedFusion} (\textbf{85.71\% $\pm$ 0.06\%} mean unseen accuracy; \textbf{95.40\%} DiffFace; \textbf{97.7\%} JPEG $Q=30$) outperforms 304M \texttt{UniversalFakeDetect} (CLIP ViT-L/14) on \texttt{seen\_test} and all three unseen diffusion/swap domains. We also added \texttt{ConvNeXt\_128} modularity with matched fusion controls ($+9.86\%$ unseen gain for \texttt{ConvNeXt + MHA\_128}), exact GPU-inclusive latency ($24.92\,$ms, $\approx 40$ FPS), FairFace demographic fairness ($0.00\%$ FPR disparity), and an honest end-to-end raw-pixel FGSM sweep across all five models reporting full real/fake recall collapse.
+    \item \textbf{Redrawn Figures, Line Numbers, and Expanded Literature Positioning:} All seven figures were redrawn at 300 DPI (clean architecture diagram matching Table~1, paired train/val convergence curves, ROC/PR/reliability diagrams, 4-seed bars with separate EER axis, perturbation/FGSM curves, single-row t-SNE with Silhouette/Fisher scores, and male-only synthetic Grad-CAM with $[0,1]$ colorbar and masking controls), continuous line numbers (\texttt{\textbackslash lineno}) were enabled, and Related Work was expanded with FAViT (2026), LGF-Net (2026), FreqDebias (CVPR 2025), UniversalFakeDetect (CVPR 2023), and DRCT (ICML 2024).
+\end{itemize}
+
+\vspace{2pt}
+\noindent{\large\bfseries\color{navy}2.\ Editorial Compliance and Mandatory Declarations}
+
+In full compliance with the editorial policies of \textit{Discover Artificial Intelligence} and the Editorial Internal Feedback, we confirm the following:
+
+\begin{itemize}[leftmargin=1.4em,itemsep=2.5pt,topsep=3pt]
+    \item \textbf{Originality and Concurrent Submission:} This revised manuscript is an original work, has not been published previously, and is not under consideration elsewhere.
+    \item \textbf{Author Contributions and Approval:} Abdelrahman Hassan conceived the study, designed the decoupled fusion architectures, implemented the codebase, conducted all experiments, and wrote the manuscript. Ahmed Hassan and Hossam Abdelmunim supervised the research, validated the methodology and statistical analyses, and reviewed and edited the manuscript. All authors read and approved the revised manuscript.
+    \item \textbf{Competing Interests:} The authors declare no competing interests.
+    \item \textbf{Funding:} No external funds or grants were received. Open access funding is provided by the Science, Technology \& Innovation Funding Authority (STDF) in cooperation with the Egyptian Knowledge Bank (EKB).
+    \item \textbf{Ethical Approval, Consent to Participate, and Consent to Publish:} Not applicable. All datasets analyzed (FairFace, CelebA, FFHQ-256, UTKFace, LFW, StyleGAN 140k, and public Zenodo diffusion repositories) are publicly available academic benchmarks; no human participants were recruited. All facial visualizations in Figure~7 depict purely synthetic AI-generated faces and do not represent real identifiable individuals. Individual subheadings for all Declarations appear in the revised manuscript.
+    \item \textbf{Data and Code Availability (Matched with SNAPP Portal):} We have set \textit{Data Availability} to ``Yes'' in the SNAPP portal with verbatim matching text. All datasets are publicly available via Zenodo (\url{https://doi.org/10.5281/zenodo.10865300} and \url{https://doi.org/10.5281/zenodo.10865065}) and the official public releases of FairFace, CelebA, FFHQ-256, UTKFace, LFW, and 140k Real-and-Fake Faces. Complete PyTorch source code, capacity-matched ablation heads, cross-fitted evaluation scripts, split manifests, and prediction logs are publicly archived on Zenodo (\url{https://doi.org/10.5281/zenodo.21323779}) and maintained on GitHub (\url{https://github.com/AbdelrahmanHassan131/Novel-Deepfake-Detection}).
+\end{itemize}
+
+\vspace{4pt}
+\noindent We sincerely appreciate the editorial board's time and guidance and hope that our revised manuscript now fully meets the standards of \textit{Discover Artificial Intelligence}.
+
+\vspace{6pt}
+\noindent Sincerely,
+
+\vspace{4pt}
+\noindent\textbf{\color{navy}Abdelrahman Hassan} (\textit{Corresponding Author})\\
+On behalf of co-authors \textbf{Ahmed Hassan} and \textbf{Hossam Abdelmunim}\\
+Computer and Systems Engineering Department, Faculty of Engineering\\
+Ain Shams University, Cairo, Egypt\\
+Email: \texttt{2201662@eng.asu.edu.eg}
+
+\end{document}
